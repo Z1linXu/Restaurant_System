@@ -1,0 +1,17 @@
+{
+  "purpose": "separate preserved Windows distribution; no source deleted or public download route changed",
+  "files": [
+    {
+      "source": "/srv/restaurant-pos/staging/releases/028d4971740889a0ac0d784a43497bc3e5b54b3d/deployment/windows-pilot/package/backend/restaurant-system-backend.jar",
+      "stored": "/srv/restaurant-pos/artifacts/windows-pilot/preserved-20261031/restaurant-system-backend.jar",
+      "bytes": 54879638,
+      "sha256": "657aa5ae309fa9cef1974960dcaa7129ff2cd714a3c05b3706d6420fdb86e7ee"
+    },
+    {
+      "source": "/srv/restaurant-pos/staging/releases/028d4971740889a0ac0d784a43497bc3e5b54b3d/deployment/windows-pilot/restaurant-pos-windows-pilot.zip",
+      "stored": "/srv/restaurant-pos/artifacts/windows-pilot/preserved-20261031/restaurant-pos-windows-pilot.zip",
+      "bytes": 49454860,
+      "sha256": "7e4c0b7a511834a7d807e32f9cbc7c2de668ea1669cb4c8f7fe7c75f3cd3b46f"
+    }
+  ]
+}

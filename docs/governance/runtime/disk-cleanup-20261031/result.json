@@ -1,0 +1,30 @@
+{
+  "observed_before": "2026-10-31T05:56:25.372841+00:00",
+  "observed_after": "2026-10-31T06:12:03.333783+00:00",
+  "disk_before": {
+    "total": 63290032128,
+    "used": 49327218688,
+    "available": 11261980672
+  },
+  "disk_after": {
+    "total": 63290032128,
+    "used": 37996285952,
+    "available": 22592913408
+  },
+  "net_reclaimed_bytes": 11330932736,
+  "cache_before_bytes": 17221729721,
+  "cache_after_bytes": 8292506429,
+  "cache_removed_records": 120,
+  "cache_reclaimed_logical_bytes": 8929223292,
+  "journal_removed_files": 50,
+  "journal_removed_allocated_bytes": 2508345344,
+  "release_removed": 0,
+  "release_retained": 72,
+  "all_134_images_unchanged": true,
+  "all_12_containers_ids_images_starts_restarts_mounts_unchanged": true,
+  "production_staging_health": {
+    "production": 200,
+    "staging": 200
+  },
+  "no_application_deploy_restart_or_db_action": true
+}

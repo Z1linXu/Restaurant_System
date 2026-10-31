@@ -1,0 +1,140 @@
+{
+  "containers": [
+    {
+      "container": "/restaurant-template-test-frontend-1",
+      "driver": {
+        "Type": "json-file",
+        "Config": {
+          "max-file": "2",
+          "max-size": "2m"
+        }
+      },
+      "configured_file_sinks": [],
+      "managed_archives": []
+    },
+    {
+      "container": "/restaurant-template-test-relay-1",
+      "driver": {
+        "Type": "json-file",
+        "Config": {
+          "max-file": "2",
+          "max-size": "2m"
+        }
+      },
+      "configured_file_sinks": [],
+      "managed_archives": []
+    },
+    {
+      "container": "/restaurant-template-test-backend-1",
+      "driver": {
+        "Type": "json-file",
+        "Config": {
+          "max-file": "2",
+          "max-size": "2m"
+        }
+      },
+      "configured_file_sinks": [],
+      "managed_archives": []
+    },
+    {
+      "container": "/restaurant-template-test-db-1",
+      "driver": {
+        "Type": "json-file",
+        "Config": {
+          "max-file": "2",
+          "max-size": "2m"
+        }
+      },
+      "configured_file_sinks": [],
+      "managed_archives": []
+    },
+    {
+      "container": "/cloud-nginx-1",
+      "driver": {
+        "Type": "json-file",
+        "Config": {}
+      },
+      "configured_file_sinks": [],
+      "managed_archives": []
+    },
+    {
+      "container": "/cloud-backend-1",
+      "driver": {
+        "Type": "json-file",
+        "Config": {}
+      },
+      "configured_file_sinks": [],
+      "managed_archives": []
+    },
+    {
+      "container": "/restaurant-pos-staging-nginx-1",
+      "driver": {
+        "Type": "local",
+        "Config": {
+          "max-file": "3",
+          "max-size": "10m"
+        }
+      },
+      "configured_file_sinks": [],
+      "managed_archives": []
+    },
+    {
+      "container": "/restaurant-pos-staging-backend-1",
+      "driver": {
+        "Type": "local",
+        "Config": {
+          "max-file": "3",
+          "max-size": "10m"
+        }
+      },
+      "configured_file_sinks": [],
+      "managed_archives": []
+    },
+    {
+      "container": "/restaurant-pos-staging-ingress",
+      "driver": {
+        "Type": "local",
+        "Config": {
+          "max-file": "3",
+          "max-size": "10m"
+        }
+      },
+      "configured_file_sinks": [],
+      "managed_archives": []
+    },
+    {
+      "container": "/restaurant-pos-uber-sandbox-webhook",
+      "driver": {
+        "Type": "local",
+        "Config": {
+          "max-file": "2",
+          "max-size": "5m"
+        }
+      },
+      "configured_file_sinks": [],
+      "managed_archives": []
+    },
+    {
+      "container": "/restaurant-pos-staging-db-1",
+      "driver": {
+        "Type": "local",
+        "Config": {
+          "max-file": "3",
+          "max-size": "10m"
+        }
+      },
+      "configured_file_sinks": [],
+      "managed_archives": []
+    },
+    {
+      "container": "/cloud-db-1",
+      "driver": {
+        "Type": "json-file",
+        "Config": {}
+      },
+      "configured_file_sinks": [],
+      "managed_archives": []
+    }
+  ],
+  "other_logs_action": "preserved existing OS security/package rotation and all deployment/acceptance evidence; no independent application file sink configured"
+}

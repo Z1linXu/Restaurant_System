@@ -68,7 +68,7 @@ make_release_fixture() {
   git init -q "$source_repo"
   git -C "$source_repo" config user.name hygiene-test
   git -C "$source_repo" config user.email hygiene-test@example.invalid
-  for index in 1 2 3 4 5; do
+  for index in 1 2 3 4 5 6 7; do
     printf 'release-%s\n' "$index" >"$source_repo/release.txt"
     git -C "$source_repo" add release.txt
     GIT_AUTHOR_DATE="2020-01-0${index}T00:00:00Z" \
@@ -87,8 +87,8 @@ make_release_fixture() {
     touch -t "2020010${index}0000" "$root/releases/$sha"
     index=$((index + 1))
   done
-  CURRENT_RELEASE_SHA="${RELEASE_SHAS[4]}"
-  PREVIOUS_RELEASE_SHA="${RELEASE_SHAS[3]}"
+  CURRENT_RELEASE_SHA="${RELEASE_SHAS[6]}"
+  PREVIOUS_RELEASE_SHA="${RELEASE_SHAS[5]}"
   sed -i.bak "s/^STAGING_COMMIT_SHA=.*/STAGING_COMMIT_SHA=$CURRENT_RELEASE_SHA/; s#^BACKEND_IMAGE=.*#BACKEND_IMAGE=restaurant-pos-backend:staging-$CURRENT_RELEASE_SHA#; s#^FRONTEND_IMAGE=.*#FRONTEND_IMAGE=restaurant-pos-frontend:staging-$CURRENT_RELEASE_SHA#; s#^VITE_APP_BUILD_VERSION=.*#VITE_APP_BUILD_VERSION=staging-$CURRENT_RELEASE_SHA#" "$root/config/.env.staging"
   rm -f "$root/config/.env.staging.bak"
   printf 'OPS001_ENV_ROTATION|PRIOR_STAGING_SHA|%s\n' "$PREVIOUS_RELEASE_SHA" >"$root/state/rotation.record"

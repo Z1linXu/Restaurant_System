@@ -1,0 +1,1667 @@
+{
+  "execution_utc": "2026-10-31T05:57:06.512979+00:00",
+  "candidate_ids": [
+    "8lte7aw6h4sj0agmwwuygsrqa",
+    "j36e7rfx495gcn6t1qn1rdz8u",
+    "swjhsphxf9lk2eozkupi3mclw",
+    "7b2xtniuo2j4ppaiyxlndmn76",
+    "ixozw2mf2dub81tpjy4hnpwqs",
+    "l7gfb5xca0f5j2cnwf15yig2y",
+    "oa40s4y9nksb4m52ayojc05a2",
+    "q2d1ksn48bn63wafqg7tz3ziv",
+    "3aea7k5uu2cndk6ynch5t6bxu",
+    "tku12sh3l834ebb1i6fyid58o",
+    "owikc4xgbkvhvikp2h0pp2mv9",
+    "9lhe2a7ajbs2df1q03i1dyc5q",
+    "wmke2k24z555ge7jdyp1piwze",
+    "ij61y41m9rtry4r1ealhw0tgg",
+    "o8ups6ogof7rcutvyj7u8rgkz",
+    "qk8r4bhf39p4wa7rzlxsv98wf",
+    "pytt9ucycc32g6pxijys63vv5",
+    "uuduu84ctdzifeh3lg2m331w8",
+    "xgn26k7uwie8bf1esp947zwiw",
+    "z5octy43m5a0sia7liyap4mwj",
+    "z8m8u37pk6fyp8diz9eqj2vck",
+    "xor8fsowl8y6lsng70m6tnt18",
+    "xrogw5j8l6gx60ed8kus62jtm",
+    "r07qg99ucttu5k1jovv9ykifd",
+    "bevfv6vo8x7enmedua3lwjfwg",
+    "51u9ids2ndrnfqeuia4xa962m",
+    "jo6t5kc78po8u07dx403sk94f",
+    "0r824bno9g2cpalxz6f2bbfaf",
+    "oqewdatm9boyjooeq8wufzldv",
+    "se3tqk3063ugh2njv4izlavir",
+    "h3zv7h6pdnbom3hxyqjmrd5ej",
+    "u7isl4mubrnz597hbthn2awnx",
+    "yvqxngez0hrm7x0ukrqlm4ppj",
+    "otxixizoi7r4ayrli9g0tbulw",
+    "ge07nrybwogjjykss7l7peq4j",
+    "gbhb9qulb8aq8ymora4shhj3p",
+    "9utdjqyoyqlbnxf7d1vkwmhx8",
+    "dzjfwwr21bwflcz42meeq4h1m",
+    "ve4ume502438bsg19l6dw85ms",
+    "trwwahwl6il9dvpdwfef9asrl",
+    "srnjy59g206ihezihz36ea5yg",
+    "21mstky1ixirdawr7u4fsesq1",
+    "rv954euh1l8zwud65etekuktr",
+    "gbr2qh7ae9vigsbab2d56ktdf",
+    "qfr2i9n95n7syud9yixdigkqg",
+    "eibqjiinsaglnvyzdpt4tqhwr",
+    "cm82rrgpe4fvmghby1ppfra91",
+    "zbayso1b87ffb4s2zpxy0phtg",
+    "v52m2id5pyacmj18lapsum7hq",
+    "z8nk0hdwkbo9tlirtug0rth7r",
+    "r2kp5lhrtyxx4y76xhhu87not",
+    "nidtj4sbfrnd22hhrkutt9k3s",
+    "msh2fc0yuyabvegvotoaxjb24",
+    "j563zsyhd4kybtq3m0txaj1mm",
+    "lsuyigptdvqk1q1h41vu4gj4g",
+    "l8ybu2023xrlsttj5mn93kolu",
+    "sqtfanjl9jt49xcddbjjzfq17",
+    "1t0qlf89qoky22fs1v8c55pla",
+    "dfpihp9ej0wy8gqge8wbuitrh",
+    "uk83599fosr6atw9unfii25b9",
+    "pmi6jx2hghae8fngvpjmh11rs",
+    "rpw4d2ckrlyrr5cqelqqnmxib",
+    "wad9kkevbzi29xz6fezwkcru3",
+    "euyyzkuivkx3olyr4k2vhvb08",
+    "1qeq93vc3bq9mdmqnlu37i4ak",
+    "ttxgyujc8uvvcv8hnp2pzcrwy",
+    "qzsddtryhex013wnxk74op5t0",
+    "yvihgiyvsy1vum6yfptebc86v",
+    "o2rpe9rxh0vk76nrryfq4k7pn",
+    "k1tb0f1c3sa8z3bt5ougczivl",
+    "eze0id65oc95v5ash8yv3d5ph",
+    "94jbsvplethq8ks3s44y6yifx",
+    "f8lf4urgt3ig2v856afyj6zko",
+    "luax2ucd9vaosoxzh19n18w0y",
+    "10t4rd1qm9i520kqlrup4kjfk",
+    "rgtqcdafn0ykshqixzwmhiqk1",
+    "e9zvbvbi39v4vnc8l2u2mktk2",
+    "i4fm7in5auszv24ot7raedv5c",
+    "sqwa1u9cfu118husoresmrkh8",
+    "xak1d4yloxjfugpv1pr3til79",
+    "1p9vzseqesn2ttb6uv6hfxn51",
+    "2xj2wl3lgqr447ioodjobybkq",
+    "62zk41h9xjqelvotgqkp15ky4",
+    "jqy8bf0r3rwh56osrzwxxmn26",
+    "ljoy8hgvth31joazpwxwm5zh3",
+    "rehpq05myjd6wlls26fl45979",
+    "fp9strojxelc4zq9z042ptrzr",
+    "2waut60d91bj294eyjtqdw1v2",
+    "86v8c2q61w259qfcxagbcb68p",
+    "yuzgjb31x8xqm5nn0dc1wmi3x",
+    "o19030ni5gh7a8qaz2rf7xzr2",
+    "iiydxph8zx4d4can69730gbez",
+    "m3kziwmgffxfonnqgm620hhcy",
+    "u2mrfr25jcmniagdxe5vna0dx",
+    "bh5wjv03ymbjnvkhbsj15nfne",
+    "2d3esg4xo0thu3fttddceetar",
+    "xf5fakkcee3msbd9veov32220",
+    "4dwrshlvokews7e13gvmftlku",
+    "pwb7opczmed1jsab6rpzwvfcv",
+    "ypz00qqyp1sew3u4i0qoytuue",
+    "kfzmmz93ouohyzbl88pmzinau",
+    "i0vk4g4f42i2tw3lwsmdhmo7f",
+    "xbyv9uqjusrphvd1t2a431rwi",
+    "4n6z8hq6w0pp7ui56u68bel3k",
+    "vuolj1kmiees52bh6f2kyftku",
+    "ctbdv91l97tbxqybndjhd4ekx",
+    "yhx2a6bdjsr1loyao7ebfk61b",
+    "029874zoicc1sbmh8nu72tic5",
+    "tt6q5khh5md37523agu2lq42r",
+    "hyqsz00qggs5sqhck5nqgn62b",
+    "fnfbb8ccij25fbm621n4amv4g",
+    "ne25u8y29kh5sx67badwh49jd",
+    "gmyzjq7a50h0lllwlxudr55hg",
+    "q3u0wialpt740k6tiv7qvvyt6",
+    "irfzdxtpg6gk6cdl3flq7tvcd",
+    "0g39qnm8dve22cbqtvvwnxx7t",
+    "rpkjzpdnmasx5bm80nblxwh1w",
+    "yf5qq9k4dellbnonrv1rqaixq",
+    "3dqov3ipd2yyuc3qct7mmgy4o",
+    "i6iie6zv61da03jh24anawfaq",
+    "0gqx9b4ulu49djz4lpq9ulfpj",
+    "2msfbcczm8a38qnyv9tbymusv",
+    "4m4u3ej62qvcutf7hdaixf9cd",
+    "c8z5mqpi4ifolmtst9o5z9m5h",
+    "hhg1bispp5hhwmn9nrmmyazu6",
+    "kxoddmjllnc22wek0tvnge896",
+    "px21s0f4br6nywmluva008u58",
+    "wpcr1di81yp53r0h6klxeo2bl",
+    "lqlviokco5wf78mvztjfxvw1f",
+    "37jb3ed57319w1tp76512pl6u",
+    "b38sbh9tj31hulvnwt2ibkxa0"
+  ],
+  "candidate_bytes": 9699338412,
+  "retained_ids": [
+    "u45t08ljdjt6y5i9e3m39h69d",
+    "wgi4dsmho692pz5g36p3t9wfr",
+    "lw219wuvci9u6lbptucz1gf48",
+    "n3cp5iphfjjphezfjau6we73u",
+    "e0hcgkzpf8k0t9bdgkqe56cdm",
+    "9k9xchg0ys9326x27670odj83",
+    "pcia2m0ukk3r35jo6783cjm2d",
+    "uprd2obqvauai3yrdpfjamgc6",
+    "lnabk8bzvujpsa7ye5clrgp3h",
+    "vvjwbjc7z3lf0j7lucx3t5nvd",
+    "jvww86741ypehctinnhzjngd1",
+    "v19iejoqv358kn4y7pedgw0d6",
+    "kh2q2t970rc1v62v87cdi1nsp",
+    "prs6q1ehtqhcsha0iupq3034d",
+    "vschiyp2d18rqea7uboefwhgd",
+    "rz52g59bgmsnnm0nfs5zvd5c2",
+    "19h277mf6gu4k0cfyu4772u9d",
+    "i5k3psx9qfczjiyw3ig1ztkp7",
+    "ypp3gfrezrw97s656mhdn9tg3",
+    "y6a7vsletkioke50gjxndfe0q",
+    "rfox2ngomae3rz6csy2f62u03",
+    "jnk70vabnz471bbbbw2okcb83",
+    "6lotcgw9y8i6qzcwxu6dtan72",
+    "a71ux0l5yjso8tgcu7b15fmmb",
+    "9ou0k25ibuli7vfa59k1wemmy",
+    "56uqvg4j0fb58l8rf7ui7mypz",
+    "exy4nkqc008t4f671n59qrd44",
+    "msip6w05iiabpq6nlufiuc4t8",
+    "1at5psd9a07ownnajc8kjbaps",
+    "z556w7ziciexqtgjfsfinx2yl",
+    "u20dr3eu0juv9n9frnjaid5pk",
+    "imr2otutly9v1crcue3k25p6j",
+    "w8huhn5nwkiupsqx5ziz27pmr",
+    "sberrxmbzncvv9hx3rg9jozqf",
+    "kfdocvcu06q1luc7kjalar396",
+    "ajichh6ryqe8greqlyzr0l5b3",
+    "zhpy2nj14k2opyqys5tagy93v",
+    "aw8puewfwqiz78cx6qpzpak6q",
+    "ekg2bh6b7bniiz16mlkk7s5si",
+    "tel1f79cheikmtm88rl25r2br",
+    "17dbi23g1n5cw0t28wasddu11",
+    "nclbdvg6j1kl4rx7e0z4611rw",
+    "uyu8vu1v84b5n441h8l4m60ft",
+    "92x360cfg5a2yuieobbe50wpy",
+    "vt13eb47yase299ktxfur2ikb",
+    "sjcjfqziadhl29jydgua10bar",
+    "imdr8i9qkv0y4iilqbxveffvo",
+    "2lq1q0986a5i65podgbxzacqe",
+    "chtxq646iykezhesjqy5dr8lo",
+    "yw8cdideh0mfk4z6217hdxrtj",
+    "z9qv9a9ppkt1aurjg8yofv556",
+    "powl7efjxdu588069xv6n7mi2",
+    "kqlk5iuqikalnnko2d9l2inp8",
+    "rainbo3tk5hh38kb8xaeuc1rf",
+    "wfynv3ozxzds591br6uwi8hks",
+    "vr3pqplgao6ciatkdx7s3s53v",
+    "jfjq05hfr956lq3juio8m29ni",
+    "yg00vh757np8ssfrvn5gn8wdp",
+    "pttn56fyjn5qji8025tt4hrrb",
+    "fw0lzvn6glphg0p6da4pf4enz",
+    "fgmelx9pk1w58qal22vikxood",
+    "sz9pxtkx85xxou1ubko3wasu4",
+    "maokik9ecorrawxl7d95e82n0",
+    "47xw1c54mfzspotjo89f84y9l",
+    "foq8dl4x5eny8hmfqxaymfwfl",
+    "u87duqtlh78ppx4dw14bjh867",
+    "w46ei9d9w93k8ly60sy82z9ro",
+    "8gwi8v9ahx1fjfi8r98clurma",
+    "x3mbhyj0q4pn5xfimjy35e23j",
+    "zhx7vimvatr2q7o88obd0tgxn",
+    "rtvusmrgo76440po18ofg4607",
+    "wb3a7m9h4dw5q5wblox9c2mts",
+    "s3i9w897e76hz4acajjpv8xsi",
+    "iqtp9igebnxtrl8s6jk0iqxng",
+    "lztutdp65qjmj2r3coopr26qc",
+    "qbt5ebhqrda9px65tu3f19ijy",
+    "jmhec4i3utdwjvo5dvoqzkryi",
+    "ycois0u420j5aabw4xe1nk9r2",
+    "6nmwk59nsungw0udg4gapp8c8",
+    "854ph8gd8av3ye4qc7yqnewrk",
+    "k1hfk3xrg9hts4jt4o1codeyv",
+    "sjk04ynr2dvv3erc2belp8bdn",
+    "35img50250qlm0ywazmyrs6b9",
+    "a7qvpsvq8ryd3x7a673jw06kp",
+    "apzdmyf91d1ljyg24819ull1e",
+    "yiy05kfpq3czpfv25zp25grzt",
+    "82xtoa6wh8xmjixnwb4xet1jx",
+    "8m4r54tf69qy54wh0now71hgs",
+    "qvb2n9uej5g9i6ye4yuv4g1fg",
+    "w155kuhl56qf311ube2rri5b4",
+    "wreqirpu31xq9mz04dqbk3be2",
+    "xqxrhx1049tfk6x08potdhpeb",
+    "jh5pch9rxewy2jco7uw65d4xw",
+    "y066a4zjs0fp5tgb9pzv8b9c4",
+    "145mln02wpg3pzyw222cwdd03",
+    "zjl6e2kulubs0js6d09l6mhj7",
+    "j3oxxaip5ynatgvg2ovo1b2k2",
+    "i3jgci9mrag4aokuw6ylk6pqr",
+    "35u2y6iq2pmjmb10u3cyq8i93",
+    "tcicaxhkmg5rv8b9ifcnv3slm",
+    "c2ln1cm9e9ropyq1epphs3keu",
+    "cil6w871q6xgfww665oaor5av",
+    "n0ye9h2ukqy0xmp5obuh6nvep",
+    "rekpo0lvko69o0t8w8vjexk26",
+    "oh6grjyae4qhnmhdoy9hfdcs3",
+    "6bm8skigmpum7djkuo8k9mtz7",
+    "0a5i6thttw2c4pbjehj1x1yr8",
+    "f1xwz0oxa58z3q2n946wiug3r",
+    "kbddjgajgiz0lakibdsxsk6vw",
+    "f5htokbm2kdt03nfwz06gvvsy",
+    "je4eonh7bvldimgbiap7eu9vx",
+    "k2dhdswure9alskek58qat34j",
+    "knf4nfn4il1annp8eobqaq5h3",
+    "slz50ihis4zrab7lgi471q4f8",
+    "wty4ws9fjg4fkrw1qh0agopsc",
+    "64e9lgxld9b9cgxo5mab28hfq",
+    "wukuix6zif0exxwduobr87a6k",
+    "gyf26o45w9815j9h9y5zu6c8q",
+    "pcct8mgmuggf2x3yk50kskeju",
+    "kdh30kixuaroyr898eh9v7gnb",
+    "n822jpc9josk8jk8qpqk8sh7r",
+    "fahcr2ubdrrreeu8mlkfzfc03",
+    "lo4fy5k6b8l0ofsy28n9y3k4d",
+    "18ik5axnydyqdsbayat2tegfv",
+    "mm9kskvfpjgqihi5ozb5qa94o",
+    "lsn6xfv3ybqx32qgm8c0pqbtz",
+    "kq0xcw4z0mm76ylmugjs0nvtv",
+    "te9ueczofylrddqiukiokz17h",
+    "kqalinbfezdgh7rfucgwgxbn8",
+    "0x8fkhj4ky2btclyfr5v78ar9",
+    "w4bwzv0z07s2yskwok9nvak7r",
+    "lb1tc9tqo93kfslkva10sw6lf",
+    "irjgyzni6p05ukufx5v6fyckc",
+    "7pkhmk4s24dgocks3o2j1y5oi",
+    "0sej8vxvi2faxp40xm0m55n6u",
+    "m52xyvrx49v4f04i0fyp7dvrt",
+    "mcypxuat6by0yk3vgcaqu8xd1",
+    "oym0j11ho3hsglfbey9ztj4hi",
+    "yjxeytepvgher2hfezp1thfj3",
+    "gdfibpxhrpelvd2ywv82ytid0",
+    "dbuzi04pm769wv2oxmtqi6uxl",
+    "wxnu26up6098crrrv5p5yz47t",
+    "xxy62n952csg2egzg4d9j5p8u",
+    "sfmoudc0e4jic84wr3v54zvxg",
+    "w8hpn1f5n9ar22ezojavesuo9",
+    "1xuavp1k5i9mcze1lo8aqb496",
+    "esalg1g9o50ywuwpefkfwdp2j",
+    "06v16pz5jrj4kul7g60ir0lfa",
+    "t5jt65vhu9tahc7ik6zxifoym",
+    "kjo82uecmg0algqica1p8ahc2",
+    "0z3q73rvlwsdonxfczi53ryts",
+    "rfyl5w09zb0h4exy5ka2gp98g",
+    "pbhhe867w6iqtjx3nbvzkadk7",
+    "q455eyzmk2a7q0zkqggotdedv",
+    "o1m34gzbaomfcnzgqebubjo55",
+    "j12i2n644jtep5nm60su556z8",
+    "821z0f0819fzlxjem7rv8ovxo",
+    "u0qdtaomvol072gk5fr8b0v12",
+    "0erjzuszhtk4tb7ev71alge3p",
+    "a4vzz4krpxj4x66i9jw42e879",
+    "e17p3cualm4e4tvmqm7ymrfyx",
+    "9phhbe15ibwt83wj9u59xh5xl",
+    "meip13pc6j1zkps49d48okogx",
+    "8cl2zfaadml5uayrfw7wj0jpw",
+    "rh80kgcyyxamgp6cv5w0asb80",
+    "jyv4z9khcmi283rubeirgksan",
+    "2pfyeggru17pv64biicqob2ps",
+    "pmws9paox0sb5eg7spen91tq9",
+    "arleevrjtylwxp2vtp0vc6mcq",
+    "7vg1dlvw8bj2bgb1qpbdbvsc5",
+    "a53i9scmby6qylx2k3wdceoqy",
+    "l563p1yxejdfcao7qtnv6t2gb",
+    "sra2u9p62ugtflyzxlbfshmyn",
+    "3qd0va2s9ni3czwri4qt71zoa",
+    "jjt1eaho325osr7338bbv7get",
+    "kf0t7t9bv0li8ioxif24hs7g4",
+    "ylr5axwoiv0cyqpwlq4ygm6zw",
+    "31dw9nkamicv32awc8ubz5wlb",
+    "utzp4451e1ig24hwiz7i5yzgy",
+    "xgeoirhfrq17lbetjl9zuegpc",
+    "v1gzvnm8o6oxxk8vyat9m9r3i",
+    "u3i84uy97nx9rgefe2qjgbq5e",
+    "ki63cpbup5p5jx9qy0zf4ggab",
+    "9j9sekslcz492sp7fpcavo0ns",
+    "iqx3ttwa3pzzvqrjtej9dq8jj",
+    "owefwdafcb308k2dar5rrcdvm",
+    "yq5gaxrzqe2qze4an9bbqj4zs",
+    "m9a745jh0lhzv4buyum0s29xa",
+    "x7x39crqikmvkd34qjt4h3u2p",
+    "72l9mg05sv4m1vnfo26pfpul1",
+    "9jlvq2wx7czs3ajbbohbv295t",
+    "ysoya7r89ltajau2al1g8c0z0",
+    "2tjue5ebacfutfdyrszaei5dh",
+    "p9pon8702rma3w35q80g9k986",
+    "bladaa7jcp1s6eaaknv6rug6o",
+    "6q4rf2jsvb295o0kctwuvwl71",
+    "na9elujs39m4a1202zuj71vhd",
+    "jl20ksk1984yfgbb41of79iib"
+  ],
+  "command": [
+    "docker",
+    "--context",
+    "default",
+    "buildx",
+    "prune",
+    "--builder",
+    "default",
+    "--filter",
+    "until=720h",
+    "--force",
+    "--verbose"
+  ]
+}
+ID:		h3zv7h6pdnbom3hxyqjmrd5ej
+Parent:		m3kziwmgffxfonnqgm620hhcy
+Created at:	2026-09-28 17:39:36.334911685 +0000 UTC
+Mutable:	true
+Reclaimable:	true
+Shared:		false
+Size:		4.231MB
+Description:	mount / from exec /bin/sh -c npm run build
+Usage count:	1
+Last used:	4 weeks ago
+
+ID:		owikc4xgbkvhvikp2h0pp2mv9
+Parent:		2msfbcczm8a38qnyv9tbymusv
+Created at:	2026-09-15 18:46:23.664195605 +0000 UTC
+Mutable:	true
+Reclaimable:	true
+Shared:		false
+Size:		4.19MB
+Description:	mount / from exec /bin/sh -c npm run build
+Usage count:	1
+Last used:	6 weeks ago
+
+ID:		ne25u8y29kh5sx67badwh49jd
+Parent:		62zk41h9xjqelvotgqkp15ky4
+Created at:	2026-08-24 16:05:43.497099593 +0000 UTC
+Mutable:	true
+Reclaimable:	true
+Shared:		false
+Size:		4.17MB
+Description:	mount / from exec /bin/sh -c npm run build
+Usage count:	1
+Last used:	2 months ago
+
+ID:		3dqov3ipd2yyuc3qct7mmgy4o
+Parent:		21mstky1ixirdawr7u4fsesq1
+Created at:	2026-09-28 17:56:52.834074889 +0000 UTC
+Mutable:	true
+Reclaimable:	true
+Shared:		false
+Size:		4.231MB
+Description:	mount / from exec /bin/sh -c npm run build
+Usage count:	1
+Last used:	4 weeks ago
+
+ID:		wmke2k24z555ge7jdyp1piwze
+Parent:		tt6q5khh5md37523agu2lq42r
+Created at:	2026-08-24 15:53:22.591886242 +0000 UTC
+Mutable:	true
+Reclaimable:	true
+Shared:		false
+Size:		4.17MB
+Description:	mount / from exec /bin/sh -c npm run build
+Usage count:	1
+Last used:	2 months ago
+
+ID:		e9zvbvbi39v4vnc8l2u2mktk2
+Parent:		8lte7aw6h4sj0agmwwuygsrqa
+Created at:	2026-08-22 22:36:39.706214035 +0000 UTC
+Mutable:	true
+Reclaimable:	true
+Shared:		false
+Size:		4.17MB
+Description:	mount / from exec /bin/sh -c npm run build
+Usage count:	1
+Last used:	2 months ago
+
+ID:		xgn26k7uwie8bf1esp947zwiw
+Parent:		xor8fsowl8y6lsng70m6tnt18
+Created at:	2026-09-17 16:31:13.316384775 +0000 UTC
+Mutable:	true
+Reclaimable:	true
+Shared:		false
+Size:		75.48MB
+Description:	mount / from exec /bin/sh -c mvn -q -DskipTests package
+Usage count:	1
+Last used:	6 weeks ago
+
+ID:		c8z5mqpi4ifolmtst9o5z9m5h
+Parent:		kxoddmjllnc22wek0tvnge896
+Created at:	2026-08-22 22:21:52.386560402 +0000 UTC
+Mutable:	true
+Reclaimable:	true
+Shared:		false
+Size:		4.17MB
+Description:	mount / from exec /bin/sh -c npm run build
+Usage count:	1
+Last used:	2 months ago
+
+ID:		euyyzkuivkx3olyr4k2vhvb08
+Parent:		1p9vzseqesn2ttb6uv6hfxn51
+Created at:	2026-08-24 16:55:04.651393361 +0000 UTC
+Mutable:	true
+Reclaimable:	true
+Shared:		false
+Size:		4.17MB
+Description:	mount / from exec /bin/sh -c npm run build
+Usage count:	1
+Last used:	2 months ago
+
+ID:		trwwahwl6il9dvpdwfef9asrl
+Parent:		i0vk4g4f42i2tw3lwsmdhmo7f
+Created at:	2026-09-16 16:22:19.157003615 +0000 UTC
+Mutable:	true
+Reclaimable:	true
+Shared:		false
+Size:		4.19MB
+Description:	mount / from exec /bin/sh -c npm run build
+Usage count:	1
+Last used:	6 weeks ago
+
+ID:		yf5qq9k4dellbnonrv1rqaixq
+Parent:		ekg2bh6b7bniiz16mlkk7s5si
+Created at:	2026-08-16 13:48:15.965785165 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		108.3MB
+Description:	[stage-1 3/3] COPY --from=build /workspace/target/*.jar /app/app.jar
+Usage count:	3
+Last used:	2 months ago
+
+ID:		m3kziwmgffxfonnqgm620hhcy
+Parent:		gbhb9qulb8aq8ymora4shhj3p
+Created at:	2026-09-28 17:39:36.289067376 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		2.384MB
+Description:	[build 5/6] COPY . .
+Usage count:	1
+Last used:	4 weeks ago
+
+ID:		0r824bno9g2cpalxz6f2bbfaf
+Parent:		iiydxph8zx4d4can69730gbez
+Created at:	2026-09-16 16:21:18.429413977 +0000 UTC
+Mutable:	true
+Reclaimable:	true
+Shared:		false
+Size:		74.91MB
+Description:	mount / from exec /bin/sh -c mvn -q -DskipTests package
+Usage count:	1
+Last used:	6 weeks ago
+
+ID:		2waut60d91bj294eyjtqdw1v2
+Parent:		hhg1bispp5hhwmn9nrmmyazu6
+Created at:	2026-08-24 16:25:45.264909846 +0000 UTC
+Mutable:	true
+Reclaimable:	true
+Shared:		false
+Size:		4.17MB
+Description:	mount / from exec /bin/sh -c npm run build
+Usage count:	1
+Last used:	2 months ago
+
+ID:		rehpq05myjd6wlls26fl45979
+Parent:		i4fm7in5auszv24ot7raedv5c
+Created at:	2026-09-15 18:45:22.252226706 +0000 UTC
+Mutable:	true
+Reclaimable:	true
+Shared:		false
+Size:		74.85MB
+Description:	mount / from exec /bin/sh -c mvn -q -DskipTests package
+Usage count:	1
+Last used:	6 weeks ago
+
+ID:		o19030ni5gh7a8qaz2rf7xzr2
+Parent:		u7isl4mubrnz597hbthn2awnx
+Created at:	2026-08-08 21:43:23.949931129 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		245.7MB
+Description:	mount / from exec /bin/sh -c mvn -q -DskipTests dependency:go-offline
+Usage count:	30
+Last used:	2 months ago
+
+ID:		r07qg99ucttu5k1jovv9ykifd
+Parent:		4n6z8hq6w0pp7ui56u68bel3k
+Created at:	2026-08-22 23:00:58.652343384 +0000 UTC
+Mutable:	true
+Reclaimable:	true
+Shared:		false
+Size:		4.17MB
+Description:	mount / from exec /bin/sh -c npm run build
+Usage count:	1
+Last used:	2 months ago
+
+ID:		uuduu84ctdzifeh3lg2m331w8
+Parent:		pwb7opczmed1jsab6rpzwvfcv
+Created at:	2026-09-28 17:38:30.565110903 +0000 UTC
+Mutable:	true
+Reclaimable:	true
+Shared:		false
+Size:		75.71MB
+Description:	mount / from exec /bin/sh -c mvn -q -DskipTests package
+Usage count:	1
+Last used:	4 weeks ago
+
+ID:		62zk41h9xjqelvotgqkp15ky4
+Parent:		dfpihp9ej0wy8gqge8wbuitrh
+Created at:	2026-08-24 16:05:43.459612503 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		2.187MB
+Description:	[build 5/6] COPY . .
+Usage count:	1
+Last used:	2 months ago
+
+ID:		bevfv6vo8x7enmedua3lwjfwg
+Parent:		tku12sh3l834ebb1i6fyid58o
+Created at:	2026-09-28 17:48:34.608793221 +0000 UTC
+Mutable:	true
+Reclaimable:	true
+Shared:		false
+Size:		4.231MB
+Description:	mount / from exec /bin/sh -c npm run build
+Usage count:	1
+Last used:	4 weeks ago
+
+ID:		pwb7opczmed1jsab6rpzwvfcv
+Parent:		e17p3cualm4e4tvmqm7ymrfyx
+Created at:	2026-09-28 17:38:30.523333064 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		6.922MB
+Description:	[build 5/6] COPY src ./src
+Usage count:	1
+Last used:	4 weeks ago
+
+ID:		hhg1bispp5hhwmn9nrmmyazu6
+Parent:		qfr2i9n95n7syud9yixdigkqg
+Created at:	2026-08-24 16:25:45.233788314 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		2.187MB
+Description:	[build 5/6] COPY . .
+Usage count:	1
+Last used:	2 months ago
+
+ID:		iiydxph8zx4d4can69730gbez
+Parent:		cm82rrgpe4fvmghby1ppfra91
+Created at:	2026-09-16 16:21:18.387326759 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		6.55MB
+Description:	[build 5/6] COPY src ./src
+Usage count:	1
+Last used:	6 weeks ago
+
+ID:		21mstky1ixirdawr7u4fsesq1
+Parent:		yvihgiyvsy1vum6yfptebc86v
+Created at:	2026-09-28 17:56:52.801284475 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		2.384MB
+Description:	[build 5/6] COPY . .
+Usage count:	1
+Last used:	4 weeks ago
+
+ID:		1p9vzseqesn2ttb6uv6hfxn51
+Parent:		xbyv9uqjusrphvd1t2a431rwi
+Created at:	2026-08-24 16:55:04.622465074 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		2.195MB
+Description:	[build 5/6] COPY . .
+Usage count:	1
+Last used:	2 months ago
+
+ID:		rpkjzpdnmasx5bm80nblxwh1w
+Parent:		l8ybu2023xrlsttj5mn93kolu
+Created at:	2026-09-17 16:32:24.938569229 +0000 UTC
+Mutable:	true
+Reclaimable:	true
+Shared:		false
+Size:		4.231MB
+Description:	mount / from exec /bin/sh -c npm run build
+Usage count:	1
+Last used:	6 weeks ago
+
+ID:		qzsddtryhex013wnxk74op5t0
+Parent:		dzjfwwr21bwflcz42meeq4h1m
+Created at:	2026-08-24 15:52:19.405502828 +0000 UTC
+Mutable:	true
+Reclaimable:	true
+Shared:		false
+Size:		74.42MB
+Description:	mount / from exec /bin/sh -c mvn -q -DskipTests package
+Usage count:	1
+Last used:	2 months ago
+
+ID:		gmyzjq7a50h0lllwlxudr55hg
+Parent:		ki63cpbup5p5jx9qy0zf4ggab
+Created at:	2026-08-22 06:39:26.336312533 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		108.5MB
+Description:	[stage-1 3/3] COPY --from=build /workspace/target/*.jar /app/app.jar
+Usage count:	2
+Last used:	2 months ago
+
+ID:		u7isl4mubrnz597hbthn2awnx
+Parent:		0gqx9b4ulu49djz4lpq9ulfpj
+Created at:	2026-08-08 21:42:47.382931809 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		12.29kB
+Description:	[build 3/6] COPY pom.xml .
+Usage count:	1
+Last used:	2 months ago
+
+ID:		1t0qlf89qoky22fs1v8c55pla
+Parent:		qk8r4bhf39p4wa7rzlxsv98wf
+Created at:	2026-09-28 17:47:33.797872333 +0000 UTC
+Mutable:	true
+Reclaimable:	true
+Shared:		false
+Size:		75.71MB
+Description:	mount / from exec /bin/sh -c mvn -q -DskipTests package
+Usage count:	1
+Last used:	4 weeks ago
+
+ID:		tku12sh3l834ebb1i6fyid58o
+Parent:		o2rpe9rxh0vk76nrryfq4k7pn
+Created at:	2026-09-28 17:48:34.577314002 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		2.384MB
+Description:	[build 5/6] COPY . .
+Usage count:	1
+Last used:	4 weeks ago
+
+ID:		yvihgiyvsy1vum6yfptebc86v
+Parent:		sqtfanjl9jt49xcddbjjzfq17
+Created at:	2026-09-28 17:56:52.505643403 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		259.6MB
+Description:	mount / from exec /bin/sh -c npm ci
+Usage count:	1
+Last used:	4 weeks ago
+
+ID:		i4fm7in5auszv24ot7raedv5c
+Parent:		uk83599fosr6atw9unfii25b9
+Created at:	2026-09-15 18:45:22.214979441 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		6.525MB
+Description:	[build 5/6] COPY src ./src
+Usage count:	1
+Last used:	6 weeks ago
+
+ID:		kxoddmjllnc22wek0tvnge896
+Parent:		fnfbb8ccij25fbm621n4amv4g
+Created at:	2026-08-22 22:21:52.351552716 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		2.175MB
+Description:	[build 5/6] COPY . .
+Usage count:	1
+Last used:	2 months ago
+
+ID:		dfpihp9ej0wy8gqge8wbuitrh
+Parent:		86v8c2q61w259qfcxagbcb68p
+Created at:	2026-08-24 16:05:43.294704027 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		257.2MB
+Description:	mount / from exec /bin/sh -c npm ci
+Usage count:	1
+Last used:	2 months ago
+
+ID:		0g39qnm8dve22cbqtvvwnxx7t
+Parent:		9utdjqyoyqlbnxf7d1vkwmhx8
+Created at:	2026-08-24 16:16:40.871365422 +0000 UTC
+Mutable:	true
+Reclaimable:	true
+Shared:		false
+Size:		4.17MB
+Description:	mount / from exec /bin/sh -c npm run build
+Usage count:	1
+Last used:	2 months ago
+
+ID:		4n6z8hq6w0pp7ui56u68bel3k
+Parent:		rpw4d2ckrlyrr5cqelqqnmxib
+Created at:	2026-08-22 23:00:58.621040388 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		2.179MB
+Description:	[build 5/6] COPY . .
+Usage count:	1
+Last used:	2 months ago
+
+ID:		2msfbcczm8a38qnyv9tbymusv
+Parent:		q3u0wialpt740k6tiv7qvvyt6
+Created at:	2026-09-15 18:46:23.633292249 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		2.31MB
+Description:	[build 5/6] COPY . .
+Usage count:	1
+Last used:	6 weeks ago
+
+ID:		8lte7aw6h4sj0agmwwuygsrqa
+Parent:		hyqsz00qggs5sqhck5nqgn62b
+Created at:	2026-08-22 22:36:39.679964694 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		2.179MB
+Description:	[build 5/6] COPY . .
+Usage count:	1
+Last used:	2 months ago
+
+ID:		ge07nrybwogjjykss7l7peq4j
+Parent:		ki63cpbup5p5jx9qy0zf4ggab
+Created at:	2026-08-22 06:10:57.8758803 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		108.5MB
+Description:	[stage-1 3/3] COPY --from=build /workspace/target/*.jar /app/app.jar
+Usage count:	2
+Last used:	2 months ago
+
+ID:		9utdjqyoyqlbnxf7d1vkwmhx8
+Parent:		f8lf4urgt3ig2v856afyj6zko
+Created at:	2026-08-24 16:16:40.839797879 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		2.187MB
+Description:	[build 5/6] COPY . .
+Usage count:	1
+Last used:	2 months ago
+
+ID:		xbyv9uqjusrphvd1t2a431rwi
+Parent:		86v8c2q61w259qfcxagbcb68p
+Created at:	2026-08-24 16:55:04.388454626 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		257.3MB
+Description:	mount / from exec /bin/sh -c npm ci
+Usage count:	1
+Last used:	2 months ago
+
+ID:		qfr2i9n95n7syud9yixdigkqg
+Parent:		86v8c2q61w259qfcxagbcb68p
+Created at:	2026-08-24 16:25:45.007435454 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		257.2MB
+Description:	mount / from exec /bin/sh -c npm ci
+Usage count:	1
+Last used:	2 months ago
+
+ID:		0gqx9b4ulu49djz4lpq9ulfpj
+Parent:		1qeq93vc3bq9mdmqnlu37i4ak
+Created at:	2026-08-08 21:42:47.329034394 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		8.192kB
+Description:	[build 2/6] WORKDIR /workspace
+Usage count:	1
+Last used:	2 months ago
+
+ID:		qk8r4bhf39p4wa7rzlxsv98wf
+Parent:		e17p3cualm4e4tvmqm7ymrfyx
+Created at:	2026-09-28 17:47:33.761476065 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		6.922MB
+Description:	[build 5/6] COPY src ./src
+Usage count:	1
+Last used:	4 weeks ago
+
+ID:		hyqsz00qggs5sqhck5nqgn62b
+Parent:		z5octy43m5a0sia7liyap4mwj
+Created at:	2026-08-22 22:36:39.463147585 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		257.2MB
+Description:	mount / from exec /bin/sh -c npm ci
+Usage count:	1
+Last used:	2 months ago
+
+ID:		rpw4d2ckrlyrr5cqelqqnmxib
+Parent:		z5octy43m5a0sia7liyap4mwj
+Created at:	2026-08-22 23:00:58.405724818 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		257.2MB
+Description:	mount / from exec /bin/sh -c npm ci
+Usage count:	1
+Last used:	2 months ago
+
+ID:		l8ybu2023xrlsttj5mn93kolu
+Parent:		yuzgjb31x8xqm5nn0dc1wmi3x
+Created at:	2026-09-17 16:32:24.898829007 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		2.363MB
+Description:	[build 5/6] COPY . .
+Usage count:	1
+Last used:	6 weeks ago
+
+ID:		q3u0wialpt740k6tiv7qvvyt6
+Parent:		86v8c2q61w259qfcxagbcb68p
+Created at:	2026-09-15 18:46:23.442455088 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		259.6MB
+Description:	mount / from exec /bin/sh -c npm ci
+Usage count:	1
+Last used:	6 weeks ago
+
+ID:		fnfbb8ccij25fbm621n4amv4g
+Parent:		z5octy43m5a0sia7liyap4mwj
+Created at:	2026-08-22 22:21:52.086703466 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		257.2MB
+Description:	mount / from exec /bin/sh -c npm ci
+Usage count:	1
+Last used:	2 months ago
+
+ID:		yuzgjb31x8xqm5nn0dc1wmi3x
+Parent:		86v8c2q61w259qfcxagbcb68p
+Created at:	2026-09-17 16:32:24.743449095 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		259.6MB
+Description:	mount / from exec /bin/sh -c npm ci
+Usage count:	1
+Last used:	6 weeks ago
+
+ID:		ttxgyujc8uvvcv8hnp2pzcrwy
+Parent:		ij61y41m9rtry4r1ealhw0tgg
+Created at:	2026-08-22 22:27:26.384449952 +0000 UTC
+Mutable:	true
+Reclaimable:	true
+Shared:		false
+Size:		4.17MB
+Description:	mount / from exec /bin/sh -c npm run build
+Usage count:	1
+Last used:	2 months ago
+
+ID:		f8lf4urgt3ig2v856afyj6zko
+Parent:		86v8c2q61w259qfcxagbcb68p
+Created at:	2026-08-24 16:16:40.602958815 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		257.2MB
+Description:	mount / from exec /bin/sh -c npm ci
+Usage count:	1
+Last used:	2 months ago
+
+ID:		o2rpe9rxh0vk76nrryfq4k7pn
+Parent:		sqtfanjl9jt49xcddbjjzfq17
+Created at:	2026-09-28 17:48:34.387623896 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		259.6MB
+Description:	mount / from exec /bin/sh -c npm ci
+Usage count:	1
+Last used:	4 weeks ago
+
+ID:		uk83599fosr6atw9unfii25b9
+Parent:		ctbdv91l97tbxqybndjhd4ekx
+Created at:	2026-09-15 18:45:21.758484393 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		245.7MB
+Description:	mount / from exec /bin/sh -c mvn -q -DskipTests dependency:go-offline
+Usage count:	1
+Last used:	6 weeks ago
+
+ID:		tt6q5khh5md37523agu2lq42r
+Parent:		2xj2wl3lgqr447ioodjobybkq
+Created at:	2026-08-24 15:53:22.5616727 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		2.187MB
+Description:	[build 5/6] COPY . .
+Usage count:	1
+Last used:	2 months ago
+
+ID:		gbhb9qulb8aq8ymora4shhj3p
+Parent:		sqtfanjl9jt49xcddbjjzfq17
+Created at:	2026-09-28 17:39:36.020303235 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		259.6MB
+Description:	mount / from exec /bin/sh -c npm ci
+Usage count:	1
+Last used:	4 weeks ago
+
+ID:		dzjfwwr21bwflcz42meeq4h1m
+Parent:		xf5fakkcee3msbd9veov32220
+Created at:	2026-08-24 15:52:19.345484102 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		6.308MB
+Description:	[build 5/6] COPY src ./src
+Usage count:	1
+Last used:	2 months ago
+
+ID:		i0vk4g4f42i2tw3lwsmdhmo7f
+Parent:		i6iie6zv61da03jh24anawfaq
+Created at:	2026-09-16 16:22:19.126407845 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		2.318MB
+Description:	[build 5/6] COPY . .
+Usage count:	1
+Last used:	6 weeks ago
+
+ID:		xor8fsowl8y6lsng70m6tnt18
+Parent:		cm82rrgpe4fvmghby1ppfra91
+Created at:	2026-09-17 16:31:13.272105318 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		6.84MB
+Description:	[build 5/6] COPY src ./src
+Usage count:	1
+Last used:	6 weeks ago
+
+ID:		xf5fakkcee3msbd9veov32220
+Parent:		eibqjiinsaglnvyzdpt4tqhwr
+Created at:	2026-08-21 23:39:09.838031033 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		245.7MB
+Description:	mount / from exec /bin/sh -c mvn -q -DskipTests dependency:go-offline
+Usage count:	13
+Last used:	2 months ago
+
+ID:		ij61y41m9rtry4r1ealhw0tgg
+Parent:		kfzmmz93ouohyzbl88pmzinau
+Created at:	2026-08-22 22:27:26.35603398 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		2.175MB
+Description:	[build 5/6] COPY . .
+Usage count:	1
+Last used:	2 months ago
+
+ID:		ctbdv91l97tbxqybndjhd4ekx
+Parent:		ve4ume502438bsg19l6dw85ms
+Created at:	2026-09-15 18:44:33.381300206 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		12.29kB
+Description:	[build 3/6] COPY pom.xml .
+Usage count:	1
+Last used:	6 weeks ago
+
+ID:		sqtfanjl9jt49xcddbjjzfq17
+Parent:		gbr2qh7ae9vigsbab2d56ktdf
+Created at:	2026-09-28 17:39:28.227469163 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		147.5kB
+Description:	[build 3/6] COPY package.json package-lock.json ./
+Usage count:	3
+Last used:	4 weeks ago
+
+ID:		1qeq93vc3bq9mdmqnlu37i4ak
+Parent:		jqy8bf0r3rwh56osrzwxxmn26
+Created at:	2026-08-08 21:42:18.407664956 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		12.44kB
+Description:	pulled from docker.io/library/maven:3.9-eclipse-temurin-17@sha256:4015718012bbf1113ec6cfae2b950be328d90265ceb60f92b26c3ea7c4d14ee8
+Usage count:	1
+Last used:	2 months ago
+
+ID:		i6iie6zv61da03jh24anawfaq
+Parent:		86v8c2q61w259qfcxagbcb68p
+Created at:	2026-09-16 16:22:18.941828461 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		259.6MB
+Description:	mount / from exec /bin/sh -c npm ci
+Usage count:	1
+Last used:	6 weeks ago
+
+ID:		cm82rrgpe4fvmghby1ppfra91
+Parent:		pytt9ucycc32g6pxijys63vv5
+Created at:	2026-09-16 16:21:17.93532431 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		245.7MB
+Description:	mount / from exec /bin/sh -c mvn -q -DskipTests dependency:go-offline
+Usage count:	2
+Last used:	6 weeks ago
+
+ID:		2xj2wl3lgqr447ioodjobybkq
+Parent:		86v8c2q61w259qfcxagbcb68p
+Created at:	2026-08-24 15:53:22.402721779 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		257.2MB
+Description:	mount / from exec /bin/sh -c npm ci
+Usage count:	1
+Last used:	2 months ago
+
+ID:		gbr2qh7ae9vigsbab2d56ktdf
+Parent:		msh2fc0yuyabvegvotoaxjb24
+Created at:	2026-09-28 17:39:28.162156575 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		8.192kB
+Description:	[build 2/6] WORKDIR /workspace
+Usage count:	1
+Last used:	4 weeks ago
+
+ID:		kfzmmz93ouohyzbl88pmzinau
+Parent:		z5octy43m5a0sia7liyap4mwj
+Created at:	2026-08-22 22:27:26.12759833 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		257.2MB
+Description:	mount / from exec /bin/sh -c npm ci
+Usage count:	1
+Last used:	2 months ago
+
+ID:		pytt9ucycc32g6pxijys63vv5
+Parent:		029874zoicc1sbmh8nu72tic5
+Created at:	2026-09-16 16:20:16.868167459 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		12.29kB
+Description:	[build 3/6] COPY pom.xml .
+Usage count:	1
+Last used:	6 weeks ago
+
+ID:		86v8c2q61w259qfcxagbcb68p
+Parent:		oqewdatm9boyjooeq8wufzldv
+Created at:	2026-08-24 15:53:11.101156619 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		147.5kB
+Description:	[build 3/6] COPY package.json package-lock.json ./
+Usage count:	8
+Last used:	6 weeks ago
+
+ID:		eibqjiinsaglnvyzdpt4tqhwr
+Parent:		ypz00qqyp1sew3u4i0qoytuue
+Created at:	2026-08-21 23:38:35.18642852 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		12.29kB
+Description:	[build 3/6] COPY pom.xml .
+Usage count:	1
+Last used:	2 months ago
+
+ID:		jqy8bf0r3rwh56osrzwxxmn26
+Parent:		u2mrfr25jcmniagdxe5vna0dx
+Created at:	2026-08-08 21:42:18.370853335 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		24.93kB
+Description:	pulled from docker.io/library/maven:3.9-eclipse-temurin-17@sha256:4015718012bbf1113ec6cfae2b950be328d90265ceb60f92b26c3ea7c4d14ee8
+Usage count:	1
+Last used:	2 months ago
+
+ID:		ve4ume502438bsg19l6dw85ms
+Parent:		94jbsvplethq8ks3s44y6yifx
+Created at:	2026-09-15 18:44:33.323106903 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		8.192kB
+Description:	[build 2/6] WORKDIR /workspace
+Usage count:	1
+Last used:	6 weeks ago
+
+ID:		u2mrfr25jcmniagdxe5vna0dx
+Parent:		lqlviokco5wf78mvztjfxvw1f
+Created at:	2026-08-08 21:42:18.34711808 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		21.33kB
+Description:	pulled from docker.io/library/maven:3.9-eclipse-temurin-17@sha256:4015718012bbf1113ec6cfae2b950be328d90265ceb60f92b26c3ea7c4d14ee8
+Usage count:	1
+Last used:	2 months ago
+
+ID:		z5octy43m5a0sia7liyap4mwj
+Parent:		jnk70vabnz471bbbbw2okcb83
+Created at:	2026-08-22 21:55:01.01692434 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		147.5kB
+Description:	[build 3/6] COPY package.json package-lock.json ./
+Usage count:	7
+Last used:	2 months ago
+
+ID:		94jbsvplethq8ks3s44y6yifx
+Parent:		otxixizoi7r4ayrli9g0tbulw
+Created at:	2026-09-15 18:44:05.439756731 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		12.44kB
+Description:	pulled from docker.io/library/maven:3.9-eclipse-temurin-17@sha256:880934ae394bf91bc3e57d573e4fc04774f064f3c4df7ccd7cc10b3b126737bf
+Usage count:	1
+Last used:	6 weeks ago
+
+ID:		ypz00qqyp1sew3u4i0qoytuue
+Parent:		oa40s4y9nksb4m52ayojc05a2
+Created at:	2026-08-21 23:38:35.137363592 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		8.192kB
+Description:	[build 2/6] WORKDIR /workspace
+Usage count:	1
+Last used:	2 months ago
+
+ID:		msh2fc0yuyabvegvotoaxjb24
+Parent:		q2d1ksn48bn63wafqg7tz3ziv
+Created at:	2026-09-28 17:39:21.840985767 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		20.93kB
+Description:	pulled from docker.io/library/node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402
+Usage count:	1
+Last used:	4 weeks ago
+
+ID:		029874zoicc1sbmh8nu72tic5
+Parent:		bh5wjv03ymbjnvkhbsj15nfne
+Created at:	2026-09-16 16:20:16.805166946 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		8.192kB
+Description:	[build 2/6] WORKDIR /workspace
+Usage count:	1
+Last used:	6 weeks ago
+
+ID:		oqewdatm9boyjooeq8wufzldv
+Parent:		9jlvq2wx7czs3ajbbohbv295t
+Created at:	2026-08-24 15:53:11.031955693 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		8.192kB
+Description:	[build 2/6] WORKDIR /workspace
+Usage count:	1
+Last used:	2 months ago
+
+ID:		q2d1ksn48bn63wafqg7tz3ziv
+Parent:		fp9strojxelc4zq9z042ptrzr
+Created at:	2026-09-28 17:39:21.81621811 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		6.742MB
+Description:	pulled from docker.io/library/node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402
+Usage count:	1
+Last used:	4 weeks ago
+
+ID:		otxixizoi7r4ayrli9g0tbulw
+Parent:		ixozw2mf2dub81tpjy4hnpwqs
+Created at:	2026-09-15 18:44:05.364046317 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		24.93kB
+Description:	pulled from docker.io/library/maven:3.9-eclipse-temurin-17@sha256:880934ae394bf91bc3e57d573e4fc04774f064f3c4df7ccd7cc10b3b126737bf
+Usage count:	1
+Last used:	6 weeks ago
+
+ID:		oa40s4y9nksb4m52ayojc05a2
+Parent:		2d3esg4xo0thu3fttddceetar
+Created at:	2026-08-21 23:38:07.859116849 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		12.44kB
+Description:	pulled from docker.io/library/maven:3.9-eclipse-temurin-17@sha256:bbcab0adfb03704e65831593df63b1c6b7ee42d5d8603f0d88972e0ee81a3036
+Usage count:	1
+Last used:	2 months ago
+
+ID:		bh5wjv03ymbjnvkhbsj15nfne
+Parent:		9lhe2a7ajbs2df1q03i1dyc5q
+Created at:	2026-09-16 16:19:48.343395473 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		12.44kB
+Description:	pulled from docker.io/library/maven:3.9-eclipse-temurin-17@sha256:1e539ad894cb86c5b87a9c81223732a90c6cb7c23e4ac206c2cea892538fd8d7
+Usage count:	1
+Last used:	6 weeks ago
+
+ID:		lqlviokco5wf78mvztjfxvw1f
+Parent:		rv954euh1l8zwud65etekuktr
+Created at:	2026-08-08 21:42:18.179489401 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		20.48MB
+Description:	pulled from docker.io/library/maven:3.9-eclipse-temurin-17@sha256:4015718012bbf1113ec6cfae2b950be328d90265ceb60f92b26c3ea7c4d14ee8
+Usage count:	1
+Last used:	2 months ago
+
+ID:		ixozw2mf2dub81tpjy4hnpwqs
+Parent:		xrogw5j8l6gx60ed8kus62jtm
+Created at:	2026-09-15 18:44:05.315220139 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		21.33kB
+Description:	pulled from docker.io/library/maven:3.9-eclipse-temurin-17@sha256:880934ae394bf91bc3e57d573e4fc04774f064f3c4df7ccd7cc10b3b126737bf
+Usage count:	1
+Last used:	6 weeks ago
+
+ID:		9lhe2a7ajbs2df1q03i1dyc5q
+Parent:		yvqxngez0hrm7x0ukrqlm4ppj
+Created at:	2026-09-16 16:19:48.318058807 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		24.93kB
+Description:	pulled from docker.io/library/maven:3.9-eclipse-temurin-17@sha256:1e539ad894cb86c5b87a9c81223732a90c6cb7c23e4ac206c2cea892538fd8d7
+Usage count:	1
+Last used:	6 weeks ago
+
+ID:		rv954euh1l8zwud65etekuktr
+Parent:		nidtj4sbfrnd22hhrkutt9k3s
+Created at:	2026-08-08 21:42:18.118276508 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		100.8MB
+Description:	pulled from docker.io/library/maven:3.9-eclipse-temurin-17@sha256:4015718012bbf1113ec6cfae2b950be328d90265ceb60f92b26c3ea7c4d14ee8
+Usage count:	1
+Last used:	2 months ago
+
+ID:		fp9strojxelc4zq9z042ptrzr
+Parent:		l7gfb5xca0f5j2cnwf15yig2y
+Created at:	2026-09-28 17:39:21.780252011 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		217.8MB
+Description:	pulled from docker.io/library/node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402
+Usage count:	1
+Last used:	4 weeks ago
+
+ID:		2d3esg4xo0thu3fttddceetar
+Parent:		swjhsphxf9lk2eozkupi3mclw
+Created at:	2026-08-21 23:38:07.834770148 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		24.93kB
+Description:	pulled from docker.io/library/maven:3.9-eclipse-temurin-17@sha256:bbcab0adfb03704e65831593df63b1c6b7ee42d5d8603f0d88972e0ee81a3036
+Usage count:	1
+Last used:	2 months ago
+
+ID:		swjhsphxf9lk2eozkupi3mclw
+Parent:		o8ups6ogof7rcutvyj7u8rgkz
+Created at:	2026-08-21 23:38:07.802366783 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		21.33kB
+Description:	pulled from docker.io/library/maven:3.9-eclipse-temurin-17@sha256:bbcab0adfb03704e65831593df63b1c6b7ee42d5d8603f0d88972e0ee81a3036
+Usage count:	1
+Last used:	2 months ago
+
+ID:		nidtj4sbfrnd22hhrkutt9k3s
+Parent:		rgtqcdafn0ykshqixzwmhiqk1
+Created at:	2026-08-08 21:42:18.071263034 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		14.57kB
+Description:	pulled from docker.io/library/maven:3.9-eclipse-temurin-17@sha256:4015718012bbf1113ec6cfae2b950be328d90265ceb60f92b26c3ea7c4d14ee8
+Usage count:	1
+Last used:	2 months ago
+
+ID:		yvqxngez0hrm7x0ukrqlm4ppj
+Parent:		irfzdxtpg6gk6cdl3flq7tvcd
+Created at:	2026-09-16 16:19:48.274789757 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		21.33kB
+Description:	pulled from docker.io/library/maven:3.9-eclipse-temurin-17@sha256:1e539ad894cb86c5b87a9c81223732a90c6cb7c23e4ac206c2cea892538fd8d7
+Usage count:	1
+Last used:	6 weeks ago
+
+ID:		l7gfb5xca0f5j2cnwf15yig2y
+Created at:	2026-09-28 17:39:21.743907122 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		12.93MB
+Description:	pulled from docker.io/library/node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402
+Usage count:	1
+Last used:	4 weeks ago
+
+ID:		xrogw5j8l6gx60ed8kus62jtm
+Parent:		z8m8u37pk6fyp8diz9eqj2vck
+Created at:	2026-09-15 18:44:05.145600559 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		20.48MB
+Description:	pulled from docker.io/library/maven:3.9-eclipse-temurin-17@sha256:880934ae394bf91bc3e57d573e4fc04774f064f3c4df7ccd7cc10b3b126737bf
+Usage count:	1
+Last used:	6 weeks ago
+
+ID:		z8m8u37pk6fyp8diz9eqj2vck
+Parent:		eze0id65oc95v5ash8yv3d5ph
+Created at:	2026-09-15 18:44:05.009197372 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		100.8MB
+Description:	pulled from docker.io/library/maven:3.9-eclipse-temurin-17@sha256:880934ae394bf91bc3e57d573e4fc04774f064f3c4df7ccd7cc10b3b126737bf
+Usage count:	1
+Last used:	6 weeks ago
+
+ID:		rgtqcdafn0ykshqixzwmhiqk1
+Parent:		srnjy59g206ihezihz36ea5yg
+Created at:	2026-08-08 21:42:17.974994309 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		12.45kB
+Description:	pulled from docker.io/library/maven:3.9-eclipse-temurin-17@sha256:4015718012bbf1113ec6cfae2b950be328d90265ceb60f92b26c3ea7c4d14ee8
+Usage count:	1
+Last used:	2 months ago
+
+ID:		o8ups6ogof7rcutvyj7u8rgkz
+Parent:		se3tqk3063ugh2njv4izlavir
+Created at:	2026-08-21 23:38:07.77902351 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		20.48MB
+Description:	pulled from docker.io/library/maven:3.9-eclipse-temurin-17@sha256:bbcab0adfb03704e65831593df63b1c6b7ee42d5d8603f0d88972e0ee81a3036
+Usage count:	1
+Last used:	2 months ago
+
+ID:		irfzdxtpg6gk6cdl3flq7tvcd
+Parent:		wpcr1di81yp53r0h6klxeo2bl
+Created at:	2026-09-16 16:19:48.241849507 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		20.48MB
+Description:	pulled from docker.io/library/maven:3.9-eclipse-temurin-17@sha256:1e539ad894cb86c5b87a9c81223732a90c6cb7c23e4ac206c2cea892538fd8d7
+Usage count:	1
+Last used:	6 weeks ago
+
+ID:		eze0id65oc95v5ash8yv3d5ph
+Parent:		wad9kkevbzi29xz6fezwkcru3
+Created at:	2026-09-15 18:44:04.730041826 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		14.75kB
+Description:	pulled from docker.io/library/maven:3.9-eclipse-temurin-17@sha256:880934ae394bf91bc3e57d573e4fc04774f064f3c4df7ccd7cc10b3b126737bf
+Usage count:	1
+Last used:	6 weeks ago
+
+ID:		srnjy59g206ihezihz36ea5yg
+Parent:		px21s0f4br6nywmluva008u58
+Created at:	2026-08-08 21:42:17.857340778 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		427.6MB
+Description:	pulled from docker.io/library/maven:3.9-eclipse-temurin-17@sha256:4015718012bbf1113ec6cfae2b950be328d90265ceb60f92b26c3ea7c4d14ee8
+Usage count:	1
+Last used:	2 months ago
+
+ID:		wpcr1di81yp53r0h6klxeo2bl
+Parent:		pmi6jx2hghae8fngvpjmh11rs
+Created at:	2026-09-16 16:19:48.174514454 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		100.8MB
+Description:	pulled from docker.io/library/maven:3.9-eclipse-temurin-17@sha256:1e539ad894cb86c5b87a9c81223732a90c6cb7c23e4ac206c2cea892538fd8d7
+Usage count:	1
+Last used:	6 weeks ago
+
+ID:		se3tqk3063ugh2njv4izlavir
+Parent:		7b2xtniuo2j4ppaiyxlndmn76
+Created at:	2026-08-21 23:38:07.698723352 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		100.8MB
+Description:	pulled from docker.io/library/maven:3.9-eclipse-temurin-17@sha256:bbcab0adfb03704e65831593df63b1c6b7ee42d5d8603f0d88972e0ee81a3036
+Usage count:	1
+Last used:	2 months ago
+
+ID:		pmi6jx2hghae8fngvpjmh11rs
+Parent:		yhx2a6bdjsr1loyao7ebfk61b
+Created at:	2026-09-16 16:19:48.053314182 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		14.75kB
+Description:	pulled from docker.io/library/maven:3.9-eclipse-temurin-17@sha256:1e539ad894cb86c5b87a9c81223732a90c6cb7c23e4ac206c2cea892538fd8d7
+Usage count:	1
+Last used:	6 weeks ago
+
+ID:		7b2xtniuo2j4ppaiyxlndmn76
+Parent:		vuolj1kmiees52bh6f2kyftku
+Created at:	2026-08-21 23:38:07.069185274 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		14.75kB
+Description:	pulled from docker.io/library/maven:3.9-eclipse-temurin-17@sha256:bbcab0adfb03704e65831593df63b1c6b7ee42d5d8603f0d88972e0ee81a3036
+Usage count:	1
+Last used:	2 months ago
+
+ID:		wad9kkevbzi29xz6fezwkcru3
+Parent:		zbayso1b87ffb4s2zpxy0phtg
+Created at:	2026-09-15 18:44:04.628600464 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		12.45kB
+Description:	pulled from docker.io/library/maven:3.9-eclipse-temurin-17@sha256:880934ae394bf91bc3e57d573e4fc04774f064f3c4df7ccd7cc10b3b126737bf
+Usage count:	1
+Last used:	6 weeks ago
+
+ID:		px21s0f4br6nywmluva008u58
+Parent:		xak1d4yloxjfugpv1pr3til79
+Created at:	2026-08-08 21:42:17.759738087 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		100.5MB
+Description:	pulled from docker.io/library/maven:3.9-eclipse-temurin-17@sha256:4015718012bbf1113ec6cfae2b950be328d90265ceb60f92b26c3ea7c4d14ee8
+Usage count:	1
+Last used:	2 months ago
+
+ID:		yhx2a6bdjsr1loyao7ebfk61b
+Parent:		3aea7k5uu2cndk6ynch5t6bxu
+Created at:	2026-09-16 16:19:48.011479272 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		12.45kB
+Description:	pulled from docker.io/library/maven:3.9-eclipse-temurin-17@sha256:1e539ad894cb86c5b87a9c81223732a90c6cb7c23e4ac206c2cea892538fd8d7
+Usage count:	1
+Last used:	6 weeks ago
+
+ID:		xak1d4yloxjfugpv1pr3til79
+Created at:	2026-08-08 21:42:17.738735636 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		117.4MB
+Description:	pulled from docker.io/library/maven:3.9-eclipse-temurin-17@sha256:4015718012bbf1113ec6cfae2b950be328d90265ceb60f92b26c3ea7c4d14ee8
+Usage count:	1
+Last used:	2 months ago
+
+ID:		zbayso1b87ffb4s2zpxy0phtg
+Parent:		j563zsyhd4kybtq3m0txaj1mm
+Created at:	2026-09-15 18:44:04.527563069 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		427.4MB
+Description:	pulled from docker.io/library/maven:3.9-eclipse-temurin-17@sha256:880934ae394bf91bc3e57d573e4fc04774f064f3c4df7ccd7cc10b3b126737bf
+Usage count:	1
+Last used:	6 weeks ago
+
+ID:		vuolj1kmiees52bh6f2kyftku
+Parent:		z8nk0hdwkbo9tlirtug0rth7r
+Created at:	2026-08-21 23:38:06.970702809 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		12.45kB
+Description:	pulled from docker.io/library/maven:3.9-eclipse-temurin-17@sha256:bbcab0adfb03704e65831593df63b1c6b7ee42d5d8603f0d88972e0ee81a3036
+Usage count:	1
+Last used:	2 months ago
+
+ID:		z8nk0hdwkbo9tlirtug0rth7r
+Parent:		jo6t5kc78po8u07dx403sk94f
+Created at:	2026-08-21 23:38:06.215899629 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		427.4MB
+Description:	pulled from docker.io/library/maven:3.9-eclipse-temurin-17@sha256:bbcab0adfb03704e65831593df63b1c6b7ee42d5d8603f0d88972e0ee81a3036
+Usage count:	1
+Last used:	2 months ago
+
+ID:		j563zsyhd4kybtq3m0txaj1mm
+Parent:		luax2ucd9vaosoxzh19n18w0y
+Created at:	2026-09-15 18:44:04.358569407 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		91.55MB
+Description:	pulled from docker.io/library/maven:3.9-eclipse-temurin-17@sha256:880934ae394bf91bc3e57d573e4fc04774f064f3c4df7ccd7cc10b3b126737bf
+Usage count:	1
+Last used:	6 weeks ago
+
+ID:		3aea7k5uu2cndk6ynch5t6bxu
+Parent:		4m4u3ej62qvcutf7hdaixf9cd
+Created at:	2026-09-16 16:19:47.949428032 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		427.4MB
+Description:	pulled from docker.io/library/maven:3.9-eclipse-temurin-17@sha256:1e539ad894cb86c5b87a9c81223732a90c6cb7c23e4ac206c2cea892538fd8d7
+Usage count:	1
+Last used:	6 weeks ago
+
+ID:		jo6t5kc78po8u07dx403sk94f
+Parent:		ljoy8hgvth31joazpwxwm5zh3
+Created at:	2026-08-21 23:38:06.148493031 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		91.54MB
+Description:	pulled from docker.io/library/maven:3.9-eclipse-temurin-17@sha256:bbcab0adfb03704e65831593df63b1c6b7ee42d5d8603f0d88972e0ee81a3036
+Usage count:	1
+Last used:	2 months ago
+
+ID:		4m4u3ej62qvcutf7hdaixf9cd
+Parent:		k1tb0f1c3sa8z3bt5ougczivl
+Created at:	2026-09-16 16:19:47.902172001 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		91.55MB
+Description:	pulled from docker.io/library/maven:3.9-eclipse-temurin-17@sha256:1e539ad894cb86c5b87a9c81223732a90c6cb7c23e4ac206c2cea892538fd8d7
+Usage count:	1
+Last used:	6 weeks ago
+
+ID:		luax2ucd9vaosoxzh19n18w0y
+Created at:	2026-09-15 18:44:04.296855523 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		117.4MB
+Description:	pulled from docker.io/library/maven:3.9-eclipse-temurin-17@sha256:880934ae394bf91bc3e57d573e4fc04774f064f3c4df7ccd7cc10b3b126737bf
+Usage count:	1
+Last used:	6 weeks ago
+
+ID:		ljoy8hgvth31joazpwxwm5zh3
+Created at:	2026-08-21 23:38:05.987408865 +0000 UTC
+Mutable:	false
+Reclaimable:	true
+Shared:		false
+Size:		117.4MB
+Description:	pulled from docker.io/library/maven:3.9-eclipse-temurin-17@sha256:bbcab0adfb03704e65831593df63b1c6b7ee42d5d8603f0d88972e0ee81a3036
+Usage count:	1
+Last used:	2 months ago
+
+Total:	8.929GB

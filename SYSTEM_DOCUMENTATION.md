@@ -1,5 +1,23 @@
 # SYSTEM DOCUMENTATION
 
+## Shared-server disk retention (2026-10-31)
+
+The installed maintenance policy uses the local default BuildKit builder and
+only prunes private unused cache last used over 720 hours ago, checks service
+health and deployment/build locks, and never prunes images/containers/volumes.
+Daily journal retention verifies ARCHIVED state, final-entry age over30 days,
+mtime, open-file references, exact identity and explicit holds before unlink.
+Weekly Staging retention preserves actual runtime plus the legacy env target,
+latest five successful deploys, newest five checkouts, rollback/mount/static/
+process references and all uncertain or data-bearing releases. No old release
+was deleted in the initial cleanup because reference/backup protections remain.
+Windows JAR/ZIP have a separate checksum-verified distribution copy; future
+web worktrees omit Windows packaging. Deployment success receipts and locks,
+production Docker local10m×3 logging and one-day journal file rotation are
+prepared for a later authorized rollout; current containers/daemon are unchanged.
+See [the installed policy and activation boundaries](deployment/cloud/README_SERVER_DISK_RETENTION.md)
+and [cleanup evidence](docs/governance/runtime/SERVER_DISK_AUDIT_20261031.md).
+
 ## Uber Store capability and confirmed Add-on identity (V37)
 
 `UBER_EATS` is an optional formal Store module in catalog/graph V3, default off.

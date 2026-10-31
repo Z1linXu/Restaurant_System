@@ -2,6 +2,11 @@ services:
   db:
     image: postgres:${POSTGRES_IMAGE_TAG:-16-alpine}
     restart: unless-stopped
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "3"
     environment:
       POSTGRES_DB: ${DB_NAME:-restaurant_pos}
       POSTGRES_USER: ${DB_USER:-restaurant_pos}
@@ -23,6 +28,11 @@ services:
       dockerfile: Dockerfile
     image: ${BACKEND_IMAGE:-restaurant-pos-backend:local}
     restart: unless-stopped
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "3"
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-cloud}
       SERVER_PORT: 8080
@@ -52,6 +62,11 @@ services:
         VITE_APP_BUILD_VERSION: ${VITE_APP_BUILD_VERSION:-server}
     image: ${FRONTEND_IMAGE:-restaurant-pos-frontend:local}
     restart: unless-stopped
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "3"
     environment:
       DOMAIN: ${DOMAIN:-}
       NGINX_SERVER_NAME: ${NGINX_SERVER_NAME:-_}
