@@ -1,6 +1,6 @@
 # Phase 6 M0 + M1 测试覆盖与证据映射
 
-本报告整理已经执行的证据；编写本报告时未重新运行测试、连接数据库、访问网络或部署。覆盖对象是 SYNTHETIC / MOCK 研究实施功能，不能外推为三家 Production 门店、真实设备或 SaaS 安全认证。公共域名端到端结果留待 Root 实际完成后补充。
+本报告整理已经执行的证据；编写本报告时未重新运行测试、连接数据库、访问网络或部署。覆盖对象是 SYNTHETIC / MOCK 研究实施功能，不能外推为三家 Production 门店、真实设备或 SaaS 安全认证。最终公开Test域名、精确dbe207a运行产物与网页观察已经补充；Owner验收仍待执行。
 
 固定研究基线：`028d4971740889a0ac0d784a43497bc3e5b54b3d`。功能状态采用 `IMPLEMENTED_AND_TESTED / PARTIAL / BLOCKED`；具体证据另标 `PASS / KNOWN_LIMITATION / NOT_RUN / PENDING`。`IMPLEMENTED_AND_TESTED` 只适用于所列测试范围，不表示所有环境都已验收。
 
@@ -8,13 +8,13 @@
 
 | 证据 ID | 实际执行结果 | 环境与版本绑定 | 可复核来源及边界 |
 |---|---|---|---|
-| E-BE | Backend **1304 total，1187 executed PASS，117 conditional skipped，0 failures/errors**；verify exit0 | 本地 JDK21 Maven；已验证 Jar SHA256 `2e2716739259da8b04f8693dffe166adedad43128ad31c9ad12b4f3bdd4b6624`。Jar 编译版本 `25c690d`；Root 对 b64、96 候选确认运行 Java/resources/pom 相同，复用同一 Jar | [candidate-unit-proof-96a8b56.json](../../../.template-test-private/candidate-unit-proof-96a8b56.json)、`backend/target/surefire-reports/TEST-*.xml`。117 个跳过项不计 PASS；参数化 invocation 计入1304。 |
-| E-FE | Frontend **71 files / 401 tests PASS**；TypeScript + Vite build PASS | 在实施工作树执行；最终产品 Frontend 冻结后，b64 / 96 精确候选构建通过。401 的执行回报保留在本会话工具结果，未私存 Vitest JSON | [实施记录](IMPLEMENTATION_TRACKER.md)及本会话实际执行结果。没有结构化 Vitest SHA receipt，不能声称每次 ops-only Commit 都重新执行401项。未升级依赖或锁文件。 |
-| E-HTTP | **41 PASS / 0 FAIL**，2026-10-31 05:09:17–05:09:34 UTC | 真实 Spring Boot `http://127.0.0.1:28081`；独立 PostgreSQL18 `127.0.0.1:25432/restaurant_template_test`；SYNTHETIC Store3、跨 Org Store4；Commit `96a8b56cb9809b2ddf21fabbdd718f420d7e8e71`；上述真实 Jar | [http-local-96a8b56.json](../../../.template-test-private/http-local-96a8b56.json)，SHA256 `0934c947f62d064f6f01e48c404e07896cc7baede353af603b7a93fbc5e61315`。前后工作树 clean，source diff digest 为空 SHA256；runtime policy actual build_sha=96。HTTP 不是网页验收。 |
-| E-SQL | **13 PASS / 0 FAIL**，2026-10-31 05:05:33 UTC | 独立本地 Test PG、只读事务；Commit `b64cc7ed002b9974ce70673212e1d388e48d4cb6`，同一 Jar2e2716；核对订单80、81，linked item8及指定 Job | [sql-local-final-candidate-proof.json](../../../.template-test-private/sql-local-final-candidate-proof.json)，SHA256 `398ef26979834edcd92ba0f9e2a7a71296da2de75abe405edbdbb7b37253e0d4`。这是 b64 真实行证据；不能改称96订单101、102的 SQL 重跑。Jar 身份由独立运行证明关联，SQL 自身只观察数据库行。 |
-| E-GUARD | **59 / 59 deployment topology/safety guards PASS**及独立复审 ACCEPT | 本地离线 Compose config/资源归属/监听及隔离守卫；修复后独立审阅 tree `f39ba7cfc5f492ce6f3e86a1f1d77c58c5113239ac447ef801163768baee6efd` | [deployment/test/test_safety.py](../../../deployment/test/test_safety.py)、[实施记录](IMPLEMENTATION_TRACKER.md)、独立 Agent 实际执行回报。其后 ops-only stdin 修复扩展到62项，当前执行/复审结论须由 Root 另补，不能用59覆盖新增3项。 |
+| E-BE | **1310 total /1193 executed PASS /117 conditional skipped /0 failures/errors**；verify exit0 | JDK21最终dbe207a运行源，JAR `77b2204e05af8a828810fed3f42590f432ddeb47a7e70e1239945cb7b41d1362` | `.template-test-private/candidate-unit-proof-dbe207a.json`、176个Surefire XML及`backend-security-final-verify.log`；独立只读聚合核对；117跳过不计PASS。 |
+| E-FE | **71 files /401 tests PASS**；TypeScript + Vite build PASS | 401后UI源冻结；最终dbe207a精确build PASS | 本会话真实执行输出及`frontend-dbe207a-build.log`；无结构化Vitest JSON，不伪造每个ops提交都重跑401。 |
+| E-HTTP | **最终local45/45、public45/45，0FAIL** | dbe207a/上述实际JAR；public05:46:06–05:47:34 UTC，正常TLS/拒绝重定向 | `.template-test-private/http-local-dbe207a.json`、`http-public-dbe207a-final.json`；hash见[最终证据](RELEASE_EVIDENCE.md)。旧41及失败receipt保留历史，不改称最终。 |
+| E-SQL | **最终远端Test19/19 PASS** | 05:48:39 UTC、app dbe207a、明确Test DB SELECT-only只读事务，Order34/35、Task35–38 | `.template-test-private/sql-public-dbe207a-final-proof.json`，绑定实际容器JAR/运行policy；旧b64本地13项保留历史，不混写订单身份。 |
+| E-GUARD | **62/62 PASS**，独立Agent6 ACCEPT | 最终Test部署脚本；真实Compose config、AST/shell及fakeNginx成功/失败清理 | `deployment/test/test_safety.py`及独立执行/复审会话记录。旧42/48/59为历史checkpoint，不替代最终62。 |
 | E-UI-LOCAL | Root 实际网页：Owner 登录、无组 QuickAdd、草稿整页刷新、Chicken 选项、提交 Order110、A/B MOCK PRINTED **PASS** | 本地真实浏览器 `127.0.0.1:28080` → `28081`；Root 本会话 CUA 观察；产品源与已接受候选一致，未另造 UI 数据模型 | [LOCAL_BROWSER_MOCK.png](../../../.template-test-private/LOCAL_BROWSER_MOCK.png)及 Root 本会话 CUA 记录。Chicken 微辣、芝士差价1.50、去料；小计17.50、合计20.12可见。尚未提供独立完整网页 SHA receipt，不将该片段扩写为所有10步已完成。 |
-| E-DOMAIN | **PENDING / NOT_RUN：本报告尚无公共域名完整业务验收 receipt** | `https://test.lanzhounoodlesmtl.com` | Root 最终补充实际部署 SHA、HTTPS/健康/登录/业务用例、运行镜像及证据路径。local HTTP 带该 Origin 的成功不能证明这个域名已可用。 |
+| E-DOMAIN | **HTTPS/health/source marker及public45业务PASS** | https://test.lanzhounoodlesmtl.com；实际dbe207a，06:07:31 UTC最终健康UP | `.template-test-private/public-final-health.json`、public45/SQL19；错误Host/SNI421，/ws403；[完整证据](RELEASE_EVIDENCE.md)。 |
 
 私有证据均在 ignored、受保护的 `.template-test-private/` 下。本文只读取指定无秘密 receipt/proof；未读取账户凭据文件，不复制密码、token 或生产数据到报告。
 
@@ -77,7 +77,7 @@
 | 一组一稳定业务身份，重复提交不重复票/订单 | B-IDEM/B-PRINT；H正常订单顺序重放、`fresh_concurrent_submit_single_order_three_intents_four_jobs`（4并发同key→1Order/3intent/4Job）、`same_idempotency_key_different_payload_conflict` | `IMPLEMENTED_AND_TESTED / PASS`：并发/冲突是实际HTTP；不重写旧去重算法。 |
 | Update只本次新增批次 | B-PLAN `updateRendersOnlySuppliedBatchSnapshotsWithoutReintroducingOldItems`；B-PRICE；B-PRINT `frontdeskUpdateDispatchRendersOnlyItemsFromRequestedBatch`；H `update_only_new_batch_and_idempotency` | `IMPLEMENTED_AND_TESTED / PASS`：一个新增B→一厨房票+一原前台加单票；重放batch不新增Job，不重印原A/C。 |
 | C未绑定，订单成功、A/B继续，C不假PRINTED | B-BOUND preJob；F-DIAG；H `legal_order_success_other_groups_continue_durable_missing` | `IMPLEMENTED_AND_TESTED / PASS`：C为UNRESOLVED/null Job，A/B PRINTED；无全局旧assignment挡住新MOCK组处理。真实generic Pad路径未验证。 |
-| 失败前Job意图、内容与原因可重查 | F-DIAG remount/query/状态；H missing/failed/uncertain刷新诊断；E-SQL真实Outbox与Job | `IMPLEMENTED_AND_TESTED / PASS`：复用原Outbox保存intent及冻结文本，不建第二队列。浏览器退出重登录完整业务链仍待Owner清单，不把组件remount当重登录实测。 |
+| 失败前Job意图、内容与原因可重查 | F-DIAG remount/query/状态；H missing/failed/uncertain刷新诊断；E-SQL真实Outbox与Job | `IMPLEMENTED_AND_TESTED / PASS`：复用原Outbox保存intent及冻结文本，不建第二队列。Root public浏览器Order43整页刷新及退出重登仍为同一C intent67；Owner全量清单仍待执行，组件remount与实际重登证据分别记录。 |
 | 异步故障刷新、成功与票失败分开 | F-DIAG `refreshes a later asynchronous failure after successful server confirmation`、`keeps order success distinct from a status-read failure and never writes a job`；H FAILED/UNCERTAIN | `IMPLEMENTED_AND_TESTED / PASS`：成功响应后才发现的异步故障通过持久状态刷新；不声称初始响应已知道未来故障。 |
 | UNCERTAIN不自动重发、其他组继续 | B-BOUND `terminalUncertainResultIsNeverReopenedOrReattached`；B-PRINT Pad `expiredPrintingIsNotReclaimable`；H `legal_order_success_other_groups_continue_durable_uncertain`对照观察窗口内Job数量/attempt不增 | `IMPLEMENTED_AND_TESTED / PASS`：MOCK注入及自动化状态协议范围；不是纸张输出结果不确定的真实设备实验，也不是无限时间证明。 |
 | 前台完整初次票、增量Update、原金额/税/快照 | B-PRICE/B-LEGACY/B-PRINT；H首次前台三商品完整、Update无旧行、`historical_snapshots_immutable_zero_price_custom_kitchen_instruction` | `PARTIAL`：完整商品/金额及旧语义 PASS；自由CUSTOM零价label遗漏见第7节，不能报任意自定义明细完整支持。 |
@@ -93,8 +93,8 @@
 | 草稿、IndexedDB Outbox、弱网/重放 | F-OFFLINE有状态/存储边界及网络失败模拟；B-IDEM丢首响应后重试；E-HTTP真实顺序/并发重放；E-UI-LOCAL实际草稿刷新后仍在 | `PARTIAL`：这些既有自动化及真实HTTP重放已PASS；**未做真实无线断连、网络限速/高丢包、断电、浏览器杀进程或长时间离线**。组件/存储adapter mock不能证明真实IndexedDB所有故障恢复；不以MOCK失败注入冒称无线实验。 |
 | Org/Store/角色隔离 | H anonymous拒绝；Owner/Manager own-store与foreign-Org读/写拒；foreign-order诊断拒绝；B-MENU跨店item/option/源copy及invalidstation；E-SQL两独立Org及无scope错行 | 指定HTTP/SQL负例 `PASS`；不是完整攻击面渗透测试。Phase0/1未解决的STOMP/设备凭据/SaaS安全问题不因本次通过而关闭。 |
 | Test空库迁移/Bootstrap | Root实际独立PG18 FlywayV1–V40及Hibernate validate成功；B-SAFETY/B-MENU启动前拒绝；E-SQL合成Org/Store | 本地Test `PASS`；未对Production/Staging迁移、导入真实交易或恢复生产备份。完整新客户onboarding流程不由本次bootstrap自动宣告完成。 |
-| Test部署网络/存储/资源与受保护共享入口 | E-GUARD59项：真实Compose规范化、tmpfs逗号修复、独立内部网络/前端入口、无backend/db公开port、volume/network归属、readonly/资源界限、relay/监听归属、nginx漂移与锁等 | 59项已执行 `PASS`；后续62项ops-only扩展/实际远端部署最终结果 `PENDING_ROOT_UPDATE`。本报告不执行部署，不把静态守卫通过当HTTPS业务已可用。 |
-| CORS local/Test精确Origin、evil拒绝 | H `exact_browser_origin_login_local`、`exact_browser_origin_login_test_https`、`evil_browser_origin_login_rejected`，含真实preflight/login | 本地服务收到指定Origin `PASS`；HTTPS域名DNS、TLS、反代、远端登录/业务仍 E-DOMAIN `PENDING`。 |
+| Test部署网络/存储/资源与受保护共享入口 | E-GUARD59项：真实Compose规范化、tmpfs逗号修复、独立内部网络/前端入口、无backend/db公开port、volume/network归属、readonly/资源界限、relay/监听归属、nginx漂移与锁等 | 最终62项已执行并独立复审`PASS`；实际远端容器/隔离/HTTPS证据见E-DOMAIN及最终报告。静态守卫与运行证明分别记录。 |
+| CORS local/Test精确Origin、evil拒绝 | H `exact_browser_origin_login_local`、`exact_browser_origin_login_test_https`、`evil_browser_origin_login_rejected`，含真实preflight/login | 本地服务收到指定Origin `PASS`；实际HTTPS、DNS/TLS/反代/登录及public45已在E-DOMAIN通过，不仅依赖本地Origin模拟。 |
 | 实体打印/Android/Uber/支付/旧店迁移/生产恢复 | 本次无对应真实执行授权；Test MOCK ceiling和endpoint禁用是安全限制证据 | `NOT_RUN / OUT_OF_SCOPE`。不触真实打印、Uber、支付，不接三家旧店，不做备份恢复；没有“真实全流程PASS”。 |
 
 ### 117 个条件跳过项
@@ -125,22 +125,24 @@ E-BE 中下列套件依赖未配置的外部Postgres等条件，本次未执行�
 4. **SQL与HTTP版本及订单区分**：b64 SQL订单80/81是真实COLD task证据；96 HTTP订单101/102已真实通过票据及子去料，但该receipt中的SQL followup仍是待补，本文不篡改它。二者运行同一已验证Jar，但不同实际行的后验查询不能混写。
 5. **无覆盖率百分比推断**：测试用例数量不是行覆盖率、分支覆盖率或所有业务组合覆盖率。本次没有生成可信的全仓coverage百分比；本表列出已测和未测边界，不填100%。
 
-## 8. 待 Root 最终补充的公共域名证据
+## 8. 最终公共域名与独立审阅证据
 
-当前 `PENDING`，以下位置只留证据入口，不预填结果：
+应用Commit `dbe207a1cc62256c7173108ccc375499f1e16caf`；实际镜像ID、JAR/dist/证书/Compose hash及证据完整索引见 [RELEASE_EVIDENCE.md](RELEASE_EVIDENCE.md)。Root完成真实public45、remote只读19和以下浏览器观察，非由本报告重跑测试。
 
-| 项目 | 最终填写 |
+| 项目 | 最终结果 |
 |---|---|
-| 最终部署Commit / 镜像digest / live runtime build_sha / Jar SHA | PENDING_ROOT_UPDATE |
-| 62项ops-only新增守卫实际执行与独立复审 | PENDING_ROOT_UPDATE；59项已执行结果保留 |
-| Test DNS、TLS证书、反向代理、健康与隔离证明 | PENDING_ROOT_UPDATE |
-| 公共域名Owner/Manager登录及真实41HTTP receipt | PENDING_ROOT_UPDATE |
-| 公共域名网页菜单、QuickAdd、提交/多MOCK票、Update、C未绑定Warning | PENDING_ROOT_UPDATE |
-| 网页刷新/退出重登录后诊断持久性及截图 | PENDING_ROOT_UPDATE |
-| Owner业务验收结论 | 参考 [OWNER_ACCEPTANCE_CHECKLIST.md](OWNER_ACCEPTANCE_CHECKLIST.md)，`OWNER_NOT_RUN`，等待Owner执行 |
+| Test DNS/TLS/HTTP redirect/健康/运行SHA | PASS；正常TLS校验、无insecure；旧证书/status不变 |
+| Owner/Manager public登录及scope | PASS；45真实HTTP包括anonymous401、foreign403及修复后的overview metadata scope |
+| 实际public菜单/QuickAdd/Order43 | 新建item14无组，直接入车；Chicken微辣/cheese1.50/Remove；subtotal20.50/total23.57 |
+| 多MOCK票/缺打印机 | Order43 A/B PRINTED；C UNRESOLVED、intent67、noJob；前台三商品完整；C恢复绑定不改旧失败意图 |
+| 刷新及退出重登录 | 同一C intent及原因仍可查询；[订单截图](PUBLIC_ORDER_43_WARNING.png)、[Print Center截图](PUBLIC_PRINT_CENTER_PERSISTENCE.png) |
+| 原生确认自动化 | KitchenRules保存CDP超时；GET已为C=null，授权管理REST核对/恢复；不标完整GUI确认自动化PASS |
+| 不确定打印重启保护 | 实际更新前后Order21 Jobs31/30/29/28身份/状态/retry_count/text hash不变 |
+| 独立Agent6最终只读复核 | 非文档源与dbe无diff，保护147三方hash匹配，176XML计数1310/1193/117，public45/SQL19和JAR绑定一致 |
+| Owner业务验收 | [OWNER_ACCEPTANCE_CHECKLIST.md](OWNER_ACCEPTANCE_CHECKLIST.md)仍为OWNER_NOT_RUN |
 
-仅在这些动作实际完成且证据绑定最终版本后更新相应行。生产三旧店、Staging和Android当前外部状态不能从本次Test证据推定；本报告不声称这些环境未被任何其他主体改变。
+## 9. Subsequent confirmed security repair
 
-## Subsequent confirmed security repair
+公共旧41-case版本后，真实IAB/API发现P6-SEC-OVERVIEW-001：Org1 Owner可见Org2/Store2 metadata；当时template rows0。Root最小复用StoreAccessService过滤，保持ADMIN/合法同Org多店，新增6个序列化/权限测试及4个HTTP scope用例。完整JDK21 verify1310/1193/117、独立审阅、最终dbe部署/public45均PASS；[安全修复记录](SECURITY_OVERVIEW_SCOPE_FIX.md)。初始ObjectMapper时间模块fixture错误保留，修正fixture而不削弱leakage断言。未对Production修补，未关闭F31/F47或其他UNKNOWN。
 
-After the public41-case run, IAB and direct HTTPS found P6-SEC-OVERVIEW-001 in the old platform overview metadata arrays. Root added6 Owner/Manager/authorized-multi-store/ADMIN/denial/template-source serialization tests without weakening leakage assertions. New full JDK21 minimal-environment `mvn -q verify`:1310 total,1193 executed successful,117 conditional skips,0 failures/errors; original fixture failure is retained. HTTP runner now has45 cases including actual own overview200 with scoped metadata and foreign overview403 for both roles. The45-case new public run remains PENDING until deployment; prior41 and19SQL evidence remain historical, not silently relabeled. See SECURITY_OVERVIEW_SCOPE_FIX.md.
+最终统计替代本文早期checkpoint数字；所有失败/旧候选receipt保持原始版本/订单身份。未执行的物理硬件、真实弱网、全攻击面SaaS、Production备份恢复及Owner验收继续NOT_RUN/UNKNOWN，不能从Test推断Production现状。

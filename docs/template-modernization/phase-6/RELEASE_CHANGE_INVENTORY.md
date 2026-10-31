@@ -1,8 +1,8 @@
 # Phase 6 release source change inventory
 
-Fixed base: `028d4971740889a0ac0d784a43497bc3e5b54b3d`. Runtime candidate: `1a07e1fedb4eba18f496902b3d4e48047743c426`.
+固定基线：`028d4971740889a0ac0d784a43497bc3e5b54b3d`。实际部署应用 SHA：`dbe207a1cc62256c7173108ccc375499f1e16caf`。
 
-This inventory is from Git, not inferred from planning documents. Evidence-only documents added after deployment are separate from this runtime candidate.
+Git 直接比较得到 **91 个路径：55 新增、36 修改、0 删除**；Backend45、Frontend24、deployment/test11，其余为文档/忽略规则。下表绑定应用提交；其后最终证据提交仅修改文档、治理状态及合成截图，不构建或部署。
 
 | File | Change |
 | --- | --- |
@@ -28,6 +28,7 @@ This inventory is from Git, not inferred from planning documents. Evidence-only 
 | `backend/src/main/java/com/restaurant/system/menu/template/TemplateStoreConfigurationRepository.java` | A |
 | `backend/src/main/java/com/restaurant/system/order/service/impl/IdempotentOrderSubmissionServiceImpl.java` | M |
 | `backend/src/main/java/com/restaurant/system/order/service/impl/OrderServiceImpl.java` | M |
+| `backend/src/main/java/com/restaurant/system/platform/controller/PlatformAdminController.java` | M |
 | `backend/src/main/java/com/restaurant/system/platform/service/impl/PlatformAdminServiceImpl.java` | M |
 | `backend/src/main/java/com/restaurant/system/printing/entity/OrderDispatchOutbox.java` | M |
 | `backend/src/main/java/com/restaurant/system/printing/repository/OrderDispatchOutboxRepository.java` | M |
@@ -47,6 +48,7 @@ This inventory is from Git, not inferred from planning documents. Evidence-only 
 | `backend/src/test/java/com/restaurant/system/menu/template/TemplateComboAdapterTest.java` | A |
 | `backend/src/test/java/com/restaurant/system/menu/template/TemplateMenuServiceTest.java` | A |
 | `backend/src/test/java/com/restaurant/system/order/service/impl/OrderPricingSnapshotIntegrationTest.java` | M |
+| `backend/src/test/java/com/restaurant/system/platform/controller/PlatformOverviewScopeTest.java` | A |
 | `backend/src/test/java/com/restaurant/system/printing/routing/KitchenRoutingPlannerTest.java` | A |
 | `backend/src/test/java/com/restaurant/system/printing/routing/TemplatePrintingBoundaryTest.java` | A |
 | `backend/src/test/java/com/restaurant/system/template/bootstrap/TemplateTestRuntimeSafetyTest.java` | A |
@@ -64,9 +66,13 @@ This inventory is from Git, not inferred from planning documents. Evidence-only 
 | `deployment/test/test_safety.py` | A |
 | `doc/API.md` | M |
 | `docs/governance/CURRENT_STATE.yml` | M |
+| `docs/template-modernization/phase-6/CR_RECEIPT_CUSTOM_DETAIL.md` | A |
 | `docs/template-modernization/phase-6/IMPLEMENTATION_TRACKER.md` | A |
 | `docs/template-modernization/phase-6/OWNER_ACCEPTANCE_CHECKLIST.md` | A |
 | `docs/template-modernization/phase-6/PROTECTED_BASELINE.sha256` | A |
+| `docs/template-modernization/phase-6/RELEASE_CHANGE_INVENTORY.md` | A |
+| `docs/template-modernization/phase-6/SECURITY_OVERVIEW_SCOPE_FIX.md` | A |
+| `docs/template-modernization/phase-6/TEST_COVERAGE_REPORT.md` | A |
 | `frontend/src/features/dinein/DineInPage.tsx` | M |
 | `frontend/src/features/ordering/components/ItemCustomizationModal.tsx` | M |
 | `frontend/src/features/ordering/components/TemplateItemCustomizationModal.test.tsx` | A |
@@ -91,3 +97,11 @@ This inventory is from Git, not inferred from planning documents. Evidence-only 
 | `frontend/src/utils/templateCustomization.ts` | A |
 | `frontend/src/utils/templateOptionGroups.ts` | A |
 | `frontend/vite.config.ts` | M |
+
+## Product / tooling separation
+
+PRODUCT IMPLEMENTATION：Backend 菜单/事务最小接缝、独立路由/诊断、Overview 权限响应修复及 Frontend 菜单/POS/打印配置，实际路径见上表。
+
+TOOLING / GOVERNANCE：新 `deployment/test/` 11个文件及真实HTTP验收客户端，是隔离 Test/指定HTTPS/安全合成验收的必要交付，不替换 Production/Staging 发布工具。工具修复仅涉及 tmpfs 解析、内部桥 host publish、nginx regular-file 校验及其安全守卫；无新增通用部署框架。当前公开源不可包含私有 release 包、环境文件、凭据或数据库。
+
+受保护147文件及V1–V39与固定基线逐字节一致，见 [保护清单](PROTECTED_BASELINE.sha256) 和 [最终证据](RELEASE_EVIDENCE.md)。

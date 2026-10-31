@@ -21,16 +21,16 @@ Protected source bytes are recorded in PROTECTED_BASELINE.sha256; verify before 
 
 ## Task batches
 
-| Batch / original Task IDs | Scope | Owner | Status | Validation |
+| Batch / original Task IDs | Scope | Owner | Final status | Validation |
 | --- | --- | --- | --- | --- |
-| B0 / B01,G01,E01 | Worktree, source protection, baseline, auth contract | Integration | COMPLETE | 147 protected hashes unchanged; golden/Outbox/Job baseline PASS |
-| B1 / C01,C02,C03,C04,C05 | Group library, item copy, canonical leaf prices, server validation | Integration | IMPLEMENTED; integration ongoing | 20 menu/Bootstrap tests PASS; HTTP negative cases PASS |
-| B2 / C06,C07,C08,H02 | Menu/POS controls, Quick Add, Combo reuse | Frontend | IMPLEMENTED; UI acceptance ongoing | 400 Vitest PASS; build PASS |
-| B3 / D01,D03,D07 | Pure routing planner and management/preview | Planner + Frontend | IMPLEMENTED | 18 planner tests PASS; real preview/three group HTTP PASS |
-| B4 / D04,D08,E04,H03 | Existing transactional Outbox/Job seam and durable warnings | Integration | IMPLEMENTED; final regression ongoing | 8 boundary tests PASS; initial 26 real HTTP cases PASS |
-| B5 / G02,G03,G05 | Scope/money/snapshot/idempotency/legacy integration proof | Integration/reviewer | PENDING | NOT_RUN |
-| B6 / Test | Isolated Compose, HTTPS vhost, Test fixture and deployment | Deployment + Integration | PREFLIGHT | DNS correct; HTTPS missing; no remote mutations |
-| B7 / I02 | Domain login/business/recovery acceptance and Owner checklist | Integration | PENDING | NOT_RUN |
+| B0 / B01,G01,E01 | Worktree, source protection, baseline | Integration | COMPLETE | 147 protected files and 36 Research reports unchanged |
+| B1 / C01–C05 | Library, item copies, leaf prices, validation | Integration | COMPLETE | Backend + real HTTP price/default/copy cases PASS |
+| B2 / C06–C08,H02 | Menu/POS UI, Quick Add, Combo | Frontend | COMPLETE_WITH_LIMITATION | 401 Vitest; public Quick Add; Combo legacy COLD scope PARTIAL |
+| B3 / D01,D03,D07 | Routing configuration and pure preview | Planner + Frontend | COMPLETE | Planner18; real 1/3/shared-device/category/item preview PASS |
+| B4 / D04,D08,E04,H03 | Existing Outbox/Job seam, durable Warning | Integration | COMPLETE | Real MOCK jobs + pre-Job intents; public Order43 persistence |
+| B5 / G02,G03,G05 | Scope, money, snapshots, idempotency, legacy proof | Integration/reviewer | COMPLETE | Final verify1310/1193 executed/117 skipped; local45/public45/SQL19 |
+| B6 / Test | Isolated Compose, TLS, safe shared vhost | Deployment + Integration | COMPLETE | Guard62; HTTPS200; exact dbe207a; Flyway40; old8 unchanged |
+| B7 / I02 | Public login/business/failure checks and Owner checklist | Integration | TECHNICAL_COMPLETE_OWNER_PENDING | Root public browser smoke PASS; Owner checklist OWNER_NOT_RUN |
 
 ## Ownership
 
@@ -45,7 +45,7 @@ Shared core changes are serial. No agent may revert another worker or edit the o
 - CR-DIAG-001: existing Outbox context/error projection includes pre-Job intent; new scoped read endpoints and UI, no second queue or executable state machine.
 - CR-HISTORY-001 remains excluded. No new complex price-window or general rules engine.
 
-## Test environment preflight
+## Historical initial Test environment preflight (superseded by final evidence)
 
 DNS A 170.106.13.34 observed 2026-10-31; default HTTP response is not Test deployment proof. HTTPS SNI currently fails. Shared host has about 1.4Gi available RAM/12Gi disk; no server-side Maven/npm builds or existing cache/volume cleanup. Test resources must be bounded and admitted before startup.
 No Production/Staging app/container/db/restart mutation authorized. Shared ingress changes limited to Test vhost backup/check/minimal reload under the explicit Owner exception.
@@ -111,3 +111,16 @@ Known scope limits: general Combo LINKED_MENU_ITEM behavior is unsupported by th
 - Reviewed ops helperf6fb166 real nginx check/HTTP staging entry/certificate/Test HTTPS PASS. Old vhost prefix preserved, old8 container identity and old entrance200 retained; newTest /ws403 and /actuator/env404. Valid TLS chain/hostname, certificate expiry2027-01-29. App1a public41/41 HTTP PASS; remote scoped read-only SQL19/19 PASS with devices/endpoints/Uber0 and exactly2 synthetic users. All receipts retained.
 - Actual IAB Owner login found preexisting P1 P6-SEC-OVERVIEW-001: own-store overview included foreign Org/Store arrays. Direct HTTPS proof confirmed2/2 arrays for Org1-only Owner; no foreign template rows existed in Test. Stop claiming tenant isolation complete: repair the response boundary using existing accessible Store/Org scopes, preserve ADMIN and same-Org authorized multi-store semantics. This is a security defect, not a customer-config feature. No Production patch.
 - Minimal Controller filter plus6 semantic regression cases and4 direct HTTP cases (next suite45). First focused new serialization fixture2 errors fixed by registering existing Java time modules; original failure log preserved, assertions unchanged. Full verify/independent rereview/new exactTest candidate in progress. Protected printing/Android bytes unchanged; no schema or old data migration.
+
+## Final delivery — 2026-10-31
+
+Actual Test app SHA dbe207a1cc62256c7173108ccc375499f1e16caf, Backend JAR77b2204e05af8a828810fed3f42590f432ddeb47a7e70e1239945cb7b41d1362. Final documentation commit is separate and is never substituted for this deployed SHA. Full evidence, feature states, environment/ingress safety and remaining UNKNOWN: [RELEASE_EVIDENCE.md](RELEASE_EVIDENCE.md).
+
+- Product Agent6 ACCEPT final dbe207a; deployment independent Agent6 ACCEPT62 guards. Source frozen after these reviews.
+- Final local and public HTTP45/45 each, remote Test SELECT-only proof19/19. Final public TLS/health/API/source marker checked06:07:31 UTC; wrong Host/SNI421, /ws403.
+- Public browser created no-group item14 and submitted real Order43; A/B MOCK PRINTED, C UNRESOLVED/pre-Job intent67/no Job. Reload plus signout/relogin retained the same error. C binding restored; old intent intentionally unchanged. Frontdesk includes all3 items. Root smoke is not Owner acceptance.
+- Two product limits remain PARTIAL: supported legacy COLD Combo scope; zero-price arbitrary CUSTOM detail omitted by protected legacy frontdesk renderer. Future CR-RECEIPT-CUSTOM-001 is proposed, unauthorized and unimplemented. No notes workaround.
+- Existing8 app/container identities, images, StartedAt and restart counts remain equal. Shared edge only appended Test vhost under explicit authorization with backup/check/two graceful reloads. Old certificates/status unchanged. No Production/Staging app deployment, DB change, device or Android mutation.
+- Research36 reports unchanged; original dirty workspace untouched. Local temporary PG/Java/preview stopped; public Test remains running. No cache prune or release/volume cleanup performed; observed cache decrease has UNKNOWN cause.
+
+STOP: await Owner review. No merge, M2, next phase, Production/Staging deployment or protected-core change authorized.
