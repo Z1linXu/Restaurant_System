@@ -38,11 +38,11 @@
 | F-ROUTE | [KitchenRoutingPanel.test.tsx](../../../frontend/src/features/owner-admin/KitchenRoutingPanel.test.tsx)：保存/共享设备/排序、真实合同预览、后端失败不伪造成功、`passes the existing full Combo child Remove snapshot through preview, including its virtual parent identity`。 |
 | F-DIAG | [TemplatePrintDiagnosticsPanel.test.tsx](../../../frontend/src/features/owner-admin/TemplatePrintDiagnosticsPanel.test.tsx)：pre-Job、remount 重查、异步故障刷新、Update batch 隔离、读取失败不改变订单成功、旧 backend404不影响原 coordinator。 |
 | F-OFFLINE | [localDrafts.test.ts](../../../frontend/src/offline/localDrafts.test.ts)、[orderOutbox.test.ts](../../../frontend/src/offline/orderOutbox.test.ts)、[orderOutboxProcessor.test.ts](../../../frontend/src/services/orderOutboxProcessor.test.ts)：scope、本地状态/身份、冷启动可恢复、超时/网络/5xx退避、冲突停止、单飞、仅服务端确认后成功。 |
-| H | [test_template_platform_http.py](../../../backend/test_template_platform_http.py)：E-HTTP 41项真实 API 验收；凭据仅进程内读取，精确 base URL allowlist/禁止跳转，合成数据独立命名，不清库/删除订单。 |
+| H | [test_template_platform_http.py](../../../backend/test_template_platform_http.py)：E-HTTP最终45项真实 API 验收；凭据仅进程内读取，精确 base URL allowlist/禁止跳转，合成数据独立命名，不清库/删除订单。 |
 
 ## 3. M0 菜单需求覆盖
 
-本节自动化 PASS 对应 E-BE / E-FE；真实 API PASS 对应 E-HTTP@96。未单独网页验证的子操作不能因组件测试通过而记作 Owner 网页已完成。
+本节自动化 PASS 对应 E-BE / E-FE；真实 API PASS 对应最终 E-HTTP@dbe207a local/public45。未单独网页验证的子操作不能因组件测试通过而记作 Owner 网页已完成。
 
 | Owner 需求 | 自动化与真实证据映射 | 当前结论及边界 |
 |---|---|---|
@@ -53,7 +53,7 @@
 | 直接建组、移除组、显式无组、历史叶子保留 | B-MENU `emptyGroupsMaterializeQuickAddMetadataAndRetainInactiveHistoricalLeaves`；F-MENU explicit no-group、失败保护 | `IMPLEMENTED_AND_TESTED / PASS`：新显式[]与旧null/缺字段分开；不删除历史订单快照。 |
 | 两级排序、默认、必选、启停 | B-MENU ordering/default/cardinality/disabled；F-MENU/F-POS；H copy/order case与 `server_rejects_required`、`server_rejects_single`、`server_rejects_single_quantity` | `IMPLEMENTED_AND_TESTED / PASS`。多选没有新增业务上限，但技术数量、重复身份和金额精度仍校验。 |
 | 服务端金额、scope、metadata 验真 | B-MENU；H `server_rejects_base_price`、`option_price`、`item_scope`、`unknown_item`、`negative_item`、`category_forgery`、`sku_forgery` | `IMPLEMENTED_AND_TESTED / PASS`：负例要求拒绝且无新增 Order/Job/intent；不是信任客户端价格/分类/SKU。 |
-| 无交互组选项 QuickAdd、必选不得绕过 | B-MENU empty/required；F-MENU `adds an arbitrary category group-free spring roll directly, preserving legacy category behavior`及 `never bypasses an interactive or empty required group`；H atomic catalog[]；E-UI-LOCAL | `IMPLEMENTED_AND_TESTED / PASS`：本地真实网页 SpringRoll无空Modal可直接入车。公共域名尚未验证。 |
+| 无交互组选项 QuickAdd、必选不得绕过 | B-MENU empty/required；F-MENU `adds an arbitrary category group-free spring roll directly, preserving legacy category behavior`及 `never bypasses an interactive or empty required group`；H atomic catalog[]；E-UI-LOCAL | `IMPLEMENTED_AND_TESTED / PASS`：本地及public真实网页SpringRoll无空Modal可直接入车；public新建item14，Owner独立验收仍待执行。 |
 | Combo 复用默认/虚拟 ID/父子/价格/linked side | B-COMBO、B-PRICE、F-POS；H `existing_combo_virtual_defaults_linked_child_preview_and_real_jobs`、`combo_child_remove_full_snapshot_preview_and_real_child_ticket`；E-SQL真实 WOK/COLD tasks | `PARTIAL / PASS for bounded existing behavior`：side仅 `LEGACY_COMBO_SIDE_TASK` + active COLD linked item；egg仅 `NO_KITCHEN_TASK`。新通用LINKED等未实现，不能泛称任意 Combo 都支持。 |
 | Combo 非法/缺metadata/无linked fail closed | B-COMBO；H `known_combo_virtual_id_missing_code_group_rejected`、`unsupported_combo_behavior_fails_closed_no_business_artifacts`、`legacy_combo_side_without_linked_item_rejected_no_business_artifacts` | `IMPLEMENTED_AND_TESTED / PASS`：第41项先 NO_TASK 清链，再LEGACY+null，GET证实持久null，preview/Submit均400 `TEMPLATE_COMBO_LINKED_SIDE_REQUIRED`，无业务产物，finally恢复合成配置。 |
 
@@ -93,7 +93,7 @@
 | 草稿、IndexedDB Outbox、弱网/重放 | F-OFFLINE有状态/存储边界及网络失败模拟；B-IDEM丢首响应后重试；E-HTTP真实顺序/并发重放；E-UI-LOCAL实际草稿刷新后仍在 | `PARTIAL`：这些既有自动化及真实HTTP重放已PASS；**未做真实无线断连、网络限速/高丢包、断电、浏览器杀进程或长时间离线**。组件/存储adapter mock不能证明真实IndexedDB所有故障恢复；不以MOCK失败注入冒称无线实验。 |
 | Org/Store/角色隔离 | H anonymous拒绝；Owner/Manager own-store与foreign-Org读/写拒；foreign-order诊断拒绝；B-MENU跨店item/option/源copy及invalidstation；E-SQL两独立Org及无scope错行 | 指定HTTP/SQL负例 `PASS`；不是完整攻击面渗透测试。Phase0/1未解决的STOMP/设备凭据/SaaS安全问题不因本次通过而关闭。 |
 | Test空库迁移/Bootstrap | Root实际独立PG18 FlywayV1–V40及Hibernate validate成功；B-SAFETY/B-MENU启动前拒绝；E-SQL合成Org/Store | 本地Test `PASS`；未对Production/Staging迁移、导入真实交易或恢复生产备份。完整新客户onboarding流程不由本次bootstrap自动宣告完成。 |
-| Test部署网络/存储/资源与受保护共享入口 | E-GUARD59项：真实Compose规范化、tmpfs逗号修复、独立内部网络/前端入口、无backend/db公开port、volume/network归属、readonly/资源界限、relay/监听归属、nginx漂移与锁等 | 最终62项已执行并独立复审`PASS`；实际远端容器/隔离/HTTPS证据见E-DOMAIN及最终报告。静态守卫与运行证明分别记录。 |
+| Test部署网络/存储/资源与受保护共享入口 | E-GUARD最终62项：真实Compose规范化、tmpfs逗号修复、独立内部网络/前端入口、无backend/db公开port、volume/network归属、readonly/资源界限、relay/监听归属、nginx漂移与锁等 | 最终62项已执行并独立复审`PASS`；实际远端容器/隔离/HTTPS证据见E-DOMAIN及最终报告。静态守卫与运行证明分别记录。 |
 | CORS local/Test精确Origin、evil拒绝 | H `exact_browser_origin_login_local`、`exact_browser_origin_login_test_https`、`evil_browser_origin_login_rejected`，含真实preflight/login | 本地服务收到指定Origin `PASS`；实际HTTPS、DNS/TLS/反代/登录及public45已在E-DOMAIN通过，不仅依赖本地Origin模拟。 |
 | 实体打印/Android/Uber/支付/旧店迁移/生产恢复 | 本次无对应真实执行授权；Test MOCK ceiling和endpoint禁用是安全限制证据 | `NOT_RUN / OUT_OF_SCOPE`。不触真实打印、Uber、支付，不接三家旧店，不做备份恢复；没有“真实全流程PASS”。 |
 
@@ -122,7 +122,7 @@ E-BE 中下列套件依赖未配置的外部Postgres等条件，本次未执行�
 1. **旧前台零价CUSTOM label缺失**：E-HTTP `historical_snapshots_immutable_zero_price_custom_kitchen_instruction`明确记录 `OMITTED_BY_PROTECTED_LEGACY_RENDERER_KNOWN_LIMITATION`，新厨房票包含该制作指令。原前台 Renderer只对普通收费modifier走正差价分支；既有特定语义分支另有规则。此处为 `PARTIAL / KNOWN_LIMITATION`。后续候选 [CR-RECEIPT-CUSTOM-001](CR_RECEIPT_CUSTOM_DETAIL.md) 为 `PROPOSED / NOT_AUTHORIZED / NOT_IMPLEMENTED`，不得偷偷改Renderer、伪造收费或塞notes后宣告支持。
 2. **Combo支持范围受旧Task语义约束**：COLD linked side及其Remove父子通过真实票据/Task证据；不支持的新behavior明确拒绝。真实KDS模块未开启，不曾通过启用KDS绕过验收边界；E-SQL直接只读核对实际Task。
 3. **旧Mock nullable mode 的测试oracle修正**：历史错误receipt `http-local-complete-guarded.json`保留；“所有Job.execution_mode必须MOCK”的断言对未改旧前台路径错误。最终严格规则是新TEMPLATE_KITCHEN必须MOCK，实际printer元数据无endpoint；旧FRONTDESK仅在当前StoreMOCK、运行ceiling MOCK/DISABLED、无Job printer/endpoint且相应来源/SQL补证下允许null。E-SQL证明旧路径；这不是修改产品来适配错误expected，也不放过未知module/REAL/PAD_DIRECT。
-4. **SQL与HTTP版本及订单区分**：b64 SQL订单80/81是真实COLD task证据；96 HTTP订单101/102已真实通过票据及子去料，但该receipt中的SQL followup仍是待补，本文不篡改它。二者运行同一已验证Jar，但不同实际行的后验查询不能混写。
+4. **SQL与HTTP版本及订单区分**：b64 SQL订单80/81是真实COLD task证据；96 HTTP订单101/102已真实通过票据及子去料，但该receipt中的SQL followup仍是待补，本文不篡改它。二者运行同一已验证Jar，但不同实际行的后验查询不能混写。最终dbe远端SQL19已另核对当前公共HTTP的Order34/35和对应Task/Job，不改写早期receipt。
 5. **无覆盖率百分比推断**：测试用例数量不是行覆盖率、分支覆盖率或所有业务组合覆盖率。本次没有生成可信的全仓coverage百分比；本表列出已测和未测边界，不填100%。
 
 ## 8. 最终公共域名与独立审阅证据
