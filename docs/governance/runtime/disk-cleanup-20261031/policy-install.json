@@ -1,0 +1,69 @@
+{
+  "installed_root": "/usr/local/lib/restaurant-disk-retention",
+  "cron": "/etc/cron.d/restaurant-disk-retention",
+  "logrotate": "/etc/logrotate.d/restaurant-disk-retention",
+  "logrotate_debug_check": "PASS",
+  "no_service_or_daemon_action": true,
+  "files": [
+    {
+      "name": "server-buildkit-retention.py",
+      "sha256": "bb24a556e7139b13eb1bac962ec7d95334c42cbbd88f9313269490a157f89a3a"
+    },
+    {
+      "name": "server-journal-retention.py",
+      "sha256": "e8225db60a53f121e98af9650eb434d78d747da51bf86e5e987d376c9088949f"
+    },
+    {
+      "name": "staging-release-runtime-protection.py",
+      "sha256": "58052a673d47a27b99eba2efe1f57cd407864e52b2eae1dee18fdd2b31d741f9"
+    },
+    {
+      "name": "staging-hygiene-common.sh",
+      "sha256": "49456de6316757bcbfd947dc3c2bbaefc0df38c96f4965775c6520764483eff2"
+    },
+    {
+      "name": "staging-release-retention.sh",
+      "sha256": "def2b5e088602a5bf20c123058e608c6878ea33b99a8a418161f0caa1f181711"
+    },
+    {
+      "name": "staging-retention-run.sh",
+      "sha256": "14feba377895014980d278e8154fb1489a8f0969917efd6c63381eea80888838"
+    },
+    {
+      "name": "run-journal-retention.sh",
+      "sha256": "7133495628857c1fe1a21308c9042f535f2f14fb658df22bcd081f4ca6f22f8d"
+    },
+    {
+      "name": "restaurant-disk-retention.cron",
+      "sha256": "a5b397c0e8f33a3bbb29f6b60e056abffa6a8da543375adbf54080da1b3ffa74"
+    },
+    {
+      "name": "restaurant-disk-retention.logrotate",
+      "sha256": "8941609084c6b798f74c764611f16bb1bdd3422c54c7faedd1ef38f4efc93e91"
+    },
+    {
+      "name": "pending/journald.conf",
+      "sha256": "7fc26db1b019af2a2ddc4c0a21d63addfa39586f86e0541e32fe82feecac9191"
+    },
+    {
+      "name": "pending/docker-logging.json",
+      "sha256": "3d3efdf900780a4ca63c61b3331efade541a4a6f4e5a01ea64ae171dc8731018"
+    },
+    {
+      "name": "pending/docker-compose.yml",
+      "sha256": "b4372dd01a7327822d6ca2f4fecc3bdd7407e631cdf589d91fd50809ae79d619"
+    },
+    {
+      "name": "pending/staging-deploy.sh",
+      "sha256": "96827a6896935ee5af4d8f9597b9d889d1367c1aaf82f4f2297383333fcd7a40"
+    },
+    {
+      "name": "pending/staging-release-rotation.sh",
+      "sha256": "d046bbb8b4366da02b4d00c5f158e1ae7655992adcd753e5663f78bdda117923"
+    },
+    {
+      "name": "pending/staging-retention-success.sh",
+      "sha256": "0e49a86c21a06d157c5e44aff3b0073bf3b542a6fe98648e186ac863c6799d66"
+    }
+  ]
+}

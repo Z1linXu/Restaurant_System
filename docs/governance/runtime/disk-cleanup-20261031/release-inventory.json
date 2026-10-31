@@ -1,0 +1,438 @@
+{
+  "release_count": 72,
+  "releases_with_windows_database_dump": 72,
+  "rows": [
+    {
+      "sha": "028d4971740889a0ac0d784a43497bc3e5b54b3d",
+      "mode": "0o775",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "03c9299bb198bc31f97194c75620a7c8987944db",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "0d2e244c3d1565a06bda8fa269e784af58e875e2",
+      "mode": "0o775",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "101dbdc75c25904c340251134ee1a0a03f5ce4b7",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "11996ef919d9b28ee5366c7e40a58a78c074b675",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "19ba04bf0e42ae70b887b224c86a235715de46e1",
+      "mode": "0o775",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "21826ea5b2dc9297dd98bc8be47f5223446d11c6",
+      "mode": "0o775",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "22a71b050371a319a912a025d5252604346539ea",
+      "mode": "0o775",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "2a6c30a5948882ff8bf1d3808e2970fe5b4a6ae3",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "30da94adfd1dad37276326832efdadac6d2edc53",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "31466c59e8330127ba707ac5d5ccb67cbf47499b",
+      "mode": "0o775",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "31b54c6644ea6bc32a34c171ff85ee76fbe249db",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "325e172084cd48cc09bbd34aa372be1f26e6dfda",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "33ad0e4374f176f86c937c859de2701475b65dbc",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "35033645b5414f0804cc0aba92a8b8bb832bb074",
+      "mode": "0o775",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "397bf09d01371961f6a438db67fd069afa7ed049",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "3aeac78d99ffd3cac7dcd1d12efa346a42de56d7",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "3e3230264aac1695089b475d69b81a044be31e87",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "42b5a15647b83a3f13af85198c60a865bbc68fa7",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "489e157433307c4b5aabdeb99e069a77e84561f5",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "4b3abd1349e66a146c36ac310b6a8b48bb2ad572",
+      "mode": "0o775",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "500aacd991fddbc8f224174fc65db833e60d7848",
+      "mode": "0o775",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "56185edcdd9f4496cc6073e478546a5a39ba77d9",
+      "mode": "0o775",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "6753855497b8c47be99a8d88ae9d9961653addb0",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "6de7f1ea8ee6d5acac332cba26a428fdb409254a",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "6fff80e81651727f27f5b999c2e9c5c438fd7f31",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "703488638ec2bf2002cee113b037ef547aaa61fa",
+      "mode": "0o775",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "712531b941db92f4325a86126883706314f4cba5",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "72fecac3a17e0ac40d6207f4c501eb0308210123",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "75c82482e7c72de063973128ebb9ac0a98f83b5d",
+      "mode": "0o775",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "7a6d869b4fbe8c7eeeac1daebe4763967cd5f74d",
+      "mode": "0o775",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "7b70a4fac4e350444bcd37687ca88a8636ff8f2a",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "7bebe49f81ba45d151a4b8934a1d143c8925311d",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "7ccef30919b268732a7f7c369cdd8370a8782ffe",
+      "mode": "0o775",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "7dfe1e9d691941c6c36ee61aaaa69b4e17fca9ed",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "83741ea88e07bf6735462fb5f3816650b6db59b4",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "86ccedd019b4e833a3612b8f3ad7bf8e3a0760f2",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "878fa11ca823b49630db6c6b2532c57213b23abb",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "8c3a9e356f59cd025beff25f7fb1d5a20594e028",
+      "mode": "0o775",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "8e787fa1c0030d74cb9d785122392f540b206db5",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "8eea8d47c9fe7906563d051196c703da7c14e198",
+      "mode": "0o775",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "8fc7ba8623c3180b35c6e3605a46d0a7d6744ce7",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "908902b41d4d4b34b0ce663da4a7dd75800cdb36",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "96c81cf4fab8e771187ceeddeed28e5fc3e87f4a",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "984787f236a4e0b62365ceabfa34cd6cfd488952",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "9bebac8a427690ca2a842ab8fad9dc09e2c75208",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "9c832cae9704033aea6c504e174c41f5129f8bee",
+      "mode": "0o775",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "a167e1fdd092170f8b497027a57cbacf5fe4a3de",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "a9be0c858dab52ef46170551e14f7c8633ffac72",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "aa0ee0918f4ab4ae1c8686eccd1b4b7d2a6a5627",
+      "mode": "0o775",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "ad3de48e973298604362cf21f119434d0b3f85f6",
+      "mode": "0o775",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "ae446874e6a6bc7d2c19cdbc1ca92603ed53d6de",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "b2b3f3a7f776c72845a4f08622b6f167cdc87b39",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "b4d0350c15cf777ff0ee53e9acb0d4e4127d9b99",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "b611cf5e6378c4c711e263b4d0bdafd05b5837d0",
+      "mode": "0o775",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "b700d8bf853e28553e27f075c27ff7420f9512fe",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "b83afa98d304223834793d03bfc367b4cf4238f1",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "bc26b158c2d108000f6b4da9b4be5c635b780bdf",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "c1a7be0bddc4fd4eb506ab2d672f5f3e45a3d439",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "d08238a7f0ae2a89f3139257b2ae9456db056bba",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "d0b1bde3a0e3382032a214a315703c5c18d4d058",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "d2ac3e65c887b8903f02d455f177e59eaf75fc95",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "d32fa709f2e895ebc4ebf729e8b546d6fd043df8",
+      "mode": "0o775",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "d62692021447e82be72f2dbc4865bab557b8fd99",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "dd1750c68bbe6bce3eadefb731ef9de2d17e6d95",
+      "mode": "0o700",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "e44d7a5fe534a50c675574e589751cce41615cc5",
+      "mode": "0o775",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "eaec42732425dd526b4fc3056140c12369ebe4b1",
+      "mode": "0o775",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "ece77240a7a77896632c10798fafa29120c6ab47",
+      "mode": "0o775",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "f7f0bb344bfa8a157cb15ccbefb9e588aebd3da5",
+      "mode": "0o775",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "f838e48de1f20689253716bd1910b952fcbc00d3",
+      "mode": "0o775",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "fa51366625e770e5c331e30115c9371b6abac61f",
+      "mode": "0o775",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    },
+    {
+      "sha": "fbcdb4f8152183b62b6ecc3859e2d5a689d01d49",
+      "mode": "0o775",
+      "windows_database_dump_present": true,
+      "windows_dump_bytes": 163550
+    }
+  ]
+}

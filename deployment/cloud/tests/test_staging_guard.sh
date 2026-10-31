@@ -368,6 +368,9 @@ if ! (
   assert_clean_release() { :; }
   assert_resolved_compose() { :; }
   run_release_retention_dry_run() { :; }
+  acquire_server_maintenance_lock() { :; }
+  release_server_maintenance_lock() { :; }
+  record_retention_success() { :; }
   controlled_compose() {
     local active_env_file="$1"
     shift
@@ -401,6 +404,9 @@ if (
   assert_clean_release() { :; }
   assert_resolved_compose() { :; }
   run_release_retention_dry_run() { :; }
+  acquire_server_maintenance_lock() { :; }
+  release_server_maintenance_lock() { :; }
+  record_retention_success() { :; }
   controlled_compose() {
     local active_env_file="$1"
     shift
@@ -432,6 +438,9 @@ if (
   assert_clean_release() { :; }
   assert_resolved_compose() { :; }
   run_release_retention_dry_run() { :; }
+  acquire_server_maintenance_lock() { :; }
+  release_server_maintenance_lock() { :; }
+  record_retention_success() { :; }
   controlled_compose() {
     local active_env_file="$1"
     shift

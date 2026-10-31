@@ -1,0 +1,6 @@
+# Server local time is UTC+08:00. These jobs run at 05:15/05:45/06:15 UTC.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+15 13 * * 0 ubuntu python3 -I /usr/local/lib/restaurant-disk-retention/server-buildkit-retention.py --execute >> /var/log/restaurant-disk-retention/user/buildkit.log 2>&1
+45 13 * * * root /bin/bash /usr/local/lib/restaurant-disk-retention/run-journal-retention.sh >> /var/log/restaurant-disk-retention/journal.log 2>&1
+15 14 * * 0 ubuntu /bin/bash /usr/local/lib/restaurant-disk-retention/staging-retention-run.sh --execute >> /var/log/restaurant-disk-retention/user/releases.log 2>&1

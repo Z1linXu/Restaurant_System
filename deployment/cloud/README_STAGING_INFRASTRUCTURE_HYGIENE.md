@@ -1,5 +1,9 @@
 # Staging infrastructure hygiene（Owner 受限）
 
+> 当前共享服务器采用 [30 天磁盘保留策略](README_SERVER_DISK_RETENTION.md)。
+> 下文的旧 cache helper、3-version/14-day 建议仅为历史兼容说明，不能替代新策略。
+> 自动缓存清理使用 `server-buildkit-retention.py`；发布保留数量已提高到 5。
+
 本包只面向固定的 Staging root `/srv/restaurant-pos/staging` 和 Compose project
 `restaurant-pos-staging`。脚本默认只读；脚本输出先给出结构化 protected set / dry-run
 plan，任何 execute 都要绑定 Owner 复核过的 plan SHA-256。此包不连接服务器、不执行

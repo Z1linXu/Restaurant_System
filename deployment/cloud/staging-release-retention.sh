@@ -55,7 +55,7 @@ Usage:
     [--previous-verified-sha <full-sha>]
 
 The policy keeps the current release, the previous verified release, and the
-newest three release worktrees, and considers only clean worktrees older than
+latest five successful deployments plus the newest five release worktrees, and considers only clean worktrees older than
 7 days beyond that set. Execute requires the exact plan digest and revalidates
 the fixed root, owner/symlink topology, environment SHA, evidence/recovery/
 rollback references, repository worktree registration, and eligibility before
@@ -217,40 +217,20 @@ is_retention_plan_file() {
 }
 
 collect_reference_shas() {
-  local tree="$1" path base normalized_base line sha protect_all_shas ignored_mtime
-  while IFS= read -r path; do
-    [[ -n "$path" && -f "$path" && ! -L "$path" ]] || continue
-    # State may contain an opaque executable/cache, not line-oriented evidence.
-    # Never infer that it has no recovery references: protect every release.
-    # Streaming NUL detection avoids shell-per-line parsing of large binaries.
-    if ! LC_ALL=C tr -d '\000' <"$path" | cmp -s "$path" -; then
+  local tree="$1" references sha reason reference ignored_mtime
+  references="$(python3 -I "$SCRIPT_DIR/staging-release-runtime-protection.py" \
+    --references "$tree" --state-dir "$STATE_DIR")" || hygiene_die "protected reference scan failed"
+  while IFS='|' read -r sha reason reference; do
+    [[ -n "$sha" ]] || continue
+    if [[ "$sha" == '*' ]]; then
       while IFS='|' read -r ignored_mtime sha; do
         [[ -n "$sha" ]] || continue
-        add_protected_sha "$sha" "opaque_reference_retains_all" "$(basename -- "$path")"
+        add_protected_sha "$sha" "$reason" "$reference"
       done <<<"$ALL_RELEASE_LINES"
-      continue
-    fi
-    is_retention_plan_file "$path" && continue
-    base="$(basename -- "$path")"
-    normalized_base="$(printf '%s' "$base" | tr '[:upper:]' '[:lower:]')"
-    protect_all_shas="false"
-    [[ "$normalized_base" =~ (recovery|rollback) ]] && protect_all_shas="true"
-    while IFS= read -r line || [[ -n "$line" ]]; do
-      if [[ "$protect_all_shas" != "true" ]]; then
-        [[ "$(printf '%s' "$line" | tr '[:upper:]' '[:lower:]')" =~ (previous_verified|retain_release|protected_release|rollback_sha|recovery_sha) ]] || continue
-      fi
-      while IFS= read -r sha; do
-        [[ -n "$sha" ]] || continue
-        add_protected_sha "$sha" "evidence_or_recovery_reference" "$base"
-      done < <(printf '%s\n' "$line" | grep -Eo '[0-9a-f]{40}' || true)
-    done <"$path"
-  done < <(
-    if [[ "$tree" == "$STATE_DIR" ]]; then
-      find -P "$tree" -path "$STATE_DIR/postgres" -prune -o -type f -print
     else
-      find -P "$tree" -type f -print
+      add_protected_sha "$sha" "$reason" "$reference"
     fi
-  )
+  done <<<"$references"
 }
 
 discover_previous_verified_sha() {
@@ -378,12 +358,23 @@ select_eligible_releases() {
     age=$((now - mtime))
     if [[ -z "$PREVIOUS_VERIFIED_SHA" ]]; then
       SKIP_LINES="${SKIP_LINES}RELEASE_RETENTION|SKIP|${sha}|previous_verified_unknown"$'\n'
+    elif release_has_protected_payload "$RELEASES_DIR/$sha"; then
+      SKIP_LINES="${SKIP_LINES}RELEASE_RETENTION|SKIP|${sha}|backup_key_or_persistent_payload"$'\n'
     elif (( age < MIN_AGE_SECONDS )); then
       SKIP_LINES="${SKIP_LINES}RELEASE_RETENTION|SKIP|${sha}|too_new|age_seconds=${age}"$'\n'
     else
       ELIGIBLE_LINES="${ELIGIBLE_LINES}${sha}|age_seconds=${age}"$'\n'
     fi
   done < <(printf '%s' "$ALL_RELEASE_LINES" | sed '/^$/d')
+}
+
+release_has_protected_payload() {
+  local found
+  found="$(find -P "$1" \( -type d \( -name backups -o -name uploads -o -name postgres \
+    -o -path '*/deployment/windows-pilot/package' \) \
+    -o -type f \( -name '*.dump' -o -name '*.backup' -o -name '*.pem' -o -name '*.key' \
+    -o -name restaurant-pos-windows-pilot.zip \) \) -print -quit)" || hygiene_die "cannot inspect release payload"
+  [[ -n "$found" ]]
 }
 
 build_plan() {
@@ -402,6 +393,15 @@ build_plan() {
   done <<<"$UNSAFE_RELEASE_SHA_SET"
   collect_reference_shas "$STATE_DIR"
   collect_reference_shas "$EVIDENCE_DIR"
+  if [[ "$HYGIENE_ROOT" == /srv/restaurant-pos/staging ]]; then
+    local runtime_refs runtime_sha runtime_reason
+    runtime_refs="$(sudo -n python3 -I "$SCRIPT_DIR/staging-release-runtime-protection.py")" ||
+      hygiene_die "runtime/static/download/rollback reference scan failed"
+    while IFS='|' read -r runtime_sha runtime_reason; do
+      [[ -n "$runtime_sha" ]] || continue
+      add_protected_sha "$runtime_sha" "runtime_reference:$runtime_reason"
+    done <<<"$runtime_refs"
+  fi
   protect_keep_count
   select_eligible_releases "$now"
   SKIP_LINES="${UNSAFE_RELEASE_LINES}${SKIP_LINES}"
@@ -559,6 +559,7 @@ execute_plan() {
     contains_sha "$PROTECTED_SHA_SET" "$sha" && hygiene_die "planned release became protected: $sha"
     contains_sha "$PLAN_ELIGIBLE_SHA_SET" "$sha" || hygiene_die "release is not in the reviewed eligible set: $sha"
     validate_release_worktree "$sha" >/dev/null
+    release_has_protected_payload "$path" && hygiene_die "release contains protected backup/key/data payload: $sha"
     assert_release_root_unchanged
     git --git-dir="$REPOSITORY" worktree remove "$path" >/dev/null 2>&1 || hygiene_die "exact clean release worktree removal failed: $sha"
     [[ ! -e "$path" && ! -L "$path" ]] || hygiene_die "release path remained after exact worktree removal: $sha"

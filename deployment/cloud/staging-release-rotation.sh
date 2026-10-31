@@ -250,6 +250,12 @@ create_detached_release() {
   [[ ! -e "$RELEASE_DIR" && ! -L "$RELEASE_DIR" ]] || ops001_die "exact release path already exists; refusing overwrite"
   umask 077
   git --git-dir="$REPOSITORY" worktree add --detach "$RELEASE_DIR" "$APPROVED_SHA" >/dev/null
+  # Web releases do not distribute the separately retained Windows pilot.
+  # Sparse checkout preserves Git identity and clean status without copying
+  # the extracted package and ZIP into every new release.
+  git -C "$RELEASE_DIR" sparse-checkout set --no-cone \
+    '/*' '!/deployment/windows-pilot/package/' \
+    '!/deployment/windows-pilot/restaurant-pos-windows-pilot.zip'
   assert_releases_root_unchanged
   chmod 700 "$RELEASE_DIR"
   assert_release

@@ -683,7 +683,23 @@ run_release_retention_dry_run() {
     die "Staging release-retention dry-run failed; no build or start was attempted"
 }
 
+acquire_server_maintenance_lock() {
+  # Serialize server build/up against the installed shared-host retention job.
+  # Keep local/no-start validation unchanged.
+  local lock="$STAGING_ROOT/state/server-disk-maintenance.lock"
+  [[ ! -L "$lock" ]] || die "unsafe maintenance lock"
+  (umask 077; touch "$lock")
+  [[ "$(file_owner "$lock")" == "$(id -u)" && "$(file_mode "$lock")" == 600 ]] || die "unsafe maintenance lock metadata"
+  exec 8<>"$lock"
+  flock -n 8 || die "server maintenance or another deployment is active"
+}
+
+release_server_maintenance_lock() { flock -u 8; exec 8>&-; }
+
+record_retention_success() { bash "$SCRIPT_DIR/staging-retention-success.sh" "$STAGING_COMMIT_SHA"; }
+
 run_deploy_sequence() {
+  acquire_server_maintenance_lock
   assert_snapshot_integrity
   validate_postgres_data_path
   assert_clean_release
@@ -707,6 +723,10 @@ run_deploy_sequence() {
   assert_clean_release
   echo "Starting only the $COMPOSE_PROJECT_NAME project..."
   controlled_compose "$ACTIVE_ENV_FILE" up -d
+  if ! record_retention_success; then
+    echo "Warning: staging success retention marker was not recorded; inspect health before cleanup." >&2
+  fi
+  release_server_maintenance_lock
   echo "Staging deployment started. Run staging-health-check.sh with the same --env-file."
 }
 
