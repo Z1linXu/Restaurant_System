@@ -617,25 +617,29 @@ class Acceptance:
         proposed = {"store_id": self.store, "groups": copy.deepcopy(original["groups"])}
         side = next(group for group in proposed["groups"] if group["component_group"] == "COMBO_SIDE")
         chosen = next(component for component in side["components"] if component["component_code"] == side["default_component_code"])
-        chosen["business_behavior"] = "LEGACY_COMBO_SIDE_TASK"
+        chosen["business_behavior"] = "NO_KITCHEN_TASK"
         chosen["linked_menu_item_id"] = None
         saved = False
         before = self.observation()
         try:
-            try:
-                self.owner.call("PUT", path, proposed)
-                saved = True
-            except ApiFault as error:
-                if error.status not in (400, 409, 422):
-                    raise
-                equal(self.observation(), before, "Unlinked legacy Combo side config rejection must not create business artifacts")
-                return {"behavior": "LEGACY_COMBO_SIDE_TASK", "linked_menu_item_id": None, "rejected_at": "configuration", "http_status": error.status}
+            # An incoming null in legacy behavior preserves the existing link.
+            # Use the established NO_KITCHEN_TASK transition to clear it first.
+            self.owner.call("PUT", path, proposed)
+            saved = True
+            chosen["business_behavior"] = "LEGACY_COMBO_SIDE_TASK"
+            self.owner.call("PUT", path, proposed)
+            persisted = self.owner.call("GET", path + f"?store_id={self.store}")
+            persisted_side = next(group for group in persisted["groups"] if group["component_group"] == "COMBO_SIDE")
+            persisted_component = next(component for component in persisted_side["components"] if component["component_code"] == chosen["component_code"])
+            equal(persisted_component["business_behavior"], "LEGACY_COMBO_SIDE_TASK", "Negative fixture legacy side behavior persisted")
+            equal(persisted_component.get("linked_menu_item_id"), None, "Negative fixture linked menu item was actually cleared")
             line = copy.deepcopy(self.combo_line)
             preview = self.rejected(lambda: self.owner.call("POST", self.path("kitchen-routing/preview"), {
                 "items": [{"menu_item_id": line["menu_item_id"], "quantity": line["quantity"], "options": line["options"]}]}))
             order = self.rejected(lambda: self.submit(self.payload([line], "UNLINKEDCOMBOSIDE")))
             equal(self.observation(), before, "Unlinked legacy Combo side must not create a Task without its child ticket")
             return {"behavior": "LEGACY_COMBO_SIDE_TASK", "linked_menu_item_id": None, "rejected_at": "preview_and_order",
+                    "fixture_transition": "NO_KITCHEN_TASK then LEGACY_COMBO_SIDE_TASK; GET verified persisted null link",
                     "preview": preview, "order": order, "no_order_job_intent_created": True}
         finally:
             if saved:
