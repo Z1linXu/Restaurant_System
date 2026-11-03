@@ -7,17 +7,17 @@ d=importlib.util.module_from_spec(spec);spec.loader.exec_module(d)
 V39='1|old|1|t\n39|V39__add_dining_table_split_label_mode.sql|1431202837|t'
 V40=V39+'\n40|V40__order_finish_batches.sql|123|t'
 class StagingOnlyTest(unittest.TestCase):
-    def test_only_exact_append_migration_is_allowed(self):
-        d.validate_ledger(V39,V40)
+    def test_existing_v40_ledger_cannot_change(self):
+        d.validate_ledger(V40,V40)
         for after in [V39,V40.replace('old','changed'),V40.replace('V40__order_finish_batches','V40__wrong'),V40.replace('|123|t','|123|f')]:
-            with self.assertRaises(AssertionError):d.validate_ledger(V39,after)
+            with self.assertRaises(AssertionError):d.validate_ledger(V40,after)
     def test_only_staging_and_exact_sha_can_reach_existing_lifecycle(self):
-        with patch.object(d.release.i,'ledger',return_value=V39),patch.object(d.release,'main') as start:
+        with patch.object(d.release.i,'ledger',return_value=V40),patch.object(d.release,'main') as start:
             d.main('a'*40);start.assert_called_once_with('staging','a'*40)
             with self.assertRaises(AssertionError):d.main('production')
             with self.assertRaises(AssertionError):d.release.read_sql('cloud-db-1','select 1')
     def test_wrong_baseline_does_not_deploy(self):
-        with patch.object(d.release.i,'ledger',return_value=V40),patch.object(d.release,'main') as start:
+        with patch.object(d.release.i,'ledger',return_value=V39),patch.object(d.release,'main') as start:
             with self.assertRaises(AssertionError):d.main('a'*40)
             start.assert_not_called()
 class AcceptanceGuardTest(unittest.TestCase):

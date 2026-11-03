@@ -3,32 +3,32 @@ updated_at: 2026-11-03
 
 repository:
   ref: origin/main
-  sha: 80e888fcdad74e98326fcbeaa5df14bc0d9baed6
+  sha: c1e4981a85831cadb9785d98a80375f47443e50f
   sha_semantics: IMPLEMENTATION_AUTHORITY_AT_STATE_WRITE
 
 phase:
   current: PHASE_B
   package: FINISH_ALL_TABLES
-  status: IMPLEMENTATION_TEST_REVIEW_STAGING_ONLY
+  status: STAGING_ACCEPTANCE_PERMISSION_CONTRACT_REPAIR
   next_phase_authorized: false
 
 staging:
-  deployed_sha: 028d4971740889a0ac0d784a43497bc3e5b54b3d
+  deployed_sha: c1e4981a85831cadb9785d98a80375f47443e50f
   deployed_sha_semantics: SAME_VERIFIED_BACKEND_FRONTEND_PAIR
-  frontend_deployed_sha: 028d4971740889a0ac0d784a43497bc3e5b54b3d
+  frontend_deployed_sha: c1e4981a85831cadb9785d98a80375f47443e50f
   policy_config_sha: d2316234b2936fd89a926aa24a7b6343008834e6
-  flyway: V39
-  acceptance: TABLE_SOFT_DELETE_STORE18_GET_LISTS_PUBLIC_UI_AND_PRINT_PAYLOAD_PASS
-  evidence: ../DINING_TABLE_SOFT_DELETE_20261024.md
-  repair_evidence: ../DINING_TABLE_SOFT_DELETE_20261024.md
+  flyway: V40
+  acceptance: FIRST_DEPLOY_HEALTH_PASS_UI_PERMISSION_CONTRACT_REPAIR_PENDING
+  evidence: ../FINISH_ALL_TABLES_STAGING_20261103.md
+  repair_evidence: ../FINISH_ALL_TABLES_STAGING_20261103.md
   cleanup_evidence: PHASE_B_STAGING_SYNTHETIC_FIXTURE_CLEANUP_EXECUTION_EVIDENCE.md
-  runtime_observation_evidence: ../DINING_TABLE_SOFT_DELETE_20261024.md
+  runtime_observation_evidence: ../FINISH_ALL_TABLES_STAGING_20261103.md
   endpoint_policy_evidence: runtime/STAGING_ENDPOINT_POLICY_20260930_EVIDENCE.md
-  latest_backend_release_evidence: ../DINING_TABLE_SOFT_DELETE_20261024.md
+  latest_backend_release_evidence: ../FINISH_ALL_TABLES_STAGING_20261103.md
   endpoint_policy_gate: TEST_STORE18_MOCK_ACCEPTED_NO_PHYSICAL_PRINT
 
   uber_verified_sha: 7d573be03d66a9505e0c68f92fa17829247f56e3
-  runtime_owner: DINING_TABLE_SOFT_DELETE_COMPLETED
+  runtime_owner: FINISH_ALL_TABLES_STAGING_ONLY
   uber_worker_enabled: false
 
 production:

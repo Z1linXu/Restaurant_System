@@ -63,9 +63,10 @@ def main(sha):
     prefix = 'FINISH_ALL_' + uuid.uuid4().hex[:10]
     raw = db("""select row_to_json(t) from(select i.id,i.sku,i.item_type,i.name_zh,i.name_en,i.base_price,i.station_id,c.code category_code
         from menu_items i join menu_categories c on c.id=i.category_id
-        where i.store_id=18 and i.is_active and not coalesce(i.is_sold_out,false) and i.item_type='SINGLE'
+        where i.store_id=18 and i.is_active and not coalesce(i.is_sold_out,false)
         and not exists(select 1 from menu_item_bom b where b.menu_item_id=i.id)
         order by case when i.sku='coke' then 0 else 1 end,i.id limit 1)t""")
+    assert raw, 'No active BOM-free acceptance item; no orders created'
     item = json.loads(raw)
     line = {'menu_item_id':item['id'],'quantity':1,'unit_price_snapshot':item['base_price'],
         'item_name_snapshot_zh':item['name_zh'],'item_name_snapshot_en':item['name_en'],

@@ -4,8 +4,9 @@ import { FinishAllTablesButton } from './FinishAllTablesButton'
 import { finishAllTables, previewFinishAllTables, type FinishAllPreview, type FinishAllResult } from '../../../services/finishAllTablesService'
 import { createLocalDraftRecord, listLocalDraftsForScope } from '../../../offline/localDrafts'
 import { createOrderOutboxRecord, listOrderOutboxForAccount } from '../../../offline/orderOutbox'
+const capabilityState = vi.hoisted(() => ({ permissions: ['ORDER_COMPLETE'] }))
 vi.mock('react-dom', () => ({ createPortal: (node: unknown) => node }))
-vi.mock('../../auth/useAuth', () => ({ useAuth: () => ({ user: { id: 7 }, permissions: ['order:complete'] }) }))
+vi.mock('../../auth/useAuth', () => ({ useAuth: () => ({ user: { id: 7 }, permissions: capabilityState.permissions }) }))
 vi.mock('../../store/useStoreContext', () => ({ useCurrentStore: () => ({ storeId: 18, organizationId: 1 }) }))
 vi.mock('../../../services/finishAllTablesService', () => ({ finishAllTables: vi.fn(), previewFinishAllTables: vi.fn() }))
 vi.mock('../../../offline/localDrafts', async () => ({ ...await vi.importActual('../../../offline/localDrafts'), listLocalDraftsForScope: vi.fn() }))
@@ -18,7 +19,7 @@ const button = (label: string) => view!.root.findAllByType('button').find(n => n
 const text = () => JSON.stringify(view!.toJSON())
 const click = async (label: string) => { await act(async () => { await button(label).props.onClick() }) }
 beforeEach(() => {
-  vi.resetAllMocks(); vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+  vi.resetAllMocks(); capabilityState.permissions = ['ORDER_COMPLETE']; vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   const data = new Map<string, string>()
   vi.stubGlobal('sessionStorage', { getItem: (k: string) => data.get(k) ?? null, setItem: (k: string, v: string) => data.set(k, v), removeItem: (k: string) => data.delete(k) })
   vi.stubGlobal('document', { body: {} })
@@ -78,4 +79,9 @@ it('serializes clicks while pending and retries the same token after timeout/rel
 it('does not execute if the backend preview or local storage inspection fails', async () => {
   vi.mocked(listLocalDraftsForScope).mockRejectedValue(new Error('IndexedDB unavailable'))
   await mount(); await click('Finish All Tables / 结束所有桌台'); expect(text()).toContain('IndexedDB unavailable'); expect(finishAllTables).not.toHaveBeenCalled()
+})
+
+it('uses actual auth/me enum-name permissions and hides the action without ORDER_COMPLETE', async () => {
+  capabilityState.permissions = ['ORDER_VIEW_ACTIVE']
+  await mount(); expect(view!.root.findAllByType('button')).toHaveLength(0)
 })

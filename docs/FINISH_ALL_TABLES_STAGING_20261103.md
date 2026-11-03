@@ -68,3 +68,55 @@ lint0errors, one pre-existing useDraftOrder catalogItems dependency warning.
 Deployment tests4new+8existing PASS. Agent6 consolidated review ACCEPT, no blockingP0/P1/P2; independent frontend28/tool12 PASS.
 Tooling metadata now reports actual final Flyway version instead of hardcoded39.
 No unrelated baseline warning/config/cache cleanup enters this Package.
+
+## Changed files
+
+- `SYSTEM_DOCUMENTATION.md`
+- `backend/src/main/java/com/restaurant/system/order/controller/FinishAllTablesController.java`
+- `backend/src/main/java/com/restaurant/system/order/finish/FinishAllTablesResponse.java`
+- `backend/src/main/java/com/restaurant/system/order/finish/FinishAllTablesService.java`
+- `backend/src/main/java/com/restaurant/system/station/service/DiningTableDisplayService.java`
+- `backend/src/main/resources/db/migration/V40__order_finish_batches.sql`
+- `backend/src/test/java/com/restaurant/system/order/finish/FinishAllTablesControllerTest.java`
+- `backend/src/test/java/com/restaurant/system/order/finish/FinishAllTablesPostgresTest.java`
+- `deployment/cloud/dine-in-headers/deploy.py`
+- `deployment/cloud/finish-all-tables/acceptance.py`
+- `deployment/cloud/finish-all-tables/deploy-staging.py`
+- `deployment/cloud/finish-all-tables/test_deploy.py`
+- `doc/API.md`
+- `docs/FINISH_ALL_TABLES_STAGING_20261103.md`
+- `docs/governance/CURRENT_STATE.yml`
+- `frontend/src/features/dinein/DineInPage.tsx`
+- `frontend/src/features/dinein/components/DineInTopBar.tsx`
+- `frontend/src/features/dinein/components/FinishAllTablesButton.test.tsx`
+- `frontend/src/features/dinein/components/FinishAllTablesButton.tsx`
+- `frontend/src/features/ordering/OrderingPage.tsx`
+- `frontend/src/hooks/useDraftOrder.finishProtection.test.tsx`
+- `frontend/src/hooks/useDraftOrder.ts`
+- `frontend/src/offline/localDrafts.ts`
+- `frontend/src/offline/orderLifecycle.test.ts`
+- `frontend/src/offline/orderLifecycle.ts`
+- `frontend/src/services/finishAllTablesService.ts`
+
+Application/review source: `c1e4981a85831cadb9785d98a80375f47443e50f`.
+PR #306 is open for Owner review; no main merge or Production promotion.
+Staging build began16:32:37 UTC; fresh custom backup exists. No deployment
+retry, runtime failure or rollback has occurred at this checkpoint.
+
+## First Staging acceptance repair
+
+First deploymentc1e4981 completed16:39:12Z (6m35), V39→V40, health and
+protected runtime/config/history PASS. No lifecycle failure or rollback.
+Actual browser auth/me permissions are enum names: ORDER_COMPLETE, not the
+Capability.getCode value order:complete. The button was hidden; fixed frontend
+and positive/negative contract fixtures. Actual Store18 menu types are drink/
+menu_item/main, so the acceptance selector's SINGLE assumption returned no row.
+It stopped before creating any order; lookup now preserves the actual menu type.
+Frontend394PASS/buildPASS; bounded Agent6 re-review ACCEPT, independent12tool/
+12component PASS. Backend/schema product trees unchanged.
+
+One necessary application-pair rebuild/redeploy follows the standard reviewed
+lifecycle rather than introducing a new frontend-only release framework. Repair
+pins the actual c1e4981 pair and requires the complete V40 ledger unchanged.
+Shared release metadata now derives both before/after versions, avoiding a false
+V39_TO_V40 label on a V40→V40 application repair. Old evidence stays intact.

@@ -81,7 +81,7 @@ export function FinishAllTablesButton({ unsaved = false, onFinished }: {
     }
     finally { busyRef.current = false; if (mounted.current) setBusy(false) }
   }
-  if (!permissions.includes('order:complete')) return null
+  if (!permissions.includes('ORDER_COMPLETE')) return null
   return <>
     <div className="flex flex-wrap items-center gap-2">
       <button type="button" disabled={busy || unsaved} onClick={() => void openPreview()}
