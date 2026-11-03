@@ -60,6 +60,12 @@ export interface LocalDraftRecord extends LocalDraftScope {
   schemaVersion: number
 }
 
+export function hasUnsubmittedLocalWork(record: LocalDraftRecord) {
+  return record.mode === 'SERVER_ORDER_UPDATE'
+    ? record.items.some(item => item.id.startsWith('temp-'))
+    : record.submitState === 'LOCAL_DRAFT' && record.items.length > 0
+}
+
 const PROTECTED_STATES = new Set<LocalDraftSubmitState>([
   'QUEUED',
   'SUBMITTING',

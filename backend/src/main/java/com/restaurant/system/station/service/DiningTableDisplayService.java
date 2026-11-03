@@ -46,6 +46,26 @@ public class DiningTableDisplayService {
             ? displayName(order.store_id, order.table_no) : order.table_no;
     }
 
+    /** Occupancy overlap only: a whole-table order also occupies both split slots. */
+    public boolean contextsOverlap(Long storeId, String left, String right) {
+        if (java.util.Objects.equals(left, right)) return true;
+        for (DiningTable a : contextTables(storeId, left)) {
+            for (DiningTable b : contextTables(storeId, right)) {
+                if (!a.id.equals(b.id)) continue;
+                String leftSlot = occupancySlot(a, left), rightSlot = occupancySlot(b, right);
+                if ("full".equals(leftSlot) || "full".equals(rightSlot) || leftSlot.equals(rightSlot)) return true;
+            }
+        }
+        return false;
+    }
+
+    private String occupancySlot(DiningTable table, String raw) {
+        String value = raw.trim();
+        if (value.equals(table.table_name) || value.equals(table.table_code)) return "full";
+        return value.toUpperCase(java.util.Locale.ROOT).endsWith("-A") ? "A"
+            : value.toUpperCase(java.util.Locale.ROOT).endsWith("-B") ? "B" : "full";
+    }
+
     /** Called inside the order transaction, before acquiring any Order row lock. */
     public void lockContexts(Long storeId, String... rawTableNos) {
         if (storeId == null) return;

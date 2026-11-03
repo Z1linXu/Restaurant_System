@@ -1,3 +1,4 @@
+import { FinishAllTablesButton } from './components/FinishAllTablesButton'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { followReprint, printResultMessage, reprintErrorMessage } from '../../services/manualReprintService'
 import { useMenuCatalog } from '../../hooks/useMenuCatalog'
@@ -585,6 +586,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
             <FrontdeskTopNav activeItem={null} />
             <PrintWorkerHealthBanner />
             <DineInTopBar
+              actions={<FinishAllTablesButton key={storeId} onFinished={(result) => { setSubmissionMessage(`Completed: ${result.completed} · Skipped: ${result.skipped} · Failed: ${result.failed}`); void refreshFromBackend({ force: true }) }} />}
               onTakeoutClick={handleTakeoutEntry}
               workstationLabel={workstationLabel}
               compact={workstationCompact}
@@ -644,6 +646,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
           <div className="px-4 py-4 md:px-5 xl:px-6">
             <div className="mx-auto max-w-[1880px] space-y-5">
               <DineInTopBar
+              actions={<FinishAllTablesButton key={storeId} onFinished={(result) => { setSubmissionMessage(`Completed: ${result.completed} · Skipped: ${result.skipped} · Failed: ${result.failed}`); void refreshFromBackend({ force: true }) }} />}
                 onTakeoutClick={handleTakeoutEntry}
                 workstationLabel={workstationLabel}
               />

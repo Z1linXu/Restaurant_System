@@ -1,6 +1,8 @@
+import type { ReactNode } from 'react'
 interface DineInTopBarProps {
   onTakeoutClick: () => void
   workstationLabel?: string | null
+  actions?: ReactNode
   compact?: boolean
 }
 
@@ -8,9 +10,10 @@ export function DineInTopBar({
   onTakeoutClick,
   workstationLabel = null,
   compact = false,
+  actions,
 }: DineInTopBarProps) {
   return (
-    <div className={`flex rounded-[28px] bg-[rgba(255,255,255,0.7)] shadow-[0_14px_32px_rgba(26,28,25,0.05)] backdrop-blur-sm ${compact ? 'items-center justify-between gap-4 px-5 py-3' : 'flex-col gap-5 px-7 py-5 xl:flex-row xl:items-center xl:justify-between'}`}>
+    <div className={`flex rounded-[28px] bg-[rgba(255,255,255,0.7)] shadow-[0_14px_32px_rgba(26,28,25,0.05)] backdrop-blur-sm ${compact ? 'flex-wrap items-center justify-between gap-4 px-5 py-3' : 'flex-col gap-5 px-7 py-5 xl:flex-row xl:items-center xl:justify-between'}`}>
       <div className={`flex ${compact ? 'items-center gap-6' : 'flex-col gap-5 xl:flex-row xl:items-center xl:gap-12'}`}>
         <div className={`font-display font-extrabold tracking-[-0.05em] text-[var(--primary)] ${compact ? 'text-[2rem]' : 'text-4xl'}`}>
           蘭
@@ -38,6 +41,7 @@ export function DineInTopBar({
           ) : null}
         </div>
       </div>
+      {actions}
     </div>
   )
 }

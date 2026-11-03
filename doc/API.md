@@ -2233,3 +2233,39 @@ second menu catalog. Prefix compatibility preserves distinct ingredient/operatio
 semantics; proposals never choose among conflicting custom aliases. Draft/validate/
 publish/preview endpoints remain the only rule mutation workflow. No-op proposals
 need no revision. Rule edits affect future renderings, not frozen Print Job text.
+
+
+### Store-scoped Finish All Tables
+
+`GET /api/v1/stores/{storeId}/orders/finish-all-tables/preview` requires the same
+`ORDER_COMPLETE`, StoreAccessService and operational ORDERING_POS gates as single
+Finish. It writes nothing. Returns Store name, target order IDs/raw/display table
+labels, expected released table-slot count, blocked draft/unsupported table labels,
+and a signed actor/Store-bound `preview_token` (10 minutes before first execution).
+The exact confirmed IDs and order revision/table/submission/amount fingerprints
+are fixed by this token; newly created/submitted orders are excluded.
+
+`POST /api/v1/stores/{storeId}/orders/finish-all-tables` body
+`{"preview_token":"..."}` explicitly confirms that preview. The batch ID in the
+signed token is the retry identity. A confirmed batch may resume after expiry; an
+unconfirmed expired preview is rejected. Maximum500 targets, no silent truncation.
+Only IN_STORE dine_in orders with table numbers and submitted/preparing/ready
+status can finish. Draft/pickup/delivery/external/Uber/foreign Store are excluded.
+Each target is independently locked/refreshed/revalidated and passed to the
+existing completeOrder domain; required audit, outcome journal and Finish commit
+atomically per order. Concurrent/retried batch IDs reuse committed outcomes.
+
+Response: `batch_id`, `completed`, `skipped`, `failed`, `released_slot_count`,
+per-order `results` (`order_id`,`table_no`,`outcome`,`reason`), and current
+`remaining_tables` display labels. Already-terminal/changed orders are skipped;
+ordinary per-order failures are recorded without rolling back other successes.
+A failed journal connection may fail the HTTP request; retry the same token. No
+unknown response is interpreted as full success. Partial failures need a new
+reviewed preview or individual Finish; replay never executes a failed entry again.
+Counts refer to this batch, while remaining occupancy is recalculated on each
+response and may include new orders or server Draft. No print dispatch, pricing,
+configuration, PAD_DIRECT or financial formula is changed.
+
+V40 adds only `order_finish_batches` (signed plan and per-order durable outcomes).
+Audit records contain actor, Store, time, order IDs and completed/skipped/failed
+counts, never the preview token or auth credentials.

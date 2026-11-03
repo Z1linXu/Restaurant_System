@@ -1,3 +1,4 @@
+import { FinishAllTablesButton } from '../dinein/components/FinishAllTablesButton'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Card } from '../../components/ui/Card'
 import { useIpadLandscape } from '../../hooks/useIpadLandscape'
@@ -574,6 +575,8 @@ function OrderingWorkspace({
           onSearchChange={setMenuSearch}
           compact={isIpadLandscape}
         />
+
+        <FinishAllTablesButton key={storeId} unsaved={Boolean(saving || draftLoading || customizationState || draftSubmissionLocked || session?.isModifiedAfterSubmit || (session?.status === 'draft' && session.items.length > 0))} onFinished={() => onBack()} />
 
         {(catalogError || draftError || persistenceError) ? (
           <div className="rounded-[24px] bg-[rgba(97,0,0,0.06)] px-5 py-4 text-base font-medium text-[var(--primary)]">
