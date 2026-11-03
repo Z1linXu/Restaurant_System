@@ -57,13 +57,13 @@ Tests cover exact ledger append, baseline, SHA and Staging-only dispatch.
 
 ## Validation and acceptance
 
-Pending final consolidated validation, Agent6 and exact-SHA Staging acceptance.
+Consolidated validation, Agent6 and exact-SHA Staging acceptance PASS.
 No Production deployment will follow this Package. Owner manual Staging
 acceptance is the final gate; Android/iPad physical devices are not presumed.
 
 Local final regression:171 backend cases,158 passed,13 existing conditional skips,
 0failures/errors. Includes actual PostgreSQL16 new Finish16, controller3 and
-prior soft-delete28. Frontend393/67files PASS; typecheck/build PASS. Changed
+prior soft-delete28. Frontend394/67files PASS; typecheck/build PASS. Changed
 lint0errors, one pre-existing useDraftOrder catalogItems dependency warning.
 Deployment tests4new+8existing PASS. Agent6 consolidated review ACCEPT, no blockingP0/P1/P2; independent frontend28/tool12 PASS.
 Tooling metadata now reports actual final Flyway version instead of hardcoded39.
@@ -120,3 +120,85 @@ lifecycle rather than introducing a new frontend-only release framework. Repair
 pins the actual c1e4981 pair and requires the complete V40 ledger unchanged.
 Shared release metadata now derives both before/after versions, avoiding a false
 V39_TO_V40 label on a V40→V40 application repair. Old evidence stays intact.
+
+## Final application deployment and real acceptance
+
+Application/backend/frontend SHA `a14cc4ce87ecaea17b31d86aa55aae76f1a79294`.
+Exact reviewed application pair deployed2026-11-03T16:49:10Z. Both public health
+checks PASS. Second deployment6m35; first6m35; no runtime failure/rollback.
+V40 ledger unchanged on repair. Backup SHA256
+`19b5dfa96312753c8de3431b810f8cd9d69edfcda1b63b86fe02066b0f6575ea`;
+initial V39 backup retained, hash in initial-staging-deploy.json.
+Rollback remains reviewed previous exact c1 app pair plus retained database;
+no destructive V40 downgrade. Production promotion is expressly prohibited.
+
+Evidence directory `docs/evidence/finish-all-tables-20261103/` contains sanitized
+local-validation.json, initial-staging-deploy.json, integration-repair.json,
+staging-deploy.json, acceptance-api.json, browser-cancel.json and
+final-verification.json. Private credentials, environment, backups and session
+files remain server0600; no secrets copied into repository.
+`staging-deploy.json.accepted=false` is the immutable pre-acceptance deployment
+checkpoint; subsequent acceptance-api/final-verification prove final PASS.
+
+Acceptance script SHA `41e99907a85dc326427d9faffb61ff32b87b67f6` reuses exactly
+identical backend/frontend trees to deployed a14. Drink submissions legitimately
+become ready; corrected the helper's preparing-only assertion. That assertion
+stopped before any Finish POST. Exact five interrupted fixtures were verified
+(Store/type/table/state/notes), resumed once, and normal authenticated APIs used.
+Agent6 acceptance-only re-review ACCEPT;4tools/syntax PASS. No application rebuild.
+
+| Requirement | Proof / result |
+| --- | --- |
+| Single/multiple, submitted/preparing/ready | Actual PostgreSQL16 tests; real Stage three-order batch PASS |
+| Split A/B | Stage98/99 and104/105 completed; parent1里 AVAILABLE, configuration unchanged |
+| Cancel | Real browser Cancel; DB98/99/100 stillready,101draft,102ready; journal0 |
+| Confirm | UI104/105/106: completed3/skipped0/failed0/released3; DB independently verified |
+| Frozen set | Stage103 created after first preview stayedready until separately previewed |
+| Retry/concurrency | Real same-token replay identical; PostgreSQL same/distinct Pad batch and timeout tests PASS |
+| Partial failure | PostgreSQL injected per-order failure: prior successes commit, precise failed result, retry stable |
+| Draft/outbox/editor | Frontend queued/submitting/conflict/retryable and unsaved tests PASS; Stage101 draft excluded, later explicitly cancelled via normal API |
+| Empty board | Stage preview0; actual UI Confirm disabled, no active tables message |
+| Store/type isolation | All existing Stage history hashes unchanged; Store18 pickup102 remainsready; crossStore/Uber/delivery tests PASS |
+| History/money | Original rows/items/prints hashes unchanged; completed test order/item money identity unchanged |
+| Printing | Finish job delta0; UI before/after250; no physical transport or PAD worker action |
+| WebSocket | Second independent open page changed IN USE3→0/AVAILABLE1→3 without refresh after UI Confirm |
+| Routes/layout | Base1440x900, /a1024x768, /b1280x800 show48px action; modal fits; screenshots retained |
+| Audit | 3 committed batches,7 TABLE_FINISH_RESULT +3 TABLES_FINISHED, actor1/Store18/timestamps/order IDs |
+| Runtime safety | Production3 and StageDB fingerprint equality; V40 unchanged; Stage health PASS |
+
+Final states98/99/100/103/104/105/106 completed;101cancelled;102pickupready.
+All test records remain for audit. Other pre-existing Stage records untouched.
+No forced Completed, row deletion, outbox clearing or printing retry was used.
+
+Known limits: physical Android Pad WebView/iPad devices NOT RUN; browser viewport
+checks are not physical-device certification. Other Pads' local IndexedDB cannot
+be inspected remotely; warning is explicit and their data is preserved when they
+observe terminal state. 1024px page has a2px document edge overflow; action/dialog
+remain entirely visible. No unrelated shell-layout repair was added.
+Normal Submit for eight Coke fixtures created16 jobs before Finish:8MOCK receipt
+PRINTED and8GRAB FAILED/RENDERED_CONTENT_BLANK. This is isolated fixture/printing
+behavior, not an extra Finish dispatch; no printing code/config change or reprint.
+Operational retained_printing aggregate consequently changed; configuration hashes
+exclude that runtime aggregate, while all pre-existing print rows remain identical.
+This is NON_BLOCKING_EXISTING_DEBT, not evidence of successful physical printing.
+
+## Docker / Disk Hygiene
+
+Before64% /21GiB free; after66% /20GiB free. Build Cache8.293GB before/after,
+reclaimable1.576GB. No cache/image/volume/release cleanup performed; disk remains
+below70%. Only own disposable bounded builders were removed. Existing current and
+rollback images, database volumes, backups and private environment files retained.
+Stage healthy; Production lifecycle/data mutation NONE. See final-verification.json.
+
+## Product repair versus tooling / governance
+
+PRODUCT REPAIR: backend preview/execute/V40 batch journal, shared frontend control,
+offline terminal-conflict protection and relevant tests. These directly implement
+confirmed Store-scoped Finish and prevent pending local work loss.
+TOOLING / GOVERNANCE REPAIR: small Stage-only deploy wrapper around reviewed
+lifecycle, exact ledger handling, bounded acceptance helper, current contracts and
+sanitized evidence. Required to prove isolated migration/deployment and real API
+behavior; no new deployment architecture or credential/config lifecycle.
+
+PR306 remains open; branch codex/finish-all-tables-staging. No main merge and no
+Production promotion. Final Gate OWNER; Stop FINISH_ALL_TABLES_STAGING_OWNER_ACCEPTANCE_PENDING.

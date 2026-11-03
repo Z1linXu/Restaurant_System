@@ -1,0 +1,156 @@
+{
+  "application_sha": "a14cc4ce87ecaea17b31d86aa55aae76f1a79294",
+  "backend": {
+    "total": 171,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 13,
+    "suites": [
+      {
+        "suite": "com.restaurant.system.station.SplitLabelMigrationPostgresTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      {
+        "suite": "com.restaurant.system.order.service.impl.OrderServiceImplTest",
+        "tests": 29,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.restaurant.system.station.service.DiningTableDisplayServiceTest",
+        "tests": 11,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.restaurant.system.order.service.impl.IdempotentOrderSubmissionServiceImplTest",
+        "tests": 13,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.restaurant.system.common.auth.WorkspaceControllerTest",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.restaurant.system.order.close.StoreDailyClosePostgresIntegrationTest",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 8
+      },
+      {
+        "suite": "com.restaurant.system.order.service.impl.OrderPricingSnapshotIntegrationTest",
+        "tests": 14,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.restaurant.system.order.finish.FinishAllTablesPostgresTest",
+        "tests": 16,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.restaurant.system.order.close.StoreDailyCloseServiceTest",
+        "tests": 11,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.restaurant.system.order.close.StoreDailyCloseSchedulerTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.restaurant.system.station.SplitTableLabelPostgresIntegrationTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 4
+      },
+      {
+        "suite": "com.restaurant.system.order.finish.FinishAllTablesControllerTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.restaurant.system.common.auth.StoreAccessServiceTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.restaurant.system.common.auth.AuthorizationServiceTest",
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.restaurant.system.order.service.impl.OrderSubmissionHashServiceImplTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.restaurant.system.station.DiningTableSoftDeletePostgresTest",
+        "tests": 28,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.restaurant.system.common.auth.OwnerOrganizationAuthorizationServiceTest",
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ],
+    "validated_sha": "c1e4981a85831cadb9785d98a80375f47443e50f",
+    "tree_unchanged_in_permission_fix": true
+  },
+  "frontend": {
+    "passed": 394,
+    "files": 67,
+    "build": "PASS",
+    "changed_file_lint_errors": 0,
+    "existing_catalogItems_warning": 1
+  },
+  "tools": {
+    "new": 4,
+    "existing": 8,
+    "result": "PASS"
+  },
+  "agent6": {
+    "result": "ACCEPT",
+    "blocking_P0_P1_P2": 0,
+    "independent_frontend": 28,
+    "independent_tools": 12,
+    "permission_fix_review": "ACCEPT",
+    "permission_fix_independent_component_tests": 12,
+    "acceptance_script_review": "ACCEPT",
+    "acceptance_script_independent_tools": 4
+  },
+  "production_mutation": false,
+  "local_postgres_stopped": true
+}

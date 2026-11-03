@@ -1,0 +1,91 @@
+{
+  "environment": "staging",
+  "source_sha": "a14cc4ce87ecaea17b31d86aa55aae76f1a79294",
+  "script_sha": "a14cc4ce87ecaea17b31d86aa55aae76f1a79294",
+  "migration": "NONE_V40_UNCHANGED",
+  "image": "sha256:df668c572f606d5a1557e1da81e411666fc95cf47c433a62e92efc0db696af39",
+  "images": {
+    "backend": "sha256:df668c572f606d5a1557e1da81e411666fc95cf47c433a62e92efc0db696af39",
+    "nginx": "sha256:9a2ead0b75eee7dbdd9b97fbfe260acc4228a55699f11ab57792356ba1c66a74"
+  },
+  "health": "PASS",
+  "flyway": "40",
+  "table_modes": {
+    "rows": 30,
+    "left_right": 30,
+    "inside_outside": 0,
+    "stores": [
+      {
+        "id": 1,
+        "code": "STG005_SRC_20260809_R01",
+        "tables": 13,
+        "default_mode_tables": 13,
+        "inside_outside_tables": 0
+      },
+      {
+        "id": 18,
+        "code": "CHINATOWN",
+        "tables": 3,
+        "default_mode_tables": 3,
+        "inside_outside_tables": 0
+      },
+      {
+        "id": 21,
+        "code": "PHASE_B_VALIDATION_STORE_PRODUCT_FLOW_D0B1BDE_R03",
+        "tables": 2,
+        "default_mode_tables": 2,
+        "inside_outside_tables": 0
+      },
+      {
+        "id": 22,
+        "code": "STG005_BUSINESS_67494DE0F3D949798CF78BBC08A48856",
+        "tables": 2,
+        "default_mode_tables": 2,
+        "inside_outside_tables": 0
+      },
+      {
+        "id": 23,
+        "code": "STG005_BUSINESS_4B127620A74333F0FA4C9829E3537B5F",
+        "tables": 2,
+        "default_mode_tables": 2,
+        "inside_outside_tables": 0
+      },
+      {
+        "id": 24,
+        "code": "STG005_MENU_MENU1501_A",
+        "tables": 2,
+        "default_mode_tables": 2,
+        "inside_outside_tables": 0
+      },
+      {
+        "id": 25,
+        "code": "STG005_MENU_MENU1501_B",
+        "tables": 2,
+        "default_mode_tables": 2,
+        "inside_outside_tables": 0
+      },
+      {
+        "id": 26,
+        "code": "STG005_MENU_ALIAS1601_A",
+        "tables": 2,
+        "default_mode_tables": 2,
+        "inside_outside_tables": 0
+      },
+      {
+        "id": 27,
+        "code": "STG005_MENU_ALIAS1601_B",
+        "tables": 2,
+        "default_mode_tables": 2,
+        "inside_outside_tables": 0
+      }
+    ]
+  },
+  "order_contexts_unchanged": true,
+  "accepted": false,
+  "configuration_unchanged": true,
+  "history_unchanged": true,
+  "other_containers_unchanged": true,
+  "uber_worker_enabled": false,
+  "deployed_at": "2026-11-03T16:49:10.005890+00:00",
+  "backup_sha256": "19b5dfa96312753c8de3431b810f8cd9d69edfcda1b63b86fe02066b0f6575ea"
+}

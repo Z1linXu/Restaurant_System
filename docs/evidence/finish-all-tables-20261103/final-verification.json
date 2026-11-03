@@ -1,0 +1,124 @@
+{
+  "status": "PASS",
+  "source_sha": "a14cc4ce87ecaea17b31d86aa55aae76f1a79294",
+  "observed_at": "2026-11-03T16:55:41.654815+00:00",
+  "backend_states": [
+    {
+      "id": 98,
+      "store_id": 18,
+      "status": "completed",
+      "order_type": "dine_in",
+      "table_no": "1\u91cc-A",
+      "completed_at": "2026-11-03T11:54:09.378387"
+    },
+    {
+      "id": 99,
+      "store_id": 18,
+      "status": "completed",
+      "order_type": "dine_in",
+      "table_no": "1\u91cc-B",
+      "completed_at": "2026-11-03T11:54:09.41406"
+    },
+    {
+      "id": 100,
+      "store_id": 18,
+      "status": "completed",
+      "order_type": "dine_in",
+      "table_no": "2",
+      "completed_at": "2026-11-03T11:54:09.481485"
+    },
+    {
+      "id": 101,
+      "store_id": 18,
+      "status": "cancelled",
+      "order_type": "dine_in",
+      "table_no": "1\u5916-A",
+      "completed_at": null
+    },
+    {
+      "id": 102,
+      "store_id": 18,
+      "status": "ready",
+      "order_type": "pickup",
+      "table_no": null,
+      "completed_at": null
+    },
+    {
+      "id": 103,
+      "store_id": 18,
+      "status": "completed",
+      "order_type": "dine_in",
+      "table_no": "1\u5916-B",
+      "completed_at": "2026-11-03T11:54:10.53907"
+    },
+    {
+      "id": 104,
+      "store_id": 18,
+      "status": "completed",
+      "order_type": "dine_in",
+      "table_no": "1\u91cc-A",
+      "completed_at": "2026-11-03T11:54:19.191309"
+    },
+    {
+      "id": 105,
+      "store_id": 18,
+      "status": "completed",
+      "order_type": "dine_in",
+      "table_no": "1\u91cc-B",
+      "completed_at": "2026-11-03T11:54:19.208453"
+    },
+    {
+      "id": 106,
+      "store_id": 18,
+      "status": "completed",
+      "order_type": "dine_in",
+      "table_no": "2",
+      "completed_at": "2026-11-03T11:54:19.231735"
+    }
+  ],
+  "batch_count": 3,
+  "audit": [
+    {
+      "store_id": 18,
+      "actor_user_id": 1,
+      "action": "TABLES_FINISHED",
+      "count": 3
+    },
+    {
+      "store_id": 18,
+      "actor_user_id": 1,
+      "action": "TABLE_FINISH_RESULT",
+      "count": 7
+    }
+  ],
+  "ui_print_jobs_before": 250,
+  "ui_print_jobs_after": 250,
+  "normal_submit_jobs": [
+    {
+      "module_code": "FRONTDESK_RECEIPT",
+      "status": "PRINTED",
+      "error_code": null,
+      "count": 8
+    },
+    {
+      "module_code": "GRAB",
+      "status": "FAILED",
+      "error_code": "RENDERED_CONTENT_BLANK",
+      "count": 8
+    }
+  ],
+  "finish_extra_print_jobs": 0,
+  "historical_rows_unchanged": true,
+  "all_configuration_unchanged": true,
+  "operational_retained_printing_aggregate_excluded": true,
+  "flyway_unchanged": "V40",
+  "protected_production_and_staging_db_unchanged": true,
+  "public_health": "PASS_BOTH",
+  "staging_images": {
+    "backend": "sha256:df668c572f606d5a1557e1da81e411666fc95cf47c433a62e92efc0db696af39",
+    "nginx": "sha256:9a2ead0b75eee7dbdd9b97fbfe260acc4228a55699f11ab57792356ba1c66a74"
+  },
+  "production_mutation": false,
+  "disk_after": "Filesystem      Size  Used Avail Use% Mounted on\n/dev/vda2        59G   37G   20G  66% /\n",
+  "docker_system_df_after": "TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE\nImages          139       10        9.974GB   4.023GB (40%)\nContainers      12        12        4.592MB   0B (0%)\nLocal Volumes   3         1         71.18MB   0B (0%)\nBuild Cache     209       12        8.293GB   1.576GB\n"
+}
