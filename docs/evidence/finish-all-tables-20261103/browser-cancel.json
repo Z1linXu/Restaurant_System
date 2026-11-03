@@ -1,0 +1,47 @@
+{
+  "status": "PASS",
+  "order_states": [
+    {
+      "id": 98,
+      "store_id": 18,
+      "status": "ready",
+      "order_type": "dine_in",
+      "table_no": "1\u91cc-A",
+      "pickup_no": null
+    },
+    {
+      "id": 99,
+      "store_id": 18,
+      "status": "ready",
+      "order_type": "dine_in",
+      "table_no": "1\u91cc-B",
+      "pickup_no": null
+    },
+    {
+      "id": 100,
+      "store_id": 18,
+      "status": "ready",
+      "order_type": "dine_in",
+      "table_no": "2",
+      "pickup_no": null
+    },
+    {
+      "id": 101,
+      "store_id": 18,
+      "status": "draft",
+      "order_type": "dine_in",
+      "table_no": "1\u5916-A",
+      "pickup_no": null
+    },
+    {
+      "id": 102,
+      "store_id": 18,
+      "status": "ready",
+      "order_type": "pickup",
+      "table_no": null,
+      "pickup_no": "FINISH_ALL_afa738a94f"
+    }
+  ],
+  "batch_count": 0,
+  "confirmation_cancelled": true
+}

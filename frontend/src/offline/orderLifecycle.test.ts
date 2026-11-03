@@ -84,3 +84,28 @@ describe('offline server order lifecycle', () => {
     expect(collectServerOrderIds([active, completed], [])).toEqual([491])
   })
 })
+
+it.each(['QUEUED', 'SUBMITTING', 'CONFLICT', 'FAILED_RETRYABLE'] as const)('preserves %s local draft and frozen outbox payload after another Pad finishes', (state) => {
+  const draft = { ...linkedDraft(), submitState: state }
+  const terminal = buildTerminalLocalDraft(draft, 'COMPLETED')
+  expect(terminal.items).toEqual(draft.items); expect(terminal.submitState).toBe('CONFLICT')
+  const outbox = { ...createOrderOutboxRecord(draft, { ...payload, client_order_id: draft.clientOrderId, idempotency_key: draft.clientOrderId }), state, serverOrderId: 491 }
+  const retained = buildTerminalOrderOutbox(outbox, 'COMPLETED')
+  expect(retained.state).toBe('CONFLICT'); expect(retained.frozenPayload).toEqual(outbox.frozenPayload)
+  expect(retained.lastErrorCode).toBe('SERVER_ORDER_TERMINAL_WITH_LOCAL_WORK')
+})
+it('retains unsaved submitted-order additions when remote completion is observed', () => {
+  const draft = { ...linkedDraft(), items: [{ id: 'temp-new-line' } as never] }
+  const retained = buildTerminalLocalDraft(draft, 'COMPLETED')
+  expect(retained.items).toEqual(draft.items); expect(retained.submitState).toBe('CONFLICT')
+})
+it('does not repeatedly rewrite retained conflicts when the same terminal state is polled', () => {
+  const draft = { ...linkedDraft(), submitState: 'QUEUED' as const }
+  const first = buildTerminalLocalDraft(draft, 'COMPLETED')
+  // A no-snapshot record has no visible state to reconcile; real linked snapshots are stable.
+  const withSnapshot = { ...first, serverOrderSnapshot: { status: 'completed' } as never }
+  expect(buildTerminalLocalDraft(withSnapshot, 'COMPLETED')).toBe(withSnapshot)
+  const o = createOrderOutboxRecord(draft, { ...payload, client_order_id: draft.clientOrderId, idempotency_key: draft.clientOrderId })
+  const conflict = buildTerminalOrderOutbox(o, 'COMPLETED')
+  expect(buildTerminalOrderOutbox(conflict, 'COMPLETED')).toBe(conflict)
+})

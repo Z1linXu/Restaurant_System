@@ -229,8 +229,11 @@ def main(environment, sha):
         prior.wait_health(url)
         if prod: ops.write_private(source, rollback)
         raise RuntimeError('Application rollback applied; database retained') from None
-    result = {'environment': environment, 'source_sha': sha, 'script_sha': script_sha, 'migration': 'NONE_V39_UNCHANGED', 'image': images['backend'], 'images': images, 'health': 'PASS',
-        'flyway': '39', 'table_modes': modes, 'order_contexts_unchanged': True, 'accepted': False, 'configuration_unchanged': True, 'history_unchanged': True,
+    final_version = i.ledger(db).splitlines()[-1].split('|')[0]
+    before_version = ledger.splitlines()[-1].split('|')[0]
+    migration = ('NONE_V' + final_version + '_UNCHANGED') if before_version == final_version else ('V' + before_version + '_TO_V' + final_version)
+    result = {'environment': environment, 'source_sha': sha, 'script_sha': script_sha, 'migration': migration, 'image': images['backend'], 'images': images, 'health': 'PASS',
+        'flyway': final_version, 'table_modes': modes, 'order_contexts_unchanged': True, 'accepted': False, 'configuration_unchanged': True, 'history_unchanged': True,
         'other_containers_unchanged': True, 'uber_worker_enabled': prod,
         'deployed_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),
         'backup_sha256': hashlib.sha256((root / 'database-before.dump').read_bytes()).hexdigest()}

@@ -29,6 +29,7 @@ import {
   deleteLocalDraft,
   deleteLocalDraftIfClientMatches,
   readLocalDraft,
+  hasUnsubmittedLocalWork,
   reopenRejectedLocalDraft,
   resolveLocalDraftForOpen,
   saveLocalDraft,
@@ -484,11 +485,32 @@ export function useDraftOrder(
           pickupNo: orderType === 'pickup' ? (pickupLabel ?? slotLabel) : null,
         })
         if (!active) return
+        if (resolvedOrder && cached?.serverOrderId && resolvedOrder.id !== cached.serverOrderId
+          && (hasUnsubmittedLocalWork(cached) || ['QUEUED', 'SUBMITTING', 'CONFLICT', 'FAILED_RETRYABLE', 'FAILED_VALIDATION'].includes(cached.submitState))) {
+          const previous = await fetchOrderDetail(cached.serverOrderId)
+          if (!active) return
+          await finalizeOfflineOrderRecords(localScope!, previous.id, previous.status)
+          if (!active) return
+          localDraftRef.current = cached
+          setOrder(previous)
+          setStagedItems(cached.items)
+          setError('Previous order has local changes; review them before opening the new table order / 上一订单仍有本地修改，请先处理；内容已保留。')
+          return
+        }
         if (!resolvedOrder && cached?.serverOrderId && localScope) {
           const linkedOrder = await fetchOrderDetail(cached.serverOrderId)
           const terminalState = terminalLocalStateForServerStatus(linkedOrder.status)
           if (terminalState) {
             await finalizeOfflineOrderRecords(localScope, linkedOrder.id, linkedOrder.status)
+            if (cached && (hasUnsubmittedLocalWork(cached) || ['QUEUED', 'SUBMITTING', 'CONFLICT', 'FAILED_RETRYABLE', 'FAILED_VALIDATION'].includes(cached.submitState))) {
+              const retained = await readLocalDraft(localScope, contextKey)
+              if (!active || !retained) return
+              localDraftRef.current = retained
+              setOrder(linkedOrder)
+              setStagedItems(retained.items)
+              setError(retained.lastError)
+              return
+            }
             const freshDraft = createLocalDraftRecord(
               localScope,
               localContext,
@@ -752,7 +774,9 @@ export function useDraftOrder(
     lastLocalSavedAt,
     localDraftMode: localDraftRef.current?.mode ?? 'LOCAL_NEW_ORDER',
     localSubmitState: outboxRecord?.state
-      ?? (localDraftRef.current?.mode === 'SERVER_ORDER_UPDATE'
+      ?? (localDraftRef.current?.submitState === 'CONFLICT'
+        ? 'CONFLICT'
+        : localDraftRef.current?.mode === 'SERVER_ORDER_UPDATE'
         ? 'SUBMITTED'
         : localDraftRef.current?.submitState)
       ?? 'LOCAL_DRAFT',
@@ -1028,7 +1052,27 @@ export function useDraftOrder(
         kickOrderOutboxProcessor()
         return null
       }
-      return runMutation(() => fetchOrderDetail(order.id))
+      const clientId = localDraftRef.current?.clientOrderId
+      const next = await fetchOrderDetail(order.id)
+      if (clientId && localDraftRef.current?.clientOrderId !== clientId) return next
+      const current = localDraftRef.current
+      if (terminalLocalStateForServerStatus(next.status) && current && localScope
+        && (hasUnsubmittedLocalWork(current) || ['QUEUED', 'SUBMITTING', 'CONFLICT', 'FAILED_RETRYABLE', 'FAILED_VALIDATION'].includes(current.submitState))) {
+        await flushLocalDraft()
+        await finalizeOfflineOrderRecords(localScope, next.id, next.status)
+        const retained = await readLocalDraft(localScope, contextKey)
+        if (retained && localDraftRef.current?.clientOrderId === clientId) {
+          localDraftRef.current = retained
+          setOrder(next)
+          setStagedItems(retained.items)
+          setError(retained.lastError)
+        }
+        return next
+      }
+      setOrder(next)
+      // A read refresh is not a successful Submit/Update: never discard staged additions.
+      setStagedItems(items => items?.some(item => item.id.startsWith('temp-')) ? items : mapServerItems(next))
+      return next
     },
     updateHeader: async (nextPickupLabel: string | null) => {
       if (isDraftOrder) {

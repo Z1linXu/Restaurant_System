@@ -1,0 +1,15 @@
+{
+  "initial_sha": "c1e4981a85831cadb9785d98a80375f47443e50f",
+  "repair_sha": "a14cc4ce87ecaea17b31d86aa55aae76f1a79294",
+  "initial_deployment_health": "PASS",
+  "initial_migration": "V39_TO_V40",
+  "acceptance_issues": [
+    "Actual auth/me permissions use ORDER_COMPLETE enum name; initial UI used order:complete",
+    "Existing synthetic menu item types drink/menu_item/main; initial fixture selector assumed SINGLE"
+  ],
+  "initial_api_attempt_created_business_orders": 0,
+  "fix_review": "ACCEPT",
+  "repair_scope": "FRONTEND_PERMISSION_AND_ACCEPTANCE_FIXTURE_CONTRACT",
+  "repair_migration": "NONE_V40_UNCHANGED",
+  "production_mutation": false
+}

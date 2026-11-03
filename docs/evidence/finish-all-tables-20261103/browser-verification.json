@@ -1,0 +1,63 @@
+{
+  "status": "PASS",
+  "source_sha": "a14cc4ce87ecaea17b31d86aa55aae76f1a79294",
+  "store_id": 18,
+  "routes": [
+    {
+      "route": "/frontdesk/menu",
+      "viewport": [
+        1440,
+        900
+      ],
+      "button_height": 48,
+      "scroll_width": 1440
+    },
+    {
+      "route": "/frontdesk/menu/a",
+      "viewport": [
+        1024,
+        768
+      ],
+      "button_height": 48,
+      "scroll_width": 1026
+    },
+    {
+      "route": "/frontdesk/menu/b",
+      "viewport": [
+        1280,
+        800
+      ],
+      "button_height": 48,
+      "scroll_width": 1280,
+      "dialog_bounds": {
+        "x": 352,
+        "y": 204,
+        "width": 576,
+        "height": 392
+      }
+    }
+  ],
+  "cancel_backend_verified": true,
+  "confirmed_order_ids": [
+    104,
+    105,
+    106
+  ],
+  "ui_result": {
+    "completed": 3,
+    "skipped": 0,
+    "failed": 0,
+    "released": 3
+  },
+  "second_page_no_refresh_board": {
+    "available": 3,
+    "in_use": 0
+  },
+  "idle_confirm_disabled": true,
+  "physical_android_ipad": "NOT_RUN",
+  "screenshots": [
+    "confirmation-1024.png",
+    "completed-1280.png",
+    "available-1280.png"
+  ]
+}

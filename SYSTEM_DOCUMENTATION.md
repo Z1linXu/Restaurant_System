@@ -2541,6 +2541,24 @@ Restaurant_System/
 
 ### 1.5 Table System
 
+Frontdesk Menu, Menu A and Menu B offer **Finish All Tables / 结束所有桌台**.
+A read-only signed preview fixes the eligible Store-scoped dine-in order set.
+Explicit confirmation completes submitted/preparing/ready orders through the
+existing Finish domain in independent transactions, with V40 durable per-order
+outcomes and mandatory actor/Store audit. Revision/table changes are skipped;
+new orders are never added to an existing confirmation. Retry uses the same
+batch identity, including after a timeout, and preserves partial successes.
+Server Drafts remain occupied and are listed; takeout/external/Uber are excluded.
+No additional print jobs, table configuration changes or price changes occur.
+
+The action warns about this device's local drafts, blocks pending outbox/dirty
+server updates and current unsaved edits, and inspects local storage again before
+Confirm. It never clears drafts/outbox. Remote terminal reconciliation retains
+protected local work as a visible CONFLICT (including frozen payload and staged
+items), rather than clearing it or attaching it to a newly opened table order.
+Other Pads' unsynced content cannot be discovered by a server preview.
+
+
 Dining Tables uses `is_active=false` as a soft-delete tombstone. Add defaults to
 active; the UI has no Active checkbox/status column. Edit provides a red
 **Delete Table / 删除桌台** action with a table-name confirmation. Both Admin and
