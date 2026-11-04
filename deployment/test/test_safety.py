@@ -746,7 +746,7 @@ class AlloReplacementBoundaryTest(unittest.TestCase):
         with remote.target_context(ALLO_TARGET), patch.object(remote,'run',return_value=encoded(rows)) as command:
             before=remote.protected_snapshot()
             fmt=command.call_args.args[0][3]
-            self.assertIn('.State.Running',fmt);self.assertIn('.State.Restarting',fmt);self.assertIn('.State.Health.Status',fmt)
+            self.assertIn('.State.Running',fmt);self.assertIn('.State.Restarting',fmt);self.assertIn('index .State "Health"',fmt)
             self.assertNotIn('.Config.Env',fmt);self.assertNotIn('Health.Log',fmt)
         self.assertFalse(before['/restaurant-pos-staging-backend-1']['running'])
         for field,value in ((5,False),(6,True),(7,'unhealthy')):

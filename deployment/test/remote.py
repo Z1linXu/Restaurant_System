@@ -92,7 +92,7 @@ def jsonrun(args):
 
 def container_documents(names):
     # Structural identity only: no Env, process arguments, health output or logs.
-    fmt = '{"Id":{{json .Id}},"Name":{{json .Name}},"Image":{{json .Image}},"RestartCount":{{json .RestartCount}},"State":{"Running":{{json .State.Running}},"Restarting":{{json .State.Restarting}},"StartedAt":{{json .State.StartedAt}},"Health":{"Status":{{if .State.Health}}{{json .State.Health.Status}}{{else}}null{{end}}}},"Config":{"Labels":{"com.docker.compose.project":{{json (index .Config.Labels "com.docker.compose.project")}},"com.docker.compose.service":{{json (index .Config.Labels "com.docker.compose.service")}},"org.opencontainers.image.revision":{{json (index .Config.Labels "org.opencontainers.image.revision")}}}},"NetworkSettings":{"Networks":{{json .NetworkSettings.Networks}},"Ports":{{json .NetworkSettings.Ports}}}}'
+    fmt = '{"Id":{{json .Id}},"Name":{{json .Name}},"Image":{{json .Image}},"RestartCount":{{json .RestartCount}},"State":{"Running":{{json .State.Running}},"Restarting":{{json .State.Restarting}},"StartedAt":{{json .State.StartedAt}},"Health":{"Status":{{if index .State "Health"}}{{json (index (index .State "Health") "Status")}}{{else}}null{{end}}}},"Config":{"Labels":{"com.docker.compose.project":{{json (index .Config.Labels "com.docker.compose.project")}},"com.docker.compose.service":{{json (index .Config.Labels "com.docker.compose.service")}},"org.opencontainers.image.revision":{{json (index .Config.Labels "org.opencontainers.image.revision")}}}},"NetworkSettings":{"Networks":{{json .NetworkSettings.Networks}},"Ports":{{json .NetworkSettings.Ports}}}}'
     return [json.loads(row) for row in run(['docker','inspect','--format',fmt,*names]).decode().splitlines()]
 
 
@@ -158,7 +158,7 @@ def verify_release(release, sha):
 
 def protected_snapshot():
     # Inspect only public identity fields: never read protected Config.Env.
-    fmt = '{{json .Name}}|{{json .Id}}|{{json .Image}}|{{json .State.StartedAt}}|{{json .RestartCount}}|{{json .State.Running}}|{{json .State.Restarting}}|{{if .State.Health}}{{json .State.Health.Status}}{{else}}null{{end}}'
+    fmt = '{{json .Name}}|{{json .Id}}|{{json .Image}}|{{json .State.StartedAt}}|{{json .RestartCount}}|{{json .State.Running}}|{{json .State.Restarting}}|{{if index .State "Health"}}{{json (index (index .State "Health") "Status")}}{{else}}null{{end}}'
     rows = [list(map(json.loads, row.split('|'))) for row in run(['docker', 'inspect', '--format', fmt, *PROTECTED]).decode().splitlines()]
     if len(rows) != len(PROTECTED) or {r[0] for r in rows} != {'/' + n for n in PROTECTED}:
         raise ValueError('protected identity inventory incomplete')
