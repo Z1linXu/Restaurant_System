@@ -375,6 +375,14 @@ function resizeSnapshotLineSubtotal(item: OrderLineItem, nextQuantity: number) {
 }
 
 const LOCAL_DRAFT_SAVE_DEBOUNCE_MS = 200
+const UPDATE_REVIEW_MESSAGE = '服务器订单已更新，但本机仍有未确认的加单记录。请先核对订单；本机记录已保留，不能直接再次 Update。'
+type UpdateLocalDraftRecord = LocalDraftRecord & { updateRequiresReview?: boolean }
+
+function serverItemsAdvanced(previous: BackendOrderResponse | null, current: BackendOrderResponse) {
+  if (!previous) return true
+  return previous.current_revision !== current.current_revision
+    || previous.items.map((item) => item.id).join(',') !== current.items.map((item) => item.id).join(',')
+}
 
 export function useDraftOrder(
   storeId: number,
@@ -397,7 +405,14 @@ export function useDraftOrder(
   const [outboxRecord, setOutboxRecord] = useState<OrderOutboxRecord | null>(null)
   const submitInFlightRef = useRef(false)
   const updateIdempotencyKeyRef = useRef<string | null>(null)
-  const localDraftRef = useRef<LocalDraftRecord | null>(null)
+  const localDraftRef = useRef<UpdateLocalDraftRecord | null>(null)
+  const [updateRequiresReview, setUpdateRequiresReview] = useState(false)
+  const draftSaveQueueRef = useRef<Promise<void>>(Promise.resolve())
+  const queueDraftSave = useCallback((draft: UpdateLocalDraftRecord) => {
+    const write = draftSaveQueueRef.current.then(() => saveLocalDraftIfClientMatches(draft, draft.clientOrderId))
+    draftSaveQueueRef.current = write.then(() => undefined, () => undefined)
+    return write
+  }, [])
   const saveTimerRef = useRef<number | null>(null)
   const flushLocalDraftRef = useRef<() => Promise<void>>(async () => undefined)
 
@@ -430,10 +445,11 @@ export function useDraftOrder(
     setError(null)
     setPersistenceError(null)
     setOutboxRecord(null)
+    setUpdateRequiresReview(false)
     localDraftRef.current = null
 
     const load = async () => {
-      let cached: LocalDraftRecord | null = null
+      let cached: UpdateLocalDraftRecord | null = null
       if (localScope) {
         try {
           void cleanupExpiredLocalDrafts().catch(() => undefined)
@@ -485,6 +501,7 @@ export function useDraftOrder(
           setClientOrderId(cached.clientOrderId)
           setLastLocalSavedAt(cached.updatedAt)
           setOrder(cached.serverOrderSnapshot)
+          setUpdateRequiresReview(Boolean(cached.updateRequiresReview))
           setStagedItems(cached.items)
           setLoading(false)
           if (active) setOutboxRecord(pendingSubmission)
@@ -539,6 +556,13 @@ export function useDraftOrder(
           && cached.items.length > 0
           && (cached.mode === 'SERVER_ORDER_UPDATE' || localUpdatedAt > serverUpdatedAt),
         )
+        const needsUpdateReview = Boolean(cached?.updateRequiresReview || (
+          keepLocalItems && cached?.mode === 'SERVER_ORDER_UPDATE'
+          && cached.items.some((item) => item.id.startsWith('temp-'))
+          && serverItemsAdvanced(cached.serverOrderSnapshot, resolvedOrder)
+        ))
+        setUpdateRequiresReview(needsUpdateReview)
+        if (needsUpdateReview) setError(UPDATE_REVIEW_MESSAGE)
         const nextItems = keepLocalItems ? cached!.items : mapServerItems(resolvedOrder)
         setOrder(resolvedOrder)
         setStagedItems(nextItems)
@@ -552,11 +576,14 @@ export function useDraftOrder(
             serverOrderId: resolvedOrder.id,
             serverOrderSnapshot: resolvedOrder,
             items: nextItems,
+            updateRequiresReview: needsUpdateReview,
             menuRevision: offlineIdentity.menuRevision,
             lastError: null,
           }
-          void saveLocalDraft(localDraftRef.current)
+          const draftToSave = localDraftRef.current
+          void queueDraftSave(draftToSave)
             .then((saved) => {
+              if (!saved || localDraftRef.current !== draftToSave) return
               localDraftRef.current = saved
               if (active) setLastLocalSavedAt(saved.updatedAt)
             })
@@ -584,7 +611,7 @@ export function useDraftOrder(
     return () => {
       active = false
     }
-  }, [contextKey, localContext, localScope, mapServerItems, offlineIdentity.menuRevision, orderType, pickupLabel, slotLabel, storeId])
+  }, [contextKey, localContext, localScope, mapServerItems, offlineIdentity.menuRevision, orderType, pickupLabel, queueDraftSave, slotLabel, storeId])
 
   const runMutation = useCallback(async (operation: () => Promise<BackendOrderResponse>) => {
     setSaving(true)
@@ -621,7 +648,7 @@ export function useDraftOrder(
     const dirty = effectiveItems.some((item) => item.id.startsWith('temp-'))
     return {
       ...baseSession,
-      isModifiedAfterSubmit: dirty || baseSession.isModifiedAfterSubmit,
+      isModifiedAfterSubmit: dirty,
       items: effectiveItems,
     }
   }, [catalogItems, localDraftId, order, slotLabel, stagedItems, tableLabel])
@@ -657,8 +684,8 @@ export function useDraftOrder(
     if (!localDraftRef.current) return
     const draftToSave = localDraftRef.current
     try {
-      const saved = await saveLocalDraftIfClientMatches(draftToSave, draftToSave.clientOrderId)
-      if (!saved || localDraftRef.current?.clientOrderId !== draftToSave.clientOrderId) return
+      const saved = await queueDraftSave(draftToSave)
+      if (!saved || localDraftRef.current !== draftToSave) return
       localDraftRef.current = saved
       setLastLocalSavedAt(saved.updatedAt)
       setPersistenceError(null)
@@ -667,7 +694,7 @@ export function useDraftOrder(
       setPersistenceError(message)
       throw storageError
     }
-  }, [])
+  }, [queueDraftSave])
   flushLocalDraftRef.current = flushLocalDraft
 
   useEffect(() => {
@@ -712,9 +739,9 @@ export function useDraftOrder(
           ).catch(() => undefined)
         } else {
           localDraftRef.current = updatedDraft
-          void saveLocalDraftIfClientMatches(updatedDraft, currentDraft.clientOrderId)
+          void queueDraftSave(updatedDraft)
             .then((saved) => {
-              if (!saved || localDraftRef.current?.clientOrderId !== currentDraft.clientOrderId) return
+              if (!saved || localDraftRef.current !== updatedDraft) return
               localDraftRef.current = saved
               setLastLocalSavedAt(saved.updatedAt)
             })
@@ -732,7 +759,7 @@ export function useDraftOrder(
     }
     window.addEventListener(ORDER_OUTBOX_UPDATED_EVENT, handleOutboxUpdate)
     return () => window.removeEventListener(ORDER_OUTBOX_UPDATED_EVENT, handleOutboxUpdate)
-  }, [contextKey, localScope, mapServerItems])
+  }, [contextKey, localScope, mapServerItems, queueDraftSave])
 
   const isDraftOrder = !order || order.status === 'draft'
   const syncStagedItems = (updater: (items: OrderLineItem[]) => OrderLineItem[]) => {
@@ -740,14 +767,14 @@ export function useDraftOrder(
     return Promise.resolve(order)
   }
 
-  const draftSubmissionLocked = Boolean(isDraftOrder && outboxRecord && ![
+  const draftSubmissionLocked = updateRequiresReview || Boolean(isDraftOrder && outboxRecord && ![
     'LOCAL_DRAFT',
     'CANCELLED_LOCAL',
   ].includes(outboxRecord.state))
 
   const requireLocalDraftEditable = () => {
     if (!draftSubmissionLocked) return
-    const message = '订单已进入待提交队列。如需修改，请先选择“返回修改”。'
+    const message = updateRequiresReview ? UPDATE_REVIEW_MESSAGE : '订单已进入待提交队列。如需修改，请先选择“返回修改”。'
     setError(message)
     throw new Error(message)
   }
@@ -856,6 +883,7 @@ export function useDraftOrder(
       return order
     },
     submitOrder: async () => {
+      if (updateRequiresReview) { setError(UPDATE_REVIEW_MESSAGE); return null }
       if (submitInFlightRef.current) return null
       if (orderType === 'dine_in') {
         try { await requireActiveDiningTable(storeId, slotLabel) }
@@ -900,10 +928,42 @@ export function useDraftOrder(
         try {
           const idempotencyKey = updateIdempotencyKeyRef.current ?? createIdempotencyKey('order-update')
           updateIdempotencyKeyRef.current = idempotencyKey
+          const updatingDraft = localDraftRef.current
           const result = await submitOrderUpdate(order.id, idempotencyKey, newItems, catalogItems)
           const refreshed = result.order
+          const confirmedItems = mapServerItems(refreshed)
+          if (saveTimerRef.current != null) {
+            window.clearTimeout(saveTimerRef.current)
+            saveTimerRef.current = null
+          }
           setOrder(refreshed)
-          setStagedItems(mapServerItems(refreshed))
+          setStagedItems(confirmedItems)
+          if (updatingDraft) {
+            const confirmedDraft: UpdateLocalDraftRecord = {
+              ...updatingDraft,
+              mode: 'SERVER_ORDER_UPDATE',
+              serverOrderId: refreshed.id,
+              serverOrderSnapshot: refreshed,
+              items: confirmedItems,
+              updateRequiresReview: false,
+              lastError: null,
+            }
+            if (localDraftRef.current?.clientOrderId === updatingDraft.clientOrderId) {
+              localDraftRef.current = confirmedDraft
+            }
+            try {
+              const saved = await queueDraftSave(confirmedDraft)
+              if (!saved) throw new Error('本机草稿身份已改变')
+              if (localDraftRef.current === confirmedDraft) localDraftRef.current = saved
+              setLastLocalSavedAt(saved.updatedAt)
+              setPersistenceError(null)
+            } catch {
+              setUpdateRequiresReview(true)
+              const message = '服务器已确认加单，但本机确认记录保存失败。请核对订单后再继续；不要重复 Update。'
+              setPersistenceError(message)
+              throw new Error(message)
+            }
+          }
           updateIdempotencyKeyRef.current = null
           recordSubmit('SUCCEEDED')
           return refreshed

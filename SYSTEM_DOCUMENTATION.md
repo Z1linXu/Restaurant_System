@@ -9797,3 +9797,5 @@ Refill products carry server-owned `refill_category_code`. Submission and add-on
 Allô and Template Test use only their explicit Test CORS configuration; RestCorsConfig is excluded from both profiles to prevent duplicate `/api/**` registrations from overriding the Test Origin allowlist. Browser-Origin login is covered separately from Origin-free API checks.
 
 Menu cache integrity uses the same conditional French-name markers and ordered option-group translation/min/max metadata as MenuCatalogHashService. Legacy snapshots without that metadata retain their canonical hash; integrity failures do not clear drafts or bypass validation.
+
+A successful submitted-order Update awaits persistence of its confirmed server snapshot and locked server items before navigation. Hook-local saves are serialized so a prior autosave cannot restore temp additions after acknowledgment. A stale update draft whose server revision/items have advanced retains its local content and fails closed for review; it is not deduplicated by labels/prices or silently discarded. The historical server modification flag does not represent unsent local additions.

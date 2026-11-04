@@ -166,3 +166,9 @@ Docker / Disk Hygiene：MemAvailable替换前1517MiB、后1479MiB；disk66%→66
 Owner授权仅Allô Test真实浏览器菜单/点单/Update/同类续加/MOCK/中英法验收；不操作Production/Staging。起始分支HEAD3007bcc，fresh origin/main80e888fcdad74e98326fcbeaa5df14bc0d9baed6，运行a1b94a2。
 
 PRIMARY_REPAIR_GOAL：解决实际POS菜单hash校验阻塞后完成原定浏览器闭环。EXPECTED_REPAIR_CLASS：SMALL。真实浏览器TEST1提示MENU_CACHE_HASH_MISMATCH，无商品可点；不清缓存/草稿/Outbox、不关闭校验。代码证据：Backend MenuCatalogHashService已将非null法文和组选项翻译/基数纳入canonical，Frontend menuCache尚未同步。最小修复仅同步canonical字段，保留legacy向后兼容哈希；普通局部缺陷按现有有界修复授权处理。
+
+菜单修复 d1a05891928fe123506e2c447fdaf26989ec39bf 已部署。FE78文件443PASS、21项hash focused、typecheck/build及Agent6通过；Backend JAR byte-identical。首次调用因历史保护基线中Nginx旧ID被守卫拒绝，未修改服务；只读核对另一线程已在本轮开始前完成54d526e Production前端发布后，按本轮实时8容器基线复核再部署，保护集合和共享入口hash不变。
+
+真实UI已完成初单#14：54.95/8.23/63.18，B1牛肉x2、C6两种必要零价蛋白、饮品；法语UI提交但中文打印。MOCK Job19/20均PRINTED，厨房不含饮品。Update追加当前可售A3（A1/A2现为停用，未改Owner配置）后60.94/9.13/70.07，新Job22英文厨房/21法文前台仅含A3；初单原件文本不变，指定原件重印一次，副本文本逐字相同。纯饮品#15只有Frontdesk Job23（法文），1.99/0.30/2.29，未出现GRAB；无主食时续面/续饭均隐藏。#14/#15已用正常Finish结束，历史保留。
+
+随后重入#14时发现Update确认后的新增行未持久化为locked，刷新仍显示temp-A3，存在新key重复追加风险。PRIMARY_REPAIR_GOAL更新为同一验收中的本机Update确认落盘修复；仍SMALL有界cluster。已暂停再次Update、保留截图/草稿证据；不靠同名同价推断，不清IDB/Outbox。最小方向为成功返回前await规范server snapshot持久化、串行防旧autosave覆盖、历史不明确状态fail-closed保留并提示核对，不设计新的恢复协议。
