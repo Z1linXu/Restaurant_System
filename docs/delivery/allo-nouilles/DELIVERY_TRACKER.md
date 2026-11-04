@@ -220,3 +220,11 @@ Owner 明确要求八款面类主食添加截图中的 Non-Spicy/不辣、Mild/�
 | `backend` | `7f4da3f8c0353675751f5f57413e1e6359ccb9e359a88cdda367495dff8576cf` | `sha256:92fdb1b2f6fecf623cc828c0a984e4fcdd84810d622369ed7c5906c5894b5fc7` |
 | `relay` | `b553bdbb14b00871148ca1655825a9d6350c9b27e161d4ee5b42c80a60f17ab2` | `sha256:84ed8c0dd296c188bfc24ed506f46589e9285fb0b11cf3a04d91d524d3067e11` |
 | `db` | `57f1e8a3152cb08d88bd2f0a26abe1495ca9dfbde8444047aeb598ff157d2d09` | `sha256:cbf42f0edc946c0bc1b8eeed62403734e1f25dc67a3491455d07a92fdb558b28` |
+
+### Owner 定制弹窗排版复用（2026-11-04）
+
+PRIMARY_REPAIR_GOAL：把已有兰州大按钮网格、双语标签、modifier卡片及备注排版接入Allô template组选项分支。EXPECTED_REPAIR_CLASS：MEDIUM。Owner截图明确授权，仅Allô Test UI及必要Test部署；不复制七种面型、旧店SKU、价格、汤底、去料规则或默认值。
+
+Ground Truth：分支codex/allo-nouilles-delivery-20261103，起始HEAD85f59cf，fresh origin/main80e888fcdad74e98326fcbeaa5df14bc0d9baed6；工作区clean，运行f08a930。仍Phase6同一首店Package，未开启下一阶段。新Owner请求覆盖前一Owner待验收Stop中的本次UI切片。
+
+实际原因：两分支已共用ChoiceButton/CheckboxRow/AddOnQuantityRow，但template分支缺grid和modifier容器并清空sublabel。最小复用现成控件/样式，保留selectTemplateOption、C6 cardinality、加料数量和价格、备注/提交API、草稿/Outbox及打印边界。无新增Owner步骤、重复配置、硬件blocker或UI设置。

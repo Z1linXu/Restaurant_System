@@ -9,7 +9,8 @@ import type { ItemCustomizationDraft, MenuItem } from '../../../types/ordering'
 import { appI18n } from '../../../i18n/engine'
 import { LanguageSelector } from '../../../components/LanguageSelector'
 
-vi.mock('../../../hooks/useIpadLandscape', () => ({ useIpadLandscape: () => false }))
+const layout = vi.hoisted(() => ({ compact: false }))
+vi.mock('../../../hooks/useIpadLandscape', () => ({ useIpadLandscape: () => layout.compact }))
 vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
 const sauce: TemplateOptionGroup = { group_instance_code: 'sauce', name: 'Sauce', kind: 'CUSTOM', selection_mode: 'SINGLE', required: true, is_active: true, sort_order: 10, default_option_ids: [], options: [
   { id: 11, option_type: 'addon', option_group: 'CUSTOM', option_code: 'garlic', parent_option_id: null, sort_order: 20, name_zh: '蒜蓉', name_en: 'Garlic', price_delta: 1, is_active: true },
@@ -25,10 +26,68 @@ function Harness({ item }: { item: MenuItem }) {
   lastDraft = draft
   return <ItemCustomizationModal item={item} draft={draft} mode="add" subtotal={calculateDraftLineSubtotal(item, draft)} onChange={setDraft} onClose={() => undefined} onSubmit={() => undefined} />
 }
-beforeEach(async () => { await appI18n.changeLanguage('en'); vi.stubGlobal('document', { body: { style: { overflow: '', touchAction: '' } } }) })
+beforeEach(async () => { layout.compact = false; await appI18n.changeLanguage('en'); vi.stubGlobal('document', { body: { style: { overflow: '', touchAction: '' } } }) })
 afterEach(() => { act(() => view?.unmount()); view = undefined; vi.unstubAllGlobals(); vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true) })
 
 describe('dynamic groups reuse mature customization controls', () => {
+  const noodle: TemplateOptionGroup = { ...sauce, group_instance_code: 'noodle', name: 'Noodle choice', name_translations: { en: 'Noodle choice', 'zh-CN': '面型', 'fr-CA': 'Choix de nouilles' }, sort_order: 0, default_option_ids: [21], options: [
+    { ...sauce.options[0], id: 21, name_en: 'Thin noodles', name_zh: '细面', name_fr: 'Nouilles fines', price_delta: 0, is_default: true },
+    { ...sauce.options[0], id: 22, name_en: 'Thick noodles', name_zh: '粗面', name_fr: 'Nouilles épaisses', price_delta: 0 },
+    { ...sauce.options[0], id: 23, name_en: 'Rice vermicelli', name_zh: '米粉', name_fr: 'Vermicelles de riz', price_delta: 0 },
+  ] }
+  const spicy: TemplateOptionGroup = { ...sauce, group_instance_code: 'spicy', kind: 'SPICY_LEVEL', name: 'Spicy Level', name_translations: { en: 'Spicy Level', 'zh-CN': '辣度', 'fr-CA': 'Niveau de piquant' }, sort_order: 20, default_option_ids: [31], options: [
+    { ...sauce.options[0], id: 31, name_en: 'Non-Spicy', name_zh: '不辣', name_fr: 'Non épicé', price_delta: 0, is_default: true },
+    { ...sauce.options[0], id: 32, name_en: 'Mild', name_zh: '少辣', name_fr: 'Peu épicé', price_delta: 0 },
+    { ...sauce.options[0], id: 33, name_en: 'Regular', name_zh: '正常辣', name_fr: 'Épicé', price_delta: 0 },
+    { ...sauce.options[0], id: 34, name_en: 'Extra', name_zh: '加辣', name_fr: 'Très épicé', price_delta: 0 },
+  ] }
+  const addon: TemplateOptionGroup = { ...sauce, group_instance_code: 'addon', kind: 'ADD_ON', name: 'Add-ons', name_translations: { en: 'Add-ons', 'zh-CN': '加料' }, selection_mode: 'MULTIPLE', required: false, sort_order: 10 }
+  const remove: TemplateOptionGroup = { ...sauce, group_instance_code: 'remove', kind: 'REMOVE', name: 'Remove', name_translations: { en: 'Remove', 'zh-CN': '免除' }, selection_mode: 'MULTIPLE', required: false, sort_order: 30,
+    options: [{ ...sauce.options[0], id: 41, name_en: 'No garnish', name_zh: '免配菜', price_delta: 0 }] }
+
+  it.each([false, true])('keeps configured defaults, single-choice replacement and add-on quantity two in compact=%s', async (compact) => {
+    layout.compact = compact
+    const item: MenuItem = { ...dish, categoryCode: 'NOODLE', optionGroups: [noodle, addon, spicy, remove] }
+    const originalConfiguration = JSON.stringify(item.optionGroups)
+    await act(async () => { view = create(<Harness item={item} />) })
+    expect(lastDraft.groupSelections?.noodle).toEqual({ '21': 1 })
+    expect(lastDraft.groupSelections?.spicy).toEqual({ '31': 1 })
+    expect(button('Add to Order').props.disabled).toBe(false)
+    expect(view!.root.findAll((node) => Boolean(node.props['data-option-group'])).map((node) => node.props['data-option-group'])).toEqual(['noodle', 'spicy', 'addon', 'remove'])
+    expect(view!.root.findAllByType('h3').map(text)).toContain('Spicy Level / 辣度 Required')
+    expect(text(button('Thin noodles'))).toBe('Thin noodles细面')
+    await act(async () => button('Mild').props.onClick())
+    await act(async () => button('Extra').props.onClick())
+    expect(lastDraft.groupSelections?.spicy).toEqual({ '34': 1 })
+    const addonSection = () => view!.root.findAllByType('section').find((node) => node.props['data-option-group'] === 'addon')!
+    const garlicIncrement = () => addonSection().findAllByType('button').filter((node) => text(node) === '+')[1]
+    await act(async () => garlicIncrement().props.onClick())
+    await act(async () => garlicIncrement().props.onClick())
+    expect(lastDraft.groupSelections?.addon).toEqual({ '11': 2 })
+    expect(calculateDraftLineSubtotal(item, lastDraft)).toBe(12)
+    expect(JSON.stringify(item.optionGroups)).toBe(originalConfiguration)
+  })
+
+  it('shows bilingual choices through all locales without adding a missing Remove group or losing draft state', async () => {
+    const item: MenuItem = { ...dish, categoryCode: 'NOODLE', optionGroups: [noodle, addon, spicy] }
+    await act(async () => { view = create(<><LanguageSelector /><Harness item={item} /></>) })
+    await act(async () => button('Thick noodles').props.onClick())
+    await act(async () => button('Regular').props.onClick())
+    await act(async () => view!.root.findByType('textarea').props.onChange({ target: { value: 'Keep this note' } }))
+    const selected = JSON.stringify(lastDraft)
+    for (const locale of ['zh-CN', 'en', 'fr-CA']) {
+      await act(async () => view!.root.findByType('select').props.onChange({ target: { value: locale } }))
+      expect(text(button(locale === 'fr-CA' ? 'Nouilles fines' : 'Thin noodles'))).toBe(locale === 'fr-CA' ? 'Nouilles fines细面' : 'Thin noodles细面')
+      expect(text(button(locale === 'fr-CA' ? 'Épicé' : 'Regular'))).toBe(locale === 'fr-CA' ? 'Épicé正常辣' : 'Regular正常辣')
+      expect(view!.root.findAll((node) => node.props?.['data-option-group'] === 'remove')).toHaveLength(0)
+      expect(JSON.stringify(lastDraft)).toBe(selected)
+      expect(calculateDraftLineSubtotal(item, lastDraft)).toBe(10)
+    }
+    expect(view!.root.findAllByType('section').find((node) => node.props['data-option-group'] === 'noodle')!.findAllByType('button')).toHaveLength(3)
+    expect(JSON.stringify(view!.toJSON())).not.toContain('Capillary')
+    expect(JSON.stringify(view!.toJSON())).not.toContain('No Cilantro')
+  })
+
   it('enforces the confirmed four-choose-two group, and lets a selected choice be removed at the limit', async () => {
     const group: TemplateOptionGroup = { ...sauce, name: 'Two sides', selection_mode: 'MULTIPLE', min_select: 2, max_select: 2,
       options: [1, 2, 3, 4].map((id) => ({ ...sauce.options[0], id, name_en: `Choice ${id}`, name_zh: `合成选项${id}`, price_delta: id })) }

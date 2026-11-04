@@ -11,7 +11,7 @@ import {
 import { formatNoodleTypeDisplayLabel } from './noodleTypePresentation'
 import { selectAddOn, selectRemove } from '../../../utils/modifierSelection'
 import { selectTemplateOption, templateSelectionError } from '../../../utils/templateCustomization'
-import { missingBusinessTranslation } from '../../../i18n/locale'
+import { businessLabel, missingBusinessTranslation, type BusinessNames } from '../../../i18n/locale'
 
 function isToggleAddOn(labelZh: string, priceDelta?: number) {
   return (priceDelta ?? 0) === 0 && (labelZh === '加香菜' || labelZh === '加葱')
@@ -206,6 +206,19 @@ export function ItemCustomizationModal({
   const isNoodleItem = isNoodleMenuItem(item)
   const templateMode = item.optionGroups != null
   const showComboFirst = !templateMode && isNoodleItem && Boolean(comboConfig)
+  const templateLabels = (names: BusinessNames) => {
+    const label = businessLabel(names, locale === 'fr-CA' ? 'fr-CA' : 'en', t('common.untitled'))
+    const chinese = (names.translations?.['zh-CN'] || names.zh)?.trim()
+    return { label, sublabel: chinese && chinese !== label ? chinese : '' }
+  }
+  const activeTemplateGroups = [...(item.optionGroups ?? [])].filter((group) => group.is_active).sort((a, b) => a.sort_order - b.sort_order)
+  const isModifierGroup = (group: NonNullable<MenuItem['optionGroups']>[number]) => group.kind === 'ADD_ON' || group.kind === 'REMOVE'
+  // Combo keeps its configured placement. Ordinary controls precede modifier cards,
+  // matching the mature noodle customization layout without changing menu data.
+  const displayedTemplateGroups = activeTemplateGroups.some((group) => group.kind === 'COMBO')
+    ? activeTemplateGroups
+    : [...activeTemplateGroups.filter((group) => !isModifierGroup(group)), ...activeTemplateGroups.filter(isModifierGroup)]
+  const modifierGroupCount = activeTemplateGroups.filter(isModifierGroup).length
   const comboSection = comboConfig ? (
     <section className={`bg-[rgba(26,28,25,0.03)] ${compact ? 'space-y-3 rounded-[20px] p-4' : 'space-y-4 rounded-[28px] p-6'}`}>
       {(() => {
@@ -368,27 +381,39 @@ export function ItemCustomizationModal({
           <div className={`${compact ? 'space-y-4 px-5 py-4' : 'space-y-6 px-8 py-7'}`}>
             {showComboFirst ? comboSection : null}
 
-            {[...(item.optionGroups ?? [])].filter((group) => group.is_active).sort((a, b) => a.sort_order - b.sort_order).map((group) => group.kind === 'COMBO' ? <div key={group.group_instance_code} data-option-group={group.group_instance_code}>{comboSection}</div> : (
-              <section key={group.group_instance_code} className={compact ? 'space-y-3' : 'space-y-4'} data-option-group={group.group_instance_code}>
-                <h3 className={`${compact ? 'text-[1.1rem]' : 'text-[1.45rem]'} font-bold`}>
-                  {businessName({ name: group.name, translations: group.name_translations })} {group.required ? <span className="ml-2 text-sm text-[var(--primary)]">{t('common.required')}</span> : null}
-                </h3>
-                {group.min_select != null && group.min_select === group.max_select ? <p className="text-sm text-[var(--muted)]">{t('options.exactly', { count: group.min_select })}</p> : <>
-                  {group.min_select != null && group.min_select > 0 ? <p className="text-sm text-[var(--muted)]">{t('options.atLeast', { count: group.min_select })}</p> : null}
-                  {group.max_select != null ? <p className="text-sm text-[var(--muted)]">{t('options.atMost', { count: group.max_select })}</p> : null}
-                </>}
-                {group.options.filter((option) => option.is_active && option.id != null).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)).map((option) => {
-                  const quantity = draft.groupSelections?.[group.group_instance_code]?.[String(option.id)] ?? 0
-                  const selectedCount = Object.values(draft.groupSelections?.[group.group_instance_code] ?? {}).filter((count) => count > 0).length
-                  const atLimit = quantity === 0 && group.max_select != null && selectedCount >= group.max_select
-                  const select = (next: number) => onChange(selectTemplateOption(draft, group, option.id!, next, item.optionGroups ?? []))
-                  if (group.selection_mode === 'SINGLE') return <ChoiceButton key={option.id} compact={compact} active={quantity > 0} label={`${businessName({ en: option.name_en, zh: option.name_zh, fr: option.name_fr })}${formatPriceDelta(option.price_delta)}`} sublabel="" onClick={() => select(quantity > 0 && !group.required ? 0 : 1)} />
-                  if (group.kind === 'ADD_ON') return <AddOnQuantityRow key={option.id} compact={compact} incrementDisabled={atLimit} label={businessName({ en: option.name_en, zh: option.name_zh, fr: option.name_fr })} sublabel="" quantity={quantity} priceDelta={option.price_delta} onIncrement={() => select(quantity + 1)} onDecrement={() => select(Math.max(0, quantity - 1))} />
-                  return <CheckboxRow key={option.id} compact={compact} disabled={atLimit} checked={quantity > 0} label={`${businessName({ en: option.name_en, zh: option.name_zh, fr: option.name_fr })}${formatPriceDelta(option.price_delta)}`} sublabel="" onClick={() => select(quantity > 0 ? 0 : 1)} />
-                })}
-                {!group.options.some((option) => option.is_active) ? <p className="text-sm text-[var(--muted)]">{t('options.noAvailable')}</p> : null}
-              </section>
-            ))}
+            {templateMode ? <div className={`grid grid-cols-1 md:grid-cols-2 ${compact ? 'gap-4' : 'gap-6'}`}>
+              {displayedTemplateGroups.map((group) => {
+                if (group.kind === 'COMBO') return <div key={group.group_instance_code} className="md:col-span-2" data-option-group={group.group_instance_code}>{comboSection}</div>
+                const modifier = isModifierGroup(group)
+                const heading = templateLabels({ name: group.name, translations: group.name_translations })
+                const options = group.options.filter((option) => option.is_active && option.id != null).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+                const choiceColumns = options.length <= 2 ? 'md:grid-cols-2' : options.length === 3 ? 'md:grid-cols-3' : options.length === 4 ? 'md:grid-cols-4' : 'md:grid-cols-5'
+                return <section key={group.group_instance_code}
+                  className={`${!modifier || modifierGroupCount === 1 ? 'md:col-span-2' : ''} ${modifier ? `bg-[rgba(26,28,25,0.03)] ${compact ? 'space-y-2 rounded-[20px] p-4' : 'space-y-3 rounded-[24px] p-5'}` : compact ? 'space-y-3' : 'space-y-4'}`}
+                  data-option-group={group.group_instance_code}>
+                  <h3 className={`${compact ? 'text-[1.1rem]' : 'text-[1.45rem]'} font-bold tracking-[-0.03em]`}>
+                    {heading.label}{heading.sublabel ? ` / ${heading.sublabel}` : ''} {group.required ? <span className="ml-2 text-sm text-[var(--primary)]">{t('common.required')}</span> : null}
+                  </h3>
+                  {group.min_select != null && group.min_select === group.max_select ? <p className="text-sm text-[var(--muted)]">{t('options.exactly', { count: group.min_select })}</p> : <>
+                    {group.min_select != null && group.min_select > 0 ? <p className="text-sm text-[var(--muted)]">{t('options.atLeast', { count: group.min_select })}</p> : null}
+                    {group.max_select != null ? <p className="text-sm text-[var(--muted)]">{t('options.atMost', { count: group.max_select })}</p> : null}
+                  </>}
+                  <div className={`grid ${group.selection_mode === 'SINGLE' ? `grid-cols-2 ${choiceColumns}` : !modifier || modifierGroupCount === 1 ? 'md:grid-cols-2' : 'grid-cols-1'} ${compact ? 'gap-2.5' : 'gap-3'}`}>
+                    {options.map((option) => {
+                      const quantity = draft.groupSelections?.[group.group_instance_code]?.[String(option.id)] ?? 0
+                      const selectedCount = Object.values(draft.groupSelections?.[group.group_instance_code] ?? {}).filter((count) => count > 0).length
+                      const atLimit = quantity === 0 && group.max_select != null && selectedCount >= group.max_select
+                      const select = (next: number) => onChange(selectTemplateOption(draft, group, option.id!, next, item.optionGroups ?? []))
+                      const labels = templateLabels({ en: option.name_en, zh: option.name_zh, fr: option.name_fr })
+                      if (group.selection_mode === 'SINGLE') return <ChoiceButton key={option.id} compact={compact} active={quantity > 0} label={`${labels.label}${formatPriceDelta(option.price_delta)}`} sublabel={labels.sublabel} onClick={() => select(quantity > 0 && !group.required ? 0 : 1)} />
+                      if (group.kind === 'ADD_ON') return <AddOnQuantityRow key={option.id} compact={compact} incrementDisabled={atLimit} label={labels.label} sublabel={labels.sublabel} quantity={quantity} priceDelta={option.price_delta} onIncrement={() => select(quantity + 1)} onDecrement={() => select(Math.max(0, quantity - 1))} />
+                      return <CheckboxRow key={option.id} compact={compact} disabled={atLimit} checked={quantity > 0} label={`${labels.label}${formatPriceDelta(option.price_delta)}`} sublabel={labels.sublabel} onClick={() => select(quantity > 0 ? 0 : 1)} />
+                    })}
+                  </div>
+                  {!group.options.some((option) => option.is_active) ? <p className="text-sm text-[var(--muted)]">{t('options.noAvailable')}</p> : null}
+                </section>
+              })}
+            </div> : null}
 
             {customization?.sizes ? (
               <section className={compact ? 'space-y-3' : 'space-y-4'}>
