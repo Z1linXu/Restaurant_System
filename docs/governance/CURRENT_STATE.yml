@@ -32,12 +32,15 @@ test:
   old_template_retirement_authorized: true
   old_template_database_backup: OWNER_EXPLICITLY_WAIVED
   retirement_requires: EXACT_IDS_PROJECT_LABELS_STOPPED_EXCLUSIVE_REFERENCES_AND_EXISTING_OPS_LOCKS
-  app_deployed_sha: a1b94a216a294de4e6f0b462aca414eef5266c5c
+  app_deployed_sha: f08a93060f5edb67d0542ab8580e48da3d8d0d93
   operations_sha: 9803ada1184c7d9a310a507cdd2c0f242b82da6d
   flyway: V41_ALL_41_SUCCESS
   retirement: PASS_FOUR_STOPPED_CONTAINERS_DEDICATED_DB_VOLUME_TWO_NETWORKS_RUNTIME_ENV
-  acceptance: PASS_BROWSER_OWNER_LOGIN_ORIGIN_OWNER_MANAGER12_PREFLIGHT_AND_REUSED_UNCHANGED_BUSINESS_PROOF
-  final_observation_utc: 2026-11-04T15:42:02.582079+00:00
+  acceptance: PASS_REAL_BROWSER_MENU_TRILINGUAL_INITIAL_TWO_UPDATES_REFILLS_MOCK_ORIGINAL_COPY_FINISH
+  frontend_regression: PASS_79_FILES_447_TESTS
+  independent_review: ACCEPT_WITH_LIMITATIONS
+  unknown_network_replay: NOT_CERTIFIED
+  final_observation_utc: 2026-11-04T16:27:55.482040+00:00
   owner_acceptance: NOT_RUN
   print_transport: MOCK_ONLY_NO_ENDPOINTS
   public_websocket: MUST_REMAIN_DENIED_F31_NOT_CLOSED
@@ -51,7 +54,7 @@ test:
 
 staging:
   observed_runtime_state: NGINX_BACKEND_INGRESS_DB_STOPPED_EXISTING_SANDBOX_WEBHOOK_UNCHANGED_RUNNING
-  observed_at: 2026-11-04T05:51:41Z
+  observed_at: 2026-11-04T16:27:55.482040+00:00
   deployed_sha: a14cc4ce87ecaea17b31d86aa55aae76f1a79294
   deployed_sha_semantics: STOPPED_BACKEND_FRONTEND_IMAGE_LABELS_ONLY_NOT_CURRENT_ACCEPTANCE
   frontend_deployed_sha: a14cc4ce87ecaea17b31d86aa55aae76f1a79294
@@ -71,12 +74,12 @@ staging:
   uber_worker_enabled: false
 
 production:
-  observed_at: 2026-11-04T05:51:41Z
+  observed_at: 2026-11-04T16:27:55.482040+00:00
   observed_health: HTTPS_HTTP200_UP_DB_HEALTHY
   observed_this_task_mutation: NONE_IDS_START_TIMES_IMAGES_RESTARTS_INGRESS_UNCHANGED
   deployed_sha: 74dfc1fd235af31fc7345c43f770d9991960da70
-  frontend_deployed_sha: 74dfc1fd235af31fc7345c43f770d9991960da70
-  deployed_sha_semantics: READ_ONLY_IMAGE_LABELS_AFTER_OTHER_OWNER_RELEASE_NOT_THIS_TASK_DEPLOYMENT
+  frontend_deployed_sha: 54d526e2ac6ebd69dc6b8829e28b80e8dd2925c1
+  deployed_sha_semantics: READ_ONLY_SEPARATE_BACKEND_FRONTEND_LABELS_AFTER_OTHER_OWNER_RELEASE_NOT_THIS_TASK_DEPLOYMENT
   canonical_url: https://pos.lanzhounoodlesmtl.com
   application_release: COMPLETE
   password_login: NOT_TESTED_NO_EXISTING_BROWSER_SESSION_OR_PRIVATE_PASSWORD

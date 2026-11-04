@@ -172,3 +172,43 @@ PRIMARY_REPAIR_GOAL：解决实际POS菜单hash校验阻塞后完成原定浏览
 真实UI已完成初单#14：54.95/8.23/63.18，B1牛肉x2、C6两种必要零价蛋白、饮品；法语UI提交但中文打印。MOCK Job19/20均PRINTED，厨房不含饮品。Update追加当前可售A3（A1/A2现为停用，未改Owner配置）后60.94/9.13/70.07，新Job22英文厨房/21法文前台仅含A3；初单原件文本不变，指定原件重印一次，副本文本逐字相同。纯饮品#15只有Frontdesk Job23（法文），1.99/0.30/2.29，未出现GRAB；无主食时续面/续饭均隐藏。#14/#15已用正常Finish结束，历史保留。
 
 随后重入#14时发现Update确认后的新增行未持久化为locked，刷新仍显示temp-A3，存在新key重复追加风险。PRIMARY_REPAIR_GOAL更新为同一验收中的本机Update确认落盘修复；仍SMALL有界cluster。已暂停再次Update、保留截图/草稿证据；不靠同名同价推断，不清IDB/Outbox。最小方向为成功返回前await规范server snapshot持久化、串行防旧autosave覆盖、历史不明确状态fail-closed保留并提示核对，不设计新的恢复协议。
+
+### 最终真实浏览器验收结果
+
+实际运行 SHA `f08a93060f5edb67d0542ab8580e48da3d8d0d93`。菜单校验修复之后，再修复成功 Update 导航前的确认落盘及旧 autosave 覆盖风险。79文件447项前端回归、typecheck/build PASS；Update focused10项（新4＋相关6）；两次独立Agent6均ACCEPT WITH LIMITATIONS。Backend JAR字节不变，没有Backend/Flyway修改。
+
+| 真实浏览器范围 | 结果及私有证据 browser-20261104/ |
+|---|---|
+| 菜单三语 | PASS；05/06/07管理页完整AX逐SKU核对，三语各32编号商品名称/价格无差异，见admin-menu-ui-source-check.json；另有2续加。A1/A2既有停用状态保持 |
+| 选项/价格 | PASS；B1三面型，牛肉qty2行32.97；C6零/一选不能加入、两种distinct允许、第三项禁用，固定19.99；09/11/13 |
+| 草稿及语言切换 | PASS；b428原草稿在菜单修复后保留，76803e84草稿在Update修复后保留。zh/en/fr切换保留选项、备注、数量、金额，保存/刷新不丢；15/38/39/42/43 |
+| 修复后#16初单 | PASS；C6猪/虾＋B1米粉牛肉x2＋瓶水，54.95/税8.23/总63.18；英文GRAB不含饮品，法文前台包含必要零价蛋白；45 |
+| #16第一次Update | PASS；仅新增A3，订单60.94/税9.13/总70.07；离开、重入、刷新后4行locked，Update disabled；40 |
+| #16第二次Update | PASS；仅新增续面/续饭各1，仍60.94/9.13/70.07，不重复前菜或初单；6行locked，Update disabled；41–46 |
+| 同类资格 | PASS；面主食不显示续饭、饭主食不显示续面、饮品单两者均隐藏；含已提交面/饭主食可同类续加；12/28/37/41 |
+| 三批MOCK | PASS；#16恰好6 PRINTED＝3GRAB＋3Frontdesk；逐张预览各批内容，续加批次小计/税/总额0；44/45 |
+| 原件复制 | PASS；#14中文Job20在改语言后原文不变；显式重印一次的Job24正文逐字符相同；18/33/36 |
+| 纯饮品 | PASS；#15仅Frontdesk Job23，法文水1.99/0.30/2.29，无GRAB；30/31 |
+| 完成及历史 | PASS；#14/#15/#16均正常Finish，订单中心COMPLETED，六行70.07及6条打印历史保留，最终四桌空闲；48/49/50 |
+| 配置恢复 | PASS；中文App、默认打印zh-CN，厨房/前台null跟随默认，MOCK，BACK_KITCHEN；47及final-readback.json |
+
+独立只读证据复核PASS。保留04菜单失败、26/27旧Update失败证据，不把修复前过程改写为全程PASS。截图、合成票据和客户原菜单仅存ignored私有目录。32商品逐SKU三语显示核对不等于32商品逐个浏览器下单；实际下单覆盖代表性的选项、价格、续加和饮品组合，先前全菜单HTTP矩阵仍单独标识。
+
+PRODUCT REPAIR：menuCache.ts及回归（canonical对齐）；useDraftOrder.ts及专门回归（确认落盘、旧写排空、dirty语义、模糊残留保护）。TOOLING / GOVERNANCE：无仓库部署工具变更，复用既有pack/upload/双锁caller，仅按实时观测更新本次caller保护基线及证据、技术说明和状态。两次构建/部署对应依次在浏览器发现的两项实际缺陷，文档收尾不重建应用。
+
+当前限制：真实断线/未知结果Update跨重开重放、实体打印、Android、Uber/支付均NOT_RUN；不宣称完整持久化Update重放协议。少量帮助/ARIA/技术辅助文案仍非完整三语。历史5条打印告警来自先前刻意故障测试并保留，本轮12个新Job全部MOCK PRINTED，没有重试旧失败Job。
+
+最终产物：JAR SHA256 `dacfc20c8af57c20fba14b9c45f99e934c13d773dbd2c124b759ac698e1eee3d`，dist tree `74c60960766319257341a3dd9f7804fce6f582c3fd54fdeec1c2f786a541a665`，封存包 `72612614d2406926f5388ca0934d4d69304229f3c61274299fb2b822526f1004`。工具仍9803ada；后续证据提交不改变该运行SHA。
+
+Docker / Disk Hygiene：MemAvailable1449→1452MiB，disk66%→66%，BuildCache8.794→8.814GB（可回收1.584GB）。没有cache/image/volume清理；保护现有应用、数据库、Production/Staging和回滚镜像。8个保护容器从本轮实时baseline至最终的完整ID/image/StartedAt/restarts/状态不变；Production HTTPS200/UP，Staging四主服务继续停止，共享ingress hash不变。本轮没有Production/Staging deploy/restart/config/data动作。
+
+STOP：保持现Phase/Package，等待Owner最终验收；不自动合并Draft PR308，不启动第二店、新Phase或Production。
+
+Final runtime evidence: `browser-20261104/runtime-final.json`, `deploy-update.log`, `update-entry-proof.json`, `final-readback.json`. Current application container/image identities:
+
+| Service | Container ID | Image ID |
+|---|---|---|
+| `frontend` | `0730be19d04cb77f70fccb08f09a18c86e030c3d18a02c4798ced8a7414abd33` | `sha256:fc7ddbeab711eec8091c80b6b50e44e48da1bde79f3966e116112747e24faa8c` |
+| `backend` | `7f4da3f8c0353675751f5f57413e1e6359ccb9e359a88cdda367495dff8576cf` | `sha256:92fdb1b2f6fecf623cc828c0a984e4fcdd84810d622369ed7c5906c5894b5fc7` |
+| `relay` | `b553bdbb14b00871148ca1655825a9d6350c9b27e161d4ee5b42c80a60f17ab2` | `sha256:84ed8c0dd296c188bfc24ed506f46589e9285fb0b11cf3a04d91d524d3067e11` |
+| `db` | `57f1e8a3152cb08d88bd2f0a26abe1495ca9dfbde8444047aeb598ff157d2d09` | `sha256:cbf42f0edc946c0bc1b8eeed62403734e1f25dc67a3491455d07a92fdb558b28` |
