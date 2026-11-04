@@ -9765,3 +9765,50 @@ for actual private canonical Compose and bounded recovery. Do not overwrite the
 shared Production/Staging edge with the old generic HTTPS template. Exact backup,
 images, migration and acceptance limits are in
 [release evidence](docs/governance/PRODUCTION_V37_RELEASE_20261005.md).
+
+
+## Resource-efficient Inbox and lifecycle preparation
+
+This implementation is prepared against application `27612b6f72dabc48e0167cc7d214a3ece565dd5e`
+and V39.1. Its presence in source is not evidence of a Production rollout.
+
+- `GET /api/v1/stores/{storeId}/integrations/uber-eats/inbox` returns independent
+  current Store business-day, attention and opt-in historical pages. Each page
+  has explicit `has_more`/`next_before_id`; cross-day unfinished work, missing
+  references and cancel/edit/printing warnings remain reachable. Store timezone
+  and existing UTC/JVM-local legacy creation boundaries are preserved.
+- Inbox printing state uses one narrow latest-job query and one missing-module
+  Outbox query per Store, preserving `created_at DESC,id DESC` precedence and
+  existing status/fallback rules. Large ticket payload fields are not loaded.
+  The original `/orders` array API remains compatible. No printing execution,
+  Worker, claim/lease/retry, idempotency or financial source is changed.
+- Page and Badge share one identity/permissions/Store-scoped request stream,
+  realtime client and visible-page five-second fallback timer. Last-consumer
+  teardown aborts requests and removes listeners; Store/auth changes cannot
+  reuse the prior workspace response. Reconnect/online/visibility hints refresh
+  the shared view. Explicitly loaded pages are refreshed too. Historical pages
+  are requested manually and do not add a background polling stream.
+- `GET /api/v1/admin/analytics/period-report` provides an explicitly authorized
+  Store/day or Store/month projection using the existing channel sales model.
+  It recomputes in a read-only repeatable-read transaction, retains known/Pending
+  completeness and frozen item identities, and does not add option charges
+  again. Unverified tax/discount/refund adjustments remain UNKNOWN. This is not
+  an archival substitute and does not change existing financial policy.
+- `scripts/data-lifecycle/` provides disabled-by-default cleanup preparation,
+  dependency-aware Dry-run, private audit-copy archives and guarded synthetic
+  local recovery. All reviewed tables remain blocked for deletion. There is no
+  cleanup executor, scheduler or DELETE mode.
+- `scripts/disk-governance/` collects bounded read-only host metadata and builds
+  an offline retention plan. Current/paused/rollback/unknown images, volumes and
+  releases with data or unresolved references are protected. Cache review
+  candidates are neither executable deletion approval nor guaranteed free bytes.
+  Candidate logging fragments are prepared only; existing server maintenance
+  policies are not installed or changed by these tools.
+- Optional PrintJob index apply/rollback scripts live under
+  `deployment/cloud/manual/`, outside Flyway startup scanning. They require a
+  separately approved exact database; ordinary application startup adds no DDL.
+
+Contracts and reproducible tests: [Inbox](docs/RESOURCE_INBOX_BACKEND_NOTES.md),
+[database lifecycle](docs/RESOURCE_DATABASE_LIFECYCLE.md),
+[disk governance](docs/RESOURCE_DISK_GOVERNANCE.md), and
+[independent operation boundaries](docs/RESOURCE_OPTIMIZATION_OPERATIONS.md).

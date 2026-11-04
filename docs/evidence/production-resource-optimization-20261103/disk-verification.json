@@ -1,0 +1,83 @@
+{
+  "checks": [
+    {
+      "command": "python3 scripts/disk-governance/test_disk_governance.py",
+      "exit_code": 0,
+      "stderr": "..............\n----------------------------------------------------------------------\nRan 14 tests in 0.041s\n\nOK\n",
+      "stdout": ""
+    },
+    {
+      "command": "python3 scripts/disk-governance/validate_logging.py",
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "{\"docker_and_compose\": \"PASS\", \"installed_or_activated\": false, \"journald\": \"PASS\", \"logrotate_semantics\": \"PASS\", \"native_logrotate_debug\": \"NOT_RUN\"}\n"
+    },
+    {
+      "command": "python3 scripts/disk-governance/test_logrotate_native.py",
+      "exit_code": 0,
+      "stderr": ".\n----------------------------------------------------------------------\nRan 1 test in 0.032s\n\nOK\n",
+      "stdout": ""
+    }
+  ],
+  "cleanup_performed": false,
+  "installed_policy_source_matches": [
+    {
+      "installed_path": "/etc/cron.d/restaurant-disk-retention",
+      "match": true,
+      "reviewed_source": "/Users/xuzilin/.codex/worktrees/server-disk-retention/Restaurant_System/deployment/cloud/retention/restaurant-disk-retention.cron",
+      "sha256": "a5b397c0e8f33a3bbb29f6b60e056abffa6a8da543375adbf54080da1b3ffa74"
+    },
+    {
+      "installed_path": "/etc/logrotate.d/restaurant-disk-retention",
+      "match": true,
+      "reviewed_source": "/Users/xuzilin/.codex/worktrees/server-disk-retention/Restaurant_System/deployment/cloud/retention/restaurant-disk-retention.logrotate",
+      "sha256": "8941609084c6b798f74c764611f16bb1bdd3422c54c7faedd1ef38f4efc93e91"
+    },
+    {
+      "installed_path": "/usr/local/lib/restaurant-disk-retention/server-buildkit-retention.py",
+      "match": true,
+      "reviewed_source": "/Users/xuzilin/.codex/worktrees/server-disk-retention/Restaurant_System/deployment/cloud/server-buildkit-retention.py",
+      "sha256": "bb24a556e7139b13eb1bac962ec7d95334c42cbbd88f9313269490a157f89a3a"
+    },
+    {
+      "installed_path": "/usr/local/lib/restaurant-disk-retention/server-journal-retention.py",
+      "match": true,
+      "reviewed_source": "/Users/xuzilin/.codex/worktrees/server-disk-retention/Restaurant_System/deployment/cloud/server-journal-retention.py",
+      "sha256": "e8225db60a53f121e98af9650eb434d78d747da51bf86e5e987d376c9088949f"
+    },
+    {
+      "installed_path": "/usr/local/lib/restaurant-disk-retention/staging-retention-run.sh",
+      "match": true,
+      "reviewed_source": "/Users/xuzilin/.codex/worktrees/server-disk-retention/Restaurant_System/deployment/cloud/staging-retention-run.sh",
+      "sha256": "14feba377895014980d278e8154fb1489a8f0969917efd6c63381eea80888838"
+    }
+  ],
+  "native_rehearsal": {
+    "actions": "debug then two rotations on synthetic files; .1/.2.gz contents and 0640 verified",
+    "binary": "/private/var/folders/mv/zwf0xhl1235cdw_hl6gtxyd80000gn/T/restaurant-logrotate-proof-6smpe7t0/logrotate/3.22.0/sbin/logrotate",
+    "bottles": [
+      {
+        "file": "13b9763a65d6d4c77ee3bdfa9a424c1185a98e1b1629ad6ac6bc3f91ee6c052f--logrotate--3.22.0.arm64_tahoe.bottle.2.tar.gz",
+        "sha256": "956be5c37ef380ddac0212fb5016e5d4a6baaefb6abe55d081eb8d130e3c8790"
+      },
+      {
+        "file": "449a890b572f2f621b9137890a718e5cf1bbc6c0d59febc864839e1c155ec468--popt--1.19.arm64_tahoe.bottle.tar.gz",
+        "sha256": "365d143d0d38003c60c1d6fb6d399ab4361690a64467d46a8f27c2f50d2dcfb6"
+      }
+    ],
+    "distribution": "Official Homebrew bottles; downloaded, extracted to private temporary directory, not installed",
+    "library_dir": "/private/var/folders/mv/zwf0xhl1235cdw_hl6gtxyd80000gn/T/restaurant-logrotate-proof-6smpe7t0/popt/1.19/lib",
+    "server_actions": false,
+    "service_started": false,
+    "sources": [
+      "https://formulae.brew.sh/formula/logrotate",
+      "https://formulae.brew.sh/formula/popt",
+      "https://github.com/logrotate/logrotate"
+    ],
+    "substitutions": "temporary log paths and current local user/group only; all policy directives unchanged",
+    "version": "logrotate 3.22.0 + popt 1.19"
+  },
+  "production_mutation": false,
+  "reclaimed_bytes": 0,
+  "verified_at_utc": "2026-11-04T04:54:22.901355+00:00"
+}

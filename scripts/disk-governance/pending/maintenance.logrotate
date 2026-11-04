@@ -1,0 +1,21 @@
+/var/log/restaurant-disk-retention/journal.log {
+    daily
+    rotate 30
+    maxage 30
+    missingok
+    notifempty
+    compress
+    delaycompress
+    create 0640 root adm
+}
+/var/log/restaurant-disk-retention/user/*.log {
+    su ubuntu adm
+    daily
+    rotate 30
+    maxage 30
+    missingok
+    notifempty
+    compress
+    delaycompress
+    create 0640 ubuntu adm
+}

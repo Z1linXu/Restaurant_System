@@ -1,0 +1,472 @@
+{
+  "catalog": {
+    "bytes": 186891287,
+    "database": "restaurant_pos",
+    "foreign_keys": [
+      {
+        "definition": "FOREIGN KEY (master_menu_version_id) REFERENCES chain_master_menu_versions(id)",
+        "source": "chain_master_menu_categories",
+        "source_schema": "public",
+        "target": "chain_master_menu_versions",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (master_menu_version_id) REFERENCES chain_master_menu_versions(id)",
+        "source": "chain_master_menu_options",
+        "source_schema": "public",
+        "target": "chain_master_menu_versions",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (master_menu_version_id) REFERENCES chain_master_menu_versions(id)",
+        "source": "chain_master_menu_products",
+        "source_schema": "public",
+        "target": "chain_master_menu_versions",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (master_menu_id) REFERENCES chain_master_menus(id)",
+        "source": "chain_master_menu_versions",
+        "source_schema": "public",
+        "target": "chain_master_menus",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (organization_id) REFERENCES organizations(id)",
+        "source": "chain_master_menus",
+        "source_schema": "public",
+        "target": "organizations",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (menu_item_id, store_addon_store_id) REFERENCES menu_items(id, store_id)",
+        "source": "menu_item_options",
+        "source_schema": "public",
+        "target": "menu_items",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (store_addon_id, store_addon_store_id) REFERENCES store_addons(id, store_id)",
+        "source": "menu_item_options",
+        "source_schema": "public",
+        "target": "store_addons",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (menu_item_id, store_remove_store_id) REFERENCES menu_items(id, store_id)",
+        "source": "menu_item_options",
+        "source_schema": "public",
+        "target": "menu_items",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (store_remove_id, store_remove_store_id) REFERENCES store_removes(id, store_id)",
+        "source": "menu_item_options",
+        "source_schema": "public",
+        "target": "store_removes",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (originating_device_id) REFERENCES store_devices(id)",
+        "source": "order_dispatch_outbox",
+        "source_schema": "public",
+        "target": "store_devices",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (order_item_id) REFERENCES order_items(id)",
+        "source": "order_item_options",
+        "source_schema": "public",
+        "target": "order_items",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (order_id) REFERENCES orders(id)",
+        "source": "order_items",
+        "source_schema": "public",
+        "target": "orders",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (organization_id) REFERENCES organizations(id)",
+        "source": "organization_addon_definitions",
+        "source_schema": "public",
+        "target": "organizations",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (organization_id) REFERENCES organizations(id)",
+        "source": "owner_store_provisioning_requests",
+        "source_schema": "public",
+        "target": "organizations",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (store_id) REFERENCES stores(id)",
+        "source": "owner_store_provisioning_requests",
+        "source_schema": "public",
+        "target": "stores",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (printing_rule_revision_id) REFERENCES printing_display_rule_revisions(id)",
+        "source": "print_jobs",
+        "source_schema": "public",
+        "target": "printing_display_rule_revisions",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (preferred_device_id) REFERENCES store_devices(id)",
+        "source": "print_jobs",
+        "source_schema": "public",
+        "target": "store_devices",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (reprint_source_job_id) REFERENCES print_jobs(id)",
+        "source": "print_jobs",
+        "source_schema": "public",
+        "target": "print_jobs",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (rule_set_id) REFERENCES printing_display_rule_sets(id)",
+        "source": "printing_display_rule_revisions",
+        "source_schema": "public",
+        "target": "printing_display_rule_sets",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (active_revision_id) REFERENCES printing_display_rule_revisions(id)",
+        "source": "printing_display_rule_sets",
+        "source_schema": "public",
+        "target": "printing_display_rule_revisions",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (store_id) REFERENCES stores(id)",
+        "source": "printing_display_rule_sets",
+        "source_schema": "public",
+        "target": "stores",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (organization_addon_definition_id, organization_id) REFERENCES organization_addon_definitions(id, organization_id)",
+        "source": "store_addons",
+        "source_schema": "public",
+        "target": "organization_addon_definitions",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (store_id, organization_id) REFERENCES stores(id, organization_id)",
+        "source": "store_addons",
+        "source_schema": "public",
+        "target": "stores",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (group_id) REFERENCES store_combo_groups(id)",
+        "source": "store_combo_components",
+        "source_schema": "public",
+        "target": "store_combo_groups",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (linked_menu_item_id) REFERENCES menu_items(id)",
+        "source": "store_combo_components",
+        "source_schema": "public",
+        "target": "menu_items",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (store_id) REFERENCES stores(id)",
+        "source": "store_combo_components",
+        "source_schema": "public",
+        "target": "stores",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (store_id) REFERENCES stores(id)",
+        "source": "store_combo_groups",
+        "source_schema": "public",
+        "target": "stores",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (store_id) REFERENCES stores(id)",
+        "source": "store_daily_close_runs",
+        "source_schema": "public",
+        "target": "stores",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (store_id) REFERENCES stores(id)",
+        "source": "store_menu_master_mappings",
+        "source_schema": "public",
+        "target": "stores",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (master_menu_version_id) REFERENCES chain_master_menu_versions(id)",
+        "source": "store_menu_master_mappings",
+        "source_schema": "public",
+        "target": "chain_master_menu_versions",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (store_id) REFERENCES stores(id)",
+        "source": "store_modules",
+        "source_schema": "public",
+        "target": "stores",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (store_id) REFERENCES stores(id)",
+        "source": "store_pricing_policies",
+        "source_schema": "public",
+        "target": "stores",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (profile_version_id) REFERENCES store_profile_versions(id)",
+        "source": "store_profile_artifacts",
+        "source_schema": "public",
+        "target": "store_profile_versions",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (profile_id) REFERENCES store_profiles(id)",
+        "source": "store_profile_versions",
+        "source_schema": "public",
+        "target": "store_profiles",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (category_id, store_id) REFERENCES menu_categories(id, store_id) ON DELETE CASCADE",
+        "source": "store_remove_categories",
+        "source_schema": "public",
+        "target": "menu_categories",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (remove_id, store_id) REFERENCES store_removes(id, store_id)",
+        "source": "store_remove_categories",
+        "source_schema": "public",
+        "target": "store_removes",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (menu_item_id, store_id) REFERENCES menu_items(id, store_id) ON DELETE CASCADE",
+        "source": "store_remove_item_rules",
+        "source_schema": "public",
+        "target": "menu_items",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (remove_id, store_id) REFERENCES store_removes(id, store_id)",
+        "source": "store_remove_item_rules",
+        "source_schema": "public",
+        "target": "store_removes",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (store_id) REFERENCES stores(id)",
+        "source": "store_removes",
+        "source_schema": "public",
+        "target": "stores",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (reverses_id) REFERENCES uber_eats_financial_corrections(id)",
+        "source": "uber_eats_financial_corrections",
+        "source_schema": "public",
+        "target": "uber_eats_financial_corrections",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (store_id) REFERENCES stores(id)",
+        "source": "uber_eats_financial_corrections",
+        "source_schema": "public",
+        "target": "stores",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (uber_eats_order_id) REFERENCES uber_eats_orders(id)",
+        "source": "uber_eats_financial_corrections",
+        "source_schema": "public",
+        "target": "uber_eats_orders",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (local_menu_item_id) REFERENCES menu_items(id)",
+        "source": "uber_eats_menu_mappings",
+        "source_schema": "public",
+        "target": "menu_items",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (store_mapping_id) REFERENCES uber_eats_store_mappings(id)",
+        "source": "uber_eats_menu_mappings",
+        "source_schema": "public",
+        "target": "uber_eats_store_mappings",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (local_order_id) REFERENCES orders(id)",
+        "source": "uber_eats_orders",
+        "source_schema": "public",
+        "target": "orders",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (store_id) REFERENCES stores(id)",
+        "source": "uber_eats_orders",
+        "source_schema": "public",
+        "target": "stores",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (store_mapping_id) REFERENCES uber_eats_store_mappings(id)",
+        "source": "uber_eats_orders",
+        "source_schema": "public",
+        "target": "uber_eats_store_mappings",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (organization_id) REFERENCES organizations(id)",
+        "source": "uber_eats_store_mappings",
+        "source_schema": "public",
+        "target": "organizations",
+        "target_schema": "public"
+      },
+      {
+        "definition": "FOREIGN KEY (store_id) REFERENCES stores(id)",
+        "source": "uber_eats_store_mappings",
+        "source_schema": "public",
+        "target": "stores",
+        "target_schema": "public"
+      }
+    ],
+    "print_job_indexes": [
+      {
+        "indexdef": "CREATE INDEX idx_print_jobs_active_order_module ON public.print_jobs USING btree (store_id, order_id, module_code, id) WHERE ((status)::text = ANY ((ARRAY['PENDING'::character varying, 'CLAIMED'::character varying, 'PRINTING'::character varying])::text[]))",
+        "indexname": "idx_print_jobs_active_order_module"
+      },
+      {
+        "indexdef": "CREATE INDEX idx_print_jobs_printing_rule_revision ON public.print_jobs USING btree (printing_rule_revision_id) WHERE (printing_rule_revision_id IS NOT NULL)",
+        "indexname": "idx_print_jobs_printing_rule_revision"
+      },
+      {
+        "indexdef": "CREATE UNIQUE INDEX print_jobs_pkey ON public.print_jobs USING btree (id)",
+        "indexname": "print_jobs_pkey"
+      },
+      {
+        "indexdef": "CREATE UNIQUE INDEX uq_print_jobs_dispatch_source_key ON public.print_jobs USING btree (dispatch_source_key) WHERE (dispatch_source_key IS NOT NULL)",
+        "indexname": "uq_print_jobs_dispatch_source_key"
+      }
+    ],
+    "schema": [
+      {
+        "success": true,
+        "version": "39.1"
+      },
+      {
+        "success": true,
+        "version": "39"
+      }
+    ]
+  },
+  "containers": [
+    {
+      "health": null,
+      "id": "e546d107ee2b3a7dc0d9628dc6fa52cc10ef550226c88fe2b804a0b4f1c92f89",
+      "image": "sha256:1e06e79b8655fdc56bd647390d12099f4df304da6314d7ed617a436031f999f5",
+      "java_status": {
+        "RssAnon": "711900 kB",
+        "RssFile": "20240 kB",
+        "Threads": "43",
+        "VmRSS": "732140 kB",
+        "VmSwap": "0 kB"
+      },
+      "jvm_heap_flags": [
+        "-Xms256m",
+        "-Xmx1024m"
+      ],
+      "memory": {
+        "anon_bytes": 732028928,
+        "cgroup_current_bytes": 751230976,
+        "events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0",
+        "file_bytes": 15532032,
+        "inactive_file_bytes": 13172736,
+        "shmem_bytes": 0
+      },
+      "name": "/cloud-backend-1",
+      "restarts": 0,
+      "revision": "27612b6f72dabc48e0167cc7d214a3ece565dd5e",
+      "running": true,
+      "started_at": "2026-11-04T03:53:55.893018978Z"
+    },
+    {
+      "health": null,
+      "id": "9a993f8a0da774bf2bf8de9c658188a3d320c333153b7499c1edc148e7413a9c",
+      "image": "sha256:18dd0fa21a80f77a357f2a2d32069094182cdb26c8f7cd135f4b04fd76d598e7",
+      "memory": {
+        "anon_bytes": 3624960,
+        "cgroup_current_bytes": 6905856,
+        "events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0",
+        "file_bytes": 2588672,
+        "inactive_file_bytes": 1748992,
+        "shmem_bytes": 20480
+      },
+      "name": "/cloud-nginx-1",
+      "restarts": 0,
+      "revision": "27612b6f72dabc48e0167cc7d214a3ece565dd5e",
+      "running": true,
+      "started_at": "2026-11-04T03:54:21.760381441Z"
+    },
+    {
+      "health": "healthy",
+      "id": "c2ab37fec6ac966e77a1d8ab7aa41d1da294b9ac57b1a21ce18904d04cfae91e",
+      "image": "sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777",
+      "memory": {
+        "anon_bytes": 20803584,
+        "cgroup_current_bytes": 282042368,
+        "events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0",
+        "file_bytes": 250695680,
+        "inactive_file_bytes": 65757184,
+        "shmem_bytes": 147095552
+      },
+      "name": "/cloud-db-1",
+      "restarts": 0,
+      "revision": null,
+      "running": true,
+      "started_at": "2026-07-11T12:09:37.936437539Z"
+    }
+  ],
+  "health": {
+    "body": {
+      "data": {
+        "status": "UP",
+        "timestamp": "2026-11-04T00:04:10.425305097"
+      },
+      "message": "OK",
+      "success": true
+    },
+    "http": 200
+  },
+  "host_memory_kib": {
+    "Buffers": 134984,
+    "Cached": 1910668,
+    "MemAvailable": 1924028,
+    "MemFree": 140920,
+    "MemTotal": 3809096,
+    "SReclaimable": 181544,
+    "Shmem": 146680,
+    "SwapFree": 0,
+    "SwapTotal": 0
+  },
+  "memory_psi": "some avg10=0.00 avg60=0.06 avg300=0.07 total=391727323\nfull avg10=0.00 avg60=0.04 avg300=0.05 total=298076403",
+  "observed_utc": "2026-11-04T05:04:10.357133+00:00",
+  "oom_kill": "oom_kill 0",
+  "operation_lock_held": false
+}

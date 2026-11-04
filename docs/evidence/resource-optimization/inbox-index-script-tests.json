@@ -1,0 +1,42 @@
+{
+  "environment": "LOCAL_SYNTHETIC_ONLY",
+  "cases": [
+    {
+      "case": "default_refuses_without_approval",
+      "exit_code": 3,
+      "expected_exit_code": 3,
+      "index_exists": false
+    },
+    {
+      "case": "wrong_database_refused",
+      "exit_code": 3,
+      "expected_exit_code": 3,
+      "index_exists": false
+    },
+    {
+      "case": "approved_synthetic_concurrent_create",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "index_exists": true
+    },
+    {
+      "case": "existing_name_refused",
+      "exit_code": 3,
+      "expected_exit_code": 3,
+      "index_exists": true
+    },
+    {
+      "case": "approved_exact_synthetic_rollback",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "index_exists": false
+    },
+    {
+      "case": "rollback_refuses_reused_different_index",
+      "exit_code": 3,
+      "expected_exit_code": 3,
+      "index_exists": true
+    }
+  ],
+  "production_actions": 0
+}
