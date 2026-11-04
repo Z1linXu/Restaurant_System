@@ -6,6 +6,8 @@ import com.restaurant.system.order.entity.OrderItem;
 import com.restaurant.system.order.entity.OrderItemOption;
 import com.restaurant.system.printing.PrintModuleCode;
 import com.restaurant.system.printing.dto.PrintRenderRequest;
+import com.restaurant.system.printing.dto.ReceiptPresentation;
+import com.restaurant.system.common.exception.BusinessException;
 import com.restaurant.system.printing.semantic.ComboComponentSemanticResolver;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -35,21 +37,27 @@ public class GrabReceiptRenderer implements ReceiptRenderer {
     @Override
     public String render(PrintRenderRequest request) {
         Order order = request.order;
+        ReceiptPresentation presentation = request.receipt_context;
+        if (presentation != null) presentation.requireValid();
         StringBuilder builder = new StringBuilder();
         if (PrintTableDisplayFormatter.isDineIn(order)) {
-            builder.append(PrintTableDisplayFormatter.formatDineInHeader(
-                order, Boolean.TRUE.equals(request.is_update_ticket))).append("\n");
+            builder.append(presentation == null ? PrintTableDisplayFormatter.formatDineInHeader(
+                order, Boolean.TRUE.equals(request.is_update_ticket))
+                : presentedDineInHeader(order, Boolean.TRUE.equals(request.is_update_ticket), presentation)).append("\n");
         } else {
             ExternalOrderReceiptHeader.append(builder, request.order);
             builder.append("\n\n\n\n");
             if (Boolean.TRUE.equals(request.is_update_ticket)) {
-                builder.append(PrintMarkup.large("UPDATED")).append("\n");
+                builder.append(PrintMarkup.large(presentation == null ? "UPDATED" : presentation.label("updated"))).append("\n");
                 builder.append("--------------------------------\n");
             }
-            String topLabel = resolveTopDisplayLabel(order);
+            String topLabel = presentation == null ? resolveTopDisplayLabel(order) : presentedTopLabel(order, presentation);
             if (topLabel != null) {
                 builder.append(PrintMarkup.large(topLabel)).append("\n");
             }
+        }
+        if (presentation != null && presentation.restaurant_name != null && !presentation.restaurant_name.isBlank()) {
+            builder.append(PrintMarkup.doubleHeight(presentation.restaurant_name)).append("\n");
         }
         builder.append("--------------------------------\n");
 
@@ -72,8 +80,15 @@ public class GrabReceiptRenderer implements ReceiptRenderer {
         }
 
         List<KitchenTask> tasks = request.kitchen_tasks == null ? List.of() : request.kitchen_tasks.stream()
-            .filter(task -> task != null && GRAB_STATIONS.contains(task.station_code))
+            .filter(task -> task != null && (presentation != null || GRAB_STATIONS.contains(task.station_code)))
+            .filter(task -> presentation == null || presentation.includesItem(task.order_item_id))
             .filter(task -> !"cancelled".equals(task.status))
+            .map(task -> {
+                if (presentation != null && !presentation.kitchen_station_codes.contains(task.station_code)) {
+                    throw new BusinessException("RECEIPT_STATION_NOT_ASSIGNED: " + task.station_code);
+                }
+                return task;
+            })
             .sorted(Comparator.comparingInt((KitchenTask task) -> resolveSortPriority(task, orderItemById.get(task.order_item_id)))
                 .thenComparing((KitchenTask task) -> task.created_at, Comparator.nullsLast(Comparator.naturalOrder()))
                 .thenComparing(task -> task.id))
@@ -82,17 +97,23 @@ public class GrabReceiptRenderer implements ReceiptRenderer {
             return "";
         }
 
-        Map<SideGroupKey, SideGroup> sideGroups = buildSideGroups(tasks, orderItemById);
+        List<KitchenTask> legacyTasks = presentation == null ? tasks : List.of();
+        Map<SideGroupKey, SideGroup> sideGroups = buildSideGroups(legacyTasks, orderItemById);
         Set<SideGroupKey> printedSideGroups = new LinkedHashSet<>();
-        Map<KitchenNoodlePrintFormatter.NoodleGroupKey, NoodleGroup> noodleGroups = buildNoodleGroups(tasks, orderItemById, optionsByItemId);
+        Map<KitchenNoodlePrintFormatter.NoodleGroupKey, NoodleGroup> noodleGroups = buildNoodleGroups(legacyTasks, orderItemById, optionsByItemId);
         Set<KitchenNoodlePrintFormatter.NoodleGroupKey> printedNoodleGroups = new LinkedHashSet<>();
-        Map<FriedGroupKey, FriedGroup> friedGroups = buildFriedGroups(tasks, orderItemById, optionsByItemId);
+        Map<FriedGroupKey, FriedGroup> friedGroups = buildFriedGroups(legacyTasks, orderItemById, optionsByItemId);
         Set<FriedGroupKey> printedFriedGroups = new LinkedHashSet<>();
 
         for (KitchenTask task : tasks) {
             OrderItem orderItem = orderItemById.get(task.order_item_id);
             if (orderItem != null && orderItem.externalKitchenSnapshot != null
                     && orderItem.externalKitchenSnapshot.rawRoot()) continue;
+            if (presentation != null) {
+                appendPrintLines(builder, presentedItemLines(task, orderItem,
+                    optionsByItemId.getOrDefault(task.order_item_id, List.of()), presentation));
+                continue;
+            }
             if (isSideTask(task, orderItem)) {
                 SideGroupKey key = buildSideGroupKey(task, orderItem);
                 if (!printedSideGroups.add(key)) {
@@ -138,11 +159,38 @@ public class GrabReceiptRenderer implements ReceiptRenderer {
         ExternalOrderNoteContent.append(builder, order);
         builder.append("--------------------------------\n");
         if (isTakeout(order)) {
-            builder.append(PrintMarkup.large("外卖")).append("\n");
+            builder.append(PrintMarkup.large(presentation == null ? "外卖" : presentation.label("takeout"))).append("\n");
         }
         builder.append(PrintMarkup.small(resolveTime(order))).append("\n");
         builder.append("--------------------------------\n\n");
         return builder.toString();
+    }
+
+    private List<String> presentedItemLines(KitchenTask task, OrderItem item,
+            List<OrderItemOption> options, ReceiptPresentation presentation) {
+        if (item == null) throw new BusinessException("RECEIPT_ORDER_ITEM_SNAPSHOT_REQUIRED");
+        int quantity = task.quantity == null ? 1 : task.quantity;
+        List<String> lines = new ArrayList<>();
+        lines.add(presentation.itemName(item) + " x" + quantity);
+        for (OrderItemOption option : options) {
+            if (option.quantity != null && option.quantity <= 0) continue;
+            int selected = option.quantity == null ? 1 : option.quantity;
+            lines.add(presentation.optionName(option) + " x" + Math.multiplyExact(quantity, selected));
+        }
+        if (item.notes != null && !item.notes.isBlank()) lines.add(presentation.label("notes") + ": " + item.notes);
+        return lines;
+    }
+
+    private String presentedDineInHeader(Order order, boolean update, ReceiptPresentation presentation) {
+        String label = fallback(order.table_display_name, PrintTableDisplayFormatter.formatSplitTableLabel(order.table_no), presentation.label("walk_in"));
+        return PrintMarkup.withTopFeed(PrintMarkup.large(label) + (update ? " (" + presentation.label("updated") + ")" : ""));
+    }
+
+    private String presentedTopLabel(Order order, ReceiptPresentation presentation) {
+        if (ExternalOrderReceiptHeader.isPresent(order)) return null;
+        if (isTakeout(order)) return order.pickup_no == null || order.pickup_no.isBlank() ? null : order.pickup_no;
+        return presentation.label("table") + ": "
+            + fallback(order.table_display_name, PrintTableDisplayFormatter.formatSplitTableLabel(order.table_no), presentation.label("walk_in"));
     }
 
     private String resolveTopDisplayLabel(Order order) {

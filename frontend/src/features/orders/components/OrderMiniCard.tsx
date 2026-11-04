@@ -1,3 +1,4 @@
+import { useLocale } from '../../../i18n/useLocale'
 import { Card } from '../../../components/ui/Card'
 import type { BackendFrontdeskOrderBoardItem } from '../../../types/ordering'
 import { orderLocationDisplay } from '../../../utils/tableDisplay'
@@ -14,6 +15,7 @@ function displayLabel(order: BackendFrontdeskOrderBoardItem) {
 }
 
 export function OrderMiniCard({ order, selected, onClick, compact = false }: OrderMiniCardProps) {
+  const { t } = useLocale()
   const isActive = ['submitted', 'preparing', 'ready'].includes(order.order_status)
 
   return (
@@ -40,7 +42,7 @@ export function OrderMiniCard({ order, selected, onClick, compact = false }: Ord
                 : 'bg-[rgba(26,28,25,0.06)] text-[var(--muted)]'
             } ${compact ? 'px-2 py-1 text-[0.7rem]' : 'px-2.5 py-1 text-[0.78rem]'}`}
           >
-            {order.order_type === 'pickup' ? 'TAKEOUT' : 'DINE-IN'}
+            {order.order_type === 'pickup' ? t('order.takeout') : t('order.dineIn')}
           </span>
         </div>
       </Card>

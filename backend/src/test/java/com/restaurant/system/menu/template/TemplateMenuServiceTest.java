@@ -384,6 +384,19 @@ class TemplateMenuServiceTest {
         return item;
     }
 
+    @Test
+    void explicitNullClearsCardinalityWhileAbsentFieldsPreserveIt() throws Exception {
+        Groups initial=definition("duo","CUSTOM","MULTIPLE",true,option("one","One","0.00",false),option("two","Two","0.00",false));
+        initial.groups.get(0).min_select=2;initial.groups.get(0).max_select=2;
+        Groups saved=service.saveItem(1L,10L,initial);
+        var tree=mapper.valueToTree(saved);((com.fasterxml.jackson.databind.node.ObjectNode)tree.path("groups").get(0)).remove(java.util.List.of("min_select","max_select"));
+        Groups absent=mapper.treeToValue(tree,Groups.class);Groups preserved=service.saveItem(1L,10L,absent);
+        assertEquals(2,preserved.groups.get(0).min_select);assertEquals(2,preserved.groups.get(0).max_select);
+        var clear=mapper.valueToTree(preserved);((com.fasterxml.jackson.databind.node.ObjectNode)clear.path("groups").get(0)).putNull("min_select").putNull("max_select");
+        Groups cleared=service.saveItem(1L,10L,mapper.treeToValue(clear,Groups.class));
+        assertNull(cleared.groups.get(0).min_select);assertNull(cleared.groups.get(0).max_select);
+    }
+
     private Groups definition(String code, String kind, String mode, boolean required, Option... options) {
         Groups request = new Groups();
         Group group = new Group();

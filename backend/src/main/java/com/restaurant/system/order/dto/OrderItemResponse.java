@@ -13,6 +13,7 @@ public class OrderItemResponse {
     public String item_sku_snapshot;
     public String item_name_snapshot_zh;
     public String item_name_snapshot_en;
+    public String item_name_snapshot_fr;
     public Integer quantity;
     public BigDecimal unit_price;
     public BigDecimal line_amount;

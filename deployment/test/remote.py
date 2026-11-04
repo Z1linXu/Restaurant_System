@@ -22,8 +22,18 @@ import tarfile
 import time
 import urllib.request
 
+from deployment_targets import DEFAULT_TARGET, ALLO_TARGET, TARGET_NAMES, target_config, validate_inventory
+
 ROOT = Path('/srv/restaurant-pos/test')
-PROJECT = 'restaurant-template-test'
+PROJECT = DEFAULT_TARGET
+ACTIVE_TARGET = DEFAULT_TARGET
+DATABASE = 'restaurant_template_test'
+DATABASE_USER = 'template_test'
+SPRING_PROFILE = 'template-test'
+FRONTEND_PORT = 28080
+RELAY_PORT = 28480
+OWNER_KEY = 'TEMPLATE_TEST_OWNER_PASSWORD'
+MANAGER_KEY = 'TEMPLATE_TEST_MANAGER_PASSWORD'
 DOMAIN = 'test.lanzhounoodlesmtl.com'
 EDGE = 'cloud-nginx-1'
 EDGE_TEMPLATE = Path('/home/ubuntu/Restaurant_System/deployment/cloud/data/nginx/default.conf.template')
@@ -39,6 +49,26 @@ PROTECTED = ('cloud-nginx-1', 'cloud-backend-1', 'cloud-db-1',
              'restaurant-pos-uber-sandbox-webhook')
 SHARED_LOCKS = (Path('/home/ubuntu/Restaurant_System/deployment/cloud/.production-ops.lock'),
                 Path('/srv/restaurant-pos/staging/state/restaurant-pos-staging-hygiene.lock'))
+
+
+BASE_PROTECTED = PROTECTED
+
+def select_target(name):
+    global ACTIVE_TARGET, ROOT, PROJECT, DATABASE, DATABASE_USER, SPRING_PROFILE
+    global FRONTEND_PORT, RELAY_PORT, OWNER_KEY, MANAGER_KEY, PROTECTED
+    target = target_config(name)
+    ACTIVE_TARGET, PROJECT, ROOT = name, name, target['root']
+    DATABASE, DATABASE_USER, SPRING_PROFILE = target['database'], target['user'], target['profile']
+    FRONTEND_PORT, RELAY_PORT = target['frontend_port'], target['relay_port']
+    OWNER_KEY, MANAGER_KEY = target['owner_key'], target['manager_key']
+    PROTECTED = BASE_PROTECTED
+
+
+def require_target_identity(document):
+    actual = document.get('deployment_target', DEFAULT_TARGET)
+    target_config(actual)
+    if actual != ACTIVE_TARGET:
+        raise ValueError('artifact belongs to another Test target')
 
 
 def sha256(data):
@@ -58,6 +88,22 @@ def run(args, data=None):
 
 def jsonrun(args):
     return json.loads(run(args))
+
+
+def container_documents(names):
+    # Structural identity only: no Env, process arguments, health output or logs.
+    fmt = '{"Id":{{json .Id}},"Name":{{json .Name}},"Image":{{json .Image}},"RestartCount":{{json .RestartCount}},"State":{"Running":{{json .State.Running}},"Restarting":{{json .State.Restarting}},"StartedAt":{{json .State.StartedAt}},"Health":{"Status":{{if .State.Health}}{{json .State.Health.Status}}{{else}}null{{end}}}},"Config":{"Labels":{"com.docker.compose.project":{{json (index .Config.Labels "com.docker.compose.project")}},"com.docker.compose.service":{{json (index .Config.Labels "com.docker.compose.service")}},"org.opencontainers.image.revision":{{json (index .Config.Labels "org.opencontainers.image.revision")}}}},"NetworkSettings":{"Networks":{{json .NetworkSettings.Networks}},"Ports":{{json .NetworkSettings.Ports}}}}'
+    return [json.loads(row) for row in run(['docker','inspect','--format',fmt,*names]).decode().splitlines()]
+
+
+@contextlib.contextmanager
+def target_context(name):
+    previous = ACTIVE_TARGET
+    select_target(name)
+    try:
+        yield
+    finally:
+        select_target(previous)
 
 
 def safe_path(path, parent):
@@ -87,6 +133,8 @@ def verify_release(release, sha):
     m = json.loads((release / 'manifest.json').read_text())
     if m.get('code_sha') != sha or m.get('environment') != 'ISOLATED_SYNTHETIC_MOCK':
         raise ValueError('manifest identity mismatch')
+    require_target_identity(m)
+    validate_inventory(m["files"], ACTIVE_TARGET)
     for name, expected in m['files'].items():
         p = safe_path(release / name, release)
         if not p.is_file() or sha256(p.read_bytes()) != expected:
@@ -96,6 +144,11 @@ def verify_release(release, sha):
         raise ValueError('review/SHA gate not satisfied')
     if any(checks.get('checks', {}).get(k) != 'PASS' for k in ('backend', 'frontend', 'integration', 'security', 'legacy')):
         raise ValueError('executed test gate not satisfied')
+    require_target_identity(checks)
+    if ACTIVE_TARGET == ALLO_TARGET:
+        menu = safe_path(release / 'merchant/menu.source.json', release)
+        if not menu.is_file() or menu.is_symlink() or sha256(menu.read_bytes()) != m.get('merchant_menu_sha256') or checks.get('merchant_menu_sha256') != m.get('merchant_menu_sha256') or checks.get('client_namespace') != ALLO_TARGET:
+            raise ValueError('reviewed Allo menu artifact identity mismatch')
     images = json.loads((release / 'images.json').read_text())
     for key, repo in [('jre', 'eclipse-temurin'), ('nginx', 'nginx'), ('postgres', 'postgres')]:
         if not re.fullmatch(repo + r'@sha256:[0-9a-f]{64}', images[key]):
@@ -104,9 +157,22 @@ def verify_release(release, sha):
 
 
 def protected_snapshot():
-    docs = jsonrun(['docker', 'inspect', *PROTECTED])
-    return {d['Name']: {'id': d['Id'], 'image': d['Image'], 'started': d['State']['StartedAt'],
-                        'restarts': d['RestartCount']} for d in docs}
+    # Inspect only public identity fields: never read protected Config.Env.
+    fmt = '{{json .Name}}|{{json .Id}}|{{json .Image}}|{{json .State.StartedAt}}|{{json .RestartCount}}|{{json .State.Running}}|{{json .State.Restarting}}|{{if .State.Health}}{{json .State.Health.Status}}{{else}}null{{end}}'
+    rows = [list(map(json.loads, row.split('|'))) for row in run(['docker', 'inspect', '--format', fmt, *PROTECTED]).decode().splitlines()]
+    if len(rows) != len(PROTECTED) or {r[0] for r in rows} != {'/' + n for n in PROTECTED}:
+        raise ValueError('protected identity inventory incomplete')
+    return {r[0]: {'id': r[1], 'image': r[2], 'started': r[3], 'restarts': r[4],
+                   'running': r[5], 'restarting': r[6], 'health': r[7]} for r in rows}
+
+
+def verify_template_retired():
+    if ACTIVE_TARGET != ALLO_TARGET:
+        return
+    retired = {DEFAULT_TARGET + '-' + service + '-1' for service in ('db', 'backend', 'frontend', 'relay')}
+    names = set(run(['docker', 'ps', '-a', '--format', '{{.Names}}']).decode().splitlines())
+    if names & retired:
+        raise ValueError('old Template Test containers must be ownership-checked and retired before Allo reuses its ports')
 
 
 def admission(require_capacity=True):
@@ -117,7 +183,7 @@ def admission(require_capacity=True):
     minimum_disk = (6 * 1024 ** 3) if require_capacity else (512 * 1024 ** 2)
     if available < minimum_ram or free_disk < minimum_disk:
         raise ValueError('Test resource admission failed (need ' + str(minimum_ram) + 'MiB available RAM / ' + str(minimum_disk) + ' disk bytes); no cleanup allowed')
-    edge = jsonrun(['docker', 'inspect', EDGE])[0]
+    edge = container_documents([EDGE])[0]
     n = edge['NetworkSettings']['Networks']
     if set(n) != {'cloud_restaurant-pos'} or n['cloud_restaurant-pos']['IPAddress'] != '172.18.0.4' or n['cloud_restaurant-pos']['Gateway'] != '172.18.0.1':
         raise ValueError('reviewed edge/relay addresses changed')
@@ -168,13 +234,13 @@ def verify_existing_resources():
         document = jsonrun(['docker', 'network', 'inspect', network])[0]
         validate_network_document(document, key)
         ids = list((document.get('Containers') or {}).keys())
-        for container in jsonrun(['docker', 'inspect', *ids]) if ids else []:
+        for container in container_documents(ids) if ids else []:
             validate_network_member(container, key)
     volume = PROJECT + '_postgres'
     if volume in run(['docker', 'volume', 'ls', '--format', '{{.Name}}']).decode().splitlines():
         validate_volume_document(jsonrun(['docker', 'volume', 'inspect', volume])[0])
         ids = run(['docker', 'ps', '-a', '--filter', 'volume=' + volume, '--format', '{{.ID}}']).decode().splitlines()
-        for container in jsonrun(['docker', 'inspect', *ids]) if ids else []:
+        for container in container_documents(ids) if ids else []:
             require_project_container(container, 'db')
 
 
@@ -184,7 +250,7 @@ def test_containers():
     for service in ('db', 'backend', 'frontend', 'relay'):
         name = PROJECT + '-' + service + '-1'
         if name in names:
-            document = jsonrun(['docker', 'inspect', name])[0]
+            document = container_documents([name])[0]
             require_project_container(document, service)
             result[service] = document
     return result
@@ -199,14 +265,14 @@ def listener_records():
         address = fields[3]
         if ':' not in address: continue
         ip, port = address.rsplit(':', 1)
-        if port not in ('28080', '28480'): continue
+        if port not in (str(FRONTEND_PORT), str(RELAY_PORT)): continue
         records.append({'ip': ip, 'port': int(port), 'pids': [int(v) for v in re.findall(r'pid=(\d+)', line)]})
     return records
 
 
 def validate_port_owners(records, containers, process_info):
     for record in records:
-        service = 'frontend' if record['port'] == 28080 else 'relay'
+        service = 'frontend' if record['port'] == FRONTEND_PORT else 'relay'
         document = containers.get(service)
         if document is None or not document.get('State', {}).get('Running'):
             raise ValueError('unknown listener on reserved Test port; do not adopt or kill')
@@ -219,11 +285,11 @@ def validate_port_owners(records, containers, process_info):
         else:
             if record['ip'] != '127.0.0.1': raise ValueError('frontend listener escaped localhost')
             bindings = document.get('NetworkSettings', {}).get('Ports', {}).get('8080/tcp') or []
-            if bindings != [{'HostIp': '127.0.0.1', 'HostPort': '28080'}]: raise ValueError('unexpected frontend port binding')
+            if bindings != [{'HostIp': '127.0.0.1', 'HostPort': str(FRONTEND_PORT)}]: raise ValueError('unexpected frontend port binding')
             ip = document.get('NetworkSettings', {}).get('Networks', {}).get(PROJECT + '_ingress', {}).get('IPAddress')
             for pid in record['pids']:
                 args = process_info[pid]['args']
-                expected = {'-host-ip': '127.0.0.1', '-host-port': '28080', '-container-ip': ip, '-container-port': '8080'}
+                expected = {'-host-ip': '127.0.0.1', '-host-port': str(FRONTEND_PORT), '-container-ip': ip, '-container-port': '8080'}
                 if not args or Path(args[0]).name != 'docker-proxy' or any(flag not in args or args.index(flag) + 1 >= len(args) or args[args.index(flag) + 1] != value for flag, value in expected.items()):
                     raise ValueError('frontend listener is not its exact Docker forwarding process')
 
@@ -232,14 +298,14 @@ def verify_port_owners(containers=None):
     containers = test_containers() if containers is None else containers
     if 'frontend' in containers and containers['frontend'].get('State', {}).get('Running'):
         bindings = containers['frontend'].get('NetworkSettings', {}).get('Ports', {}).get('8080/tcp') or []
-        if bindings != [{'HostIp': '127.0.0.1', 'HostPort': '28080'}]: raise ValueError('actual frontend binding is not localhost-only')
+        if bindings != [{'HostIp': '127.0.0.1', 'HostPort': str(FRONTEND_PORT)}]: raise ValueError('actual frontend binding is not localhost-only')
     for service in ('db', 'backend'):
         if service in containers and any(containers[service].get('NetworkSettings', {}).get('Ports', {}).values()):
             raise ValueError('actual DB/backend host publication forbidden')
     records = listener_records()
     info = {}
     for record in records:
-        service = 'frontend' if record['port'] == 28080 else 'relay'
+        service = 'frontend' if record['port'] == FRONTEND_PORT else 'relay'
         if service not in containers or not containers[service].get('State', {}).get('Running'):
             raise ValueError('unknown listener on reserved Test port; do not adopt or kill')
         for pid in record['pids']:
@@ -266,11 +332,11 @@ def verify_runtime(sha):
         if set(document['NetworkSettings']['Networks']) != expected: raise ValueError('running Test network boundary mismatch')
     if containers['db']['State'].get('Health', {}).get('Status') != 'healthy': raise ValueError('Test database not healthy')
     records = verify_port_owners(containers)
-    if not any(r['port'] == 28480 for r in records): raise ValueError('Test relay is not listening')
+    if not any(r['port'] == RELAY_PORT for r in records): raise ValueError('Test relay is not listening')
     # The already authorized edge is the actual allowlisted source; this does not reload it.
     def probe(path):
         return run(['docker', 'exec', EDGE, '/usr/bin/env', '-i', '/usr/bin/wget', '-q', '-T', '5', '-O', '-',
-                    '--header', 'Host: ' + DOMAIN, 'http://172.18.0.1:28480' + path])
+                    '--header', 'Host: ' + DOMAIN, 'http://172.18.0.1:' + str(RELAY_PORT) + path])
     if probe('/test-health').strip() != b'test-frontend-up' or probe('/test-code-sha').strip() != sha.encode():
         raise ValueError('edge-to-relay reached the wrong Test frontend')
     health = json.loads(probe('/api/v1/system/health'))
@@ -286,7 +352,7 @@ def runtime_env(sha, images):
     if path.exists():
         if path.stat().st_mode & 0o077: raise ValueError('runtime.env must be 0600')
         values = dict(l.split('=', 1) for l in path.read_text().splitlines() if l)
-    secret_keys = ['TEST_DB_PASSWORD', 'TEST_JWT_SECRET', 'TEMPLATE_TEST_OWNER_PASSWORD', 'TEMPLATE_TEST_MANAGER_PASSWORD']
+    secret_keys = ['TEST_DB_PASSWORD', 'TEST_JWT_SECRET', OWNER_KEY, MANAGER_KEY]
     for key in secret_keys:
         if key not in values: values[key] = secrets.token_hex(32)
         if not HEX64.fullmatch(values[key]): raise ValueError('unexpected private Test secret format')
@@ -325,8 +391,15 @@ def validate_compose(model, sha, release_dir=None):
     db_mounts = services['db'].get('volumes', [])
     if len(db_mounts) != 1 or db_mounts[0].get('type') != 'volume' or db_mounts[0].get('source') != 'test_postgres' or db_mounts[0].get('target') != '/var/lib/postgresql/data':
         raise ValueError('database must use only its own named volume')
-    if services['backend'].get('volumes') or services['frontend'].get('volumes'):
-        raise ValueError('application host mounts forbidden')
+    if services['frontend'].get('volumes'):
+        raise ValueError('frontend host mounts forbidden')
+    backend_mounts = services['backend'].get('volumes', [])
+    if ACTIVE_TARGET == DEFAULT_TARGET:
+        if backend_mounts: raise ValueError('application host mounts forbidden')
+    else:
+        expected_menu = str(Path(release_dir) / 'merchant/menu.source.json') if release_dir is not None else None
+        if len(backend_mounts) != 1 or not expected_menu or backend_mounts[0].get('type') != 'bind' or backend_mounts[0].get('source') != expected_menu or backend_mounts[0].get('target') != '/run/merchant/menu.source.json' or not backend_mounts[0].get('read_only'):
+            raise ValueError('Allo may mount only its sealed read-only menu artifact')
     relay_mounts = services['relay'].get('volumes', [])
     if len(relay_mounts) != 1 or relay_mounts[0].get('type') != 'bind' or not relay_mounts[0].get('read_only') or relay_mounts[0].get('target') != '/etc/nginx/nginx.conf':
         raise ValueError('relay may mount only its read-only configuration')
@@ -341,15 +414,19 @@ def validate_compose(model, sha, release_dir=None):
     if services['db'].get('ports') or services['backend'].get('ports'):
         raise ValueError('DB/backend host ports forbidden')
     ports = services['frontend'].get('ports', [])
-    if len(ports) != 1 or ports[0].get('host_ip') != '127.0.0.1' or str(ports[0].get('published')) != '28080' or ports[0].get('target') != 8080:
-        raise ValueError('frontend must bind only 127.0.0.1:28080')
+    if len(ports) != 1 or ports[0].get('host_ip') != '127.0.0.1' or str(ports[0].get('published')) != str(FRONTEND_PORT) or ports[0].get('target') != 8080:
+        raise ValueError('frontend must bind only its reviewed localhost port')
     if services['relay'].get('network_mode') != 'host' or services['relay'].get('ports'):
         raise ValueError('unexpected relay topology')
-    if services['backend']['image'] != 'restaurant-template-test-backend:' + sha or services['frontend']['image'] != 'restaurant-template-test-frontend:' + sha:
+    if services['backend']['image'] != PROJECT + '-backend:' + sha or services['frontend']['image'] != PROJECT + '-frontend:' + sha:
         raise ValueError('candidate image identity mismatch')
     env = services['backend']['environment']
-    if env.get('SPRING_PROFILES_ACTIVE') != 'template-test' or env.get('SPRING_DATASOURCE_URL') != 'jdbc:postgresql://db:5432/restaurant_template_test':
+    if env.get('SPRING_PROFILES_ACTIVE') != SPRING_PROFILE or env.get('SPRING_DATASOURCE_URL') != 'jdbc:postgresql://db:5432/' + DATABASE or env.get('SPRING_DATASOURCE_USERNAME') != DATABASE_USER:
         raise ValueError('Test profile/database boundary violation')
+    database_env = services['db']['environment']
+    if database_env.get('POSTGRES_DB') != DATABASE or database_env.get('POSTGRES_USER') != DATABASE_USER:
+        raise ValueError('database container identity mismatch')
+    if env.get('APP_BUILD_SHA') != sha: raise ValueError('runtime build SHA mismatch')
     for name, cap in [('backend', 512), ('db', 128), ('frontend', 32), ('relay', 16)]:
         limit = int(services[name].get('mem_limit', 0))
         if limit > cap * 1024 ** 2 or limit <= 0:
@@ -362,6 +439,7 @@ def validate_compose(model, sha, release_dir=None):
 
 
 def deploy(release, sha, images):
+    verify_template_retired()
     before = protected_snapshot()
     resources = admission()
     verify_existing_resources()
@@ -378,13 +456,16 @@ def deploy(release, sha, images):
              '--file', str(release / ('Dockerfile.' + kind)), '--tag', PROJECT + '-' + kind + ':' + sha, str(release)])
     # The relay's bind file is public configuration; secrets stay in private/runtime.env.
     (release / 'relay.conf').chmod(0o644)
+    if ACTIVE_TARGET == ALLO_TARGET:
+        # Parent release stays 0700; Docker UID10001 reads only this non-secret menu bind.
+        safe_path(release / 'merchant/menu.source.json', release).chmod(0o444)
     verify_existing_resources()
     verify_port_owners()
     compose(release, env, 'up', '-d', '--no-build', '--pull', 'never')
     ready = False
     for _ in range(90):
         try:
-            with urllib.request.urlopen('http://127.0.0.1:28080/api/v1/system/health', timeout=3) as response:
+            with urllib.request.urlopen('http://127.0.0.1:' + str(FRONTEND_PORT) + '/api/v1/system/health', timeout=3) as response:
                 ready = response.status == 200 and json.load(response).get('data', {}).get('status') == 'UP'
             if ready: break
         except (OSError, ValueError): pass
@@ -535,7 +616,19 @@ def head_status(url):
         return r.status
 
 
-def apply_edge(tls, expected_hash, rollback=False):
+def managed_slot_candidate(old, restore=False):
+    raise ValueError('managed-slot switching is retired; Allo reuses the existing Test relay ports without edge changes')
+
+
+def verify_template_fallback(sha):
+    if not SHA.fullmatch(sha or ''): raise ValueError('exact existing Template fallback SHA required')
+    with target_context(DEFAULT_TARGET):
+        verify_runtime(sha)
+
+
+def apply_edge(tls, expected_hash, rollback=False, slot_action=None):
+    if ACTIVE_TARGET == ALLO_TARGET:
+        raise ValueError('Allo reuses the existing Test entry; shared edge mutation is forbidden')
     if not HEX64.fullmatch(expected_hash or ''): raise ValueError('explicit observed edge hash required')
     with locked_edge_source() as (descriptor, identity):
         before = protected_snapshot()
@@ -543,14 +636,19 @@ def apply_edge(tls, expected_hash, rollback=False):
         effective = effective_state()
         if sha256(old) != expected_hash or effective['data'] != old:
             raise ValueError('shared edge drift; do not overwrite')
-        saved = ROOT / 'ingress/original.conf'
-        if not saved.exists():
-            if BEGIN in old or DOMAIN.encode() in old: raise ValueError('unrecognized pre-existing Test entry')
-            private_write(saved, old)
-        original = saved.read_bytes()
-        if old != original and not (old.startswith(original + BEGIN) and old.endswith(END) and old.count(BEGIN) == 1):
-            raise ValueError('non-Test changes since backup; manual review required')
-        candidate = original if rollback else original + edge_block(tls)
+        if slot_action is not None:
+            if slot_action not in ('switch','restore'): raise ValueError('unsupported managed-slot action')
+            candidate = managed_slot_candidate(old, restore=slot_action == 'restore')
+        else:
+            if ACTIVE_TARGET != DEFAULT_TARGET: raise ValueError('Allo cannot recreate/remove the Test vhost')
+            saved = ROOT / 'ingress/original.conf'
+            if not saved.exists():
+                if BEGIN in old or DOMAIN.encode() in old: raise ValueError('unrecognized pre-existing Test entry')
+                private_write(saved, old)
+            original = saved.read_bytes()
+            if old != original and not (old.startswith(original + BEGIN) and old.endswith(END) and old.count(BEGIN) == 1):
+                raise ValueError('non-Test changes since backup; manual review required')
+            candidate = original if rollback else original + edge_block(tls)
         validate_edge(candidate)
         continuity = {u: head_status(u) for u in ['https://pos.lanzhounoodlesmtl.com/', 'https://staging-pos.lanzhounoodlesmtl.com/']}
         private_write(ROOT / ('ingress/before-' + expected_hash + '.conf'), old)
@@ -588,6 +686,8 @@ def apply_edge(tls, expected_hash, rollback=False):
 
 
 def issue_cert():
+    if ACTIVE_TARGET == ALLO_TARGET:
+        raise ValueError('Allo reuses the existing Test certificate; certificate mutation is forbidden')
     # Explicit Test cert name/domain, no standalone/nginx plugin/other cert renewal.
     work, logs = ROOT / 'ingress/acme-work', ROOT / 'ingress/acme-logs'
     work.mkdir(mode=0o700, parents=True, exist_ok=True); logs.mkdir(mode=0o700, exist_ok=True)
@@ -607,14 +707,14 @@ def evidence(release, sha, resources=None):
         if d['Name'] in ('/' + PROJECT + '-backend-1', '/' + PROJECT + '-frontend-1'):
             if d['Config'].get('Labels', {}).get('org.opencontainers.image.revision') != sha:
                 raise ValueError('running application image revision mismatch')
-    ledger = run(['docker', 'exec', PROJECT + '-db-1', 'psql', '-U', 'template_test', '-d',
-                  'restaurant_template_test', '-At', '-c',
+    ledger = run(['docker', 'exec', PROJECT + '-db-1', 'psql', '-U', DATABASE_USER, '-d',
+                  DATABASE, '-At', '-c',
                   'SELECT version, script, success FROM flyway_schema_history ORDER BY installed_rank']).decode().strip()
     rows = [line.split('|') for line in ledger.splitlines()]
     expected = set(json.loads((release / 'manifest.json').read_text())['expected_migrations'])
     if not rows or any(len(row) != 3 or row[2] != 't' for row in rows) or {row[1] for row in rows} != expected:
         raise ValueError('Test Flyway ledger differs from exact source migration inventory')
-    data = {'code_sha': sha, 'observed_at_utc': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    data = {'code_sha': sha, 'deployment_target': ACTIVE_TARGET, 'observed_at_utc': datetime.datetime.now(datetime.timezone.utc).isoformat(),
             'containers': items, 'flyway_version_success_rows': ledger.splitlines(),
             'config_source': str(release / 'compose.yml'),
             'compose_sha256': sha256((release / 'compose.yml').read_bytes()),
@@ -627,12 +727,17 @@ def evidence(release, sha, resources=None):
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('action', choices=['deploy', 'evidence', 'edge-http', 'issue-cert', 'edge-https', 'edge-rollback'])
+    p.add_argument('action', choices=['deploy', 'evidence', 'edge-http', 'issue-cert', 'edge-https', 'edge-rollback', 'edge-switch', 'edge-restore'])
+    p.add_argument('--target', choices=TARGET_NAMES, default=DEFAULT_TARGET)
     p.add_argument('--sha', required=True)
     p.add_argument('--apply-tested-candidate', help='exact SHA released by Integration Owner')
     p.add_argument('--shared-entry-reviewed', action='store_true')
     p.add_argument('--expected-edge-sha256')
+    p.add_argument('--template-fallback-sha')
     a = p.parse_args()
+    select_target(a.target)
+    if ACTIVE_TARGET == ALLO_TARGET and (a.action.startswith('edge-') or a.action == 'issue-cert'):
+        raise ValueError('Allo reuses the existing Test entry; shared edge mutation is forbidden')
     release = ROOT / 'releases' / a.sha
     _, images = verify_release(release, a.sha)
     if a.action != 'evidence' and a.apply_tested_candidate != a.sha:
@@ -640,8 +745,12 @@ def main():
     if a.action.startswith('edge-') or a.action == 'issue-cert':
         if not a.shared_entry_reviewed: raise ValueError('shared Test vhost plan must be reviewed first')
         admission(require_capacity=False)
-        if a.action != 'edge-rollback': verify_runtime(a.sha)
-        if a.action == 'issue-cert': issue_cert()
+        if a.action not in ('edge-rollback','edge-restore'): verify_runtime(a.sha)
+        if a.action in ('edge-switch','edge-restore'):
+            if ACTIVE_TARGET != ALLO_TARGET: raise ValueError('managed slot action requires Allo target')
+            verify_template_fallback(a.template_fallback_sha)
+            apply_edge(True, a.expected_edge_sha256, slot_action='switch' if a.action == 'edge-switch' else 'restore')
+        elif a.action == 'issue-cert': issue_cert()
         else: apply_edge(a.action == 'edge-https', a.expected_edge_sha256, a.action == 'edge-rollback')
     elif a.action == 'deploy': deploy(release, a.sha, images)
     else: evidence(release, a.sha)

@@ -10,6 +10,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   define: {
     __APP_BUILD_VERSION__: JSON.stringify(appBuildVersion),
+    __APP_DEPLOYMENT_NAMESPACE__: JSON.stringify(process.env.VITE_DEPLOYMENT_NAMESPACE ?? ''),
     global: 'globalThis',
   },
   server: {

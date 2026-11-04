@@ -28,6 +28,9 @@ public class FrontdeskBeverageServiceImpl implements FrontdeskBeverageService {
     private static final String STATUS_CANCELLED = "cancelled";
     private static final Set<String> ACTIVE_STATUSES = Set.of(STATUS_PENDING, STATUS_PREPARING, STATUS_READY);
 
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    private com.restaurant.system.order.repository.OrderItemRepository receiptItems;
+
     private final FrontdeskBeverageItemRepository frontdeskBeverageItemRepository;
     private final OrderRepository orderRepository;
     private final RealtimeEventPublisher realtimeEventPublisher;
@@ -150,6 +153,9 @@ public class FrontdeskBeverageServiceImpl implements FrontdeskBeverageService {
         response.order_item_id = beverageItem.order_item_id;
         response.item_name_snapshot_zh = beverageItem.item_name_snapshot_zh;
         response.item_name_snapshot_en = beverageItem.item_name_snapshot_en;
+        if (receiptItems != null) receiptItems.findById(beverageItem.order_item_id)
+            .filter(item -> java.util.Objects.equals(item.order_id, beverageItem.order_id))
+            .ifPresent(item -> response.item_name_snapshot_fr = item.item_name_snapshot_fr);
         response.quantity = beverageItem.quantity;
         response.special_instructions_snapshot = beverageItem.special_instructions_snapshot;
         response.beverage_status = beverageItem.status;

@@ -1,5 +1,7 @@
 import { Card } from '../../../components/ui/Card'
 import type { MenuItem } from '../../../types/ordering'
+import { useLocale } from '../../../i18n/useLocale'
+import { missingBusinessTranslation } from '../../../i18n/locale'
 
 interface MenuItemCardProps {
   item: MenuItem
@@ -26,7 +28,9 @@ export function MenuItemCard({
   disabledReason,
   compact = false,
 }: MenuItemCardProps) {
-  const addLabel = quickAddState === 'adding' ? '...' : quickAddState === 'added' ? 'Added' : '+'
+  const { t, label, locale } = useLocale()
+  const itemName = label({ en: item.nameEn, zh: item.nameZh, fr: item.nameFr })
+  const addLabel = quickAddState === 'adding' ? '...' : quickAddState === 'added' ? t('menu.added') : '+'
   const stepperAddLabel = quickAddState === 'adding' ? '...' : '+'
 
   return (
@@ -51,14 +55,14 @@ export function MenuItemCard({
         }
       }}
     >
-      <Card className={`h-full transition hover:-translate-y-0.5 hover:shadow-[0_18px_40px_rgba(97,0,0,0.08)] ${compact ? 'min-h-[12.75rem] rounded-[22px] p-4' : 'min-h-[16rem] rounded-[28px] p-6'}`}>
+      <Card className={`h-full transition hover:-translate-y-0.5 hover:shadow-[0_18px_40px_rgba(97,0,0,0.08)] ${compact ? 'min-h-[10.75rem] rounded-[22px] p-4' : 'min-h-[13rem] rounded-[28px] p-5'}`}>
         <div className={`flex h-full flex-col ${compact ? 'gap-3' : 'gap-4'}`}>
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-2">
               <h3 className={`${compact ? 'text-[1.45rem]' : 'text-[2rem]'} font-bold leading-tight tracking-[-0.04em] text-[var(--on-surface)]`}>
-                {item.nameEn}
+                {itemName}
               </h3>
-              <p className={`${compact ? 'text-[1rem]' : 'text-[1.35rem]'} font-semibold text-[rgba(83,58,50,0.86)]`}>{item.nameZh}</p>
+              {missingBusinessTranslation({ en: item.nameEn, zh: item.nameZh, fr: item.nameFr }, locale) ? <p className="text-xs font-medium text-[var(--muted)]">{t('common.translationFallback')}</p> : null}
             </div>
             <div className={`text-right ${compact ? 'text-[1.55rem]' : 'text-[2rem]'} font-extrabold tracking-[-0.04em] text-[var(--primary)]`}>
               ${item.price.toFixed(2)}
@@ -70,18 +74,13 @@ export function MenuItemCard({
               {item.descriptionZh ? <p>{item.descriptionZh}</p> : null}
               {item.descriptionEn ? <p>{item.descriptionEn}</p> : null}
             </div>
-          ) : (
-            <div className={`${compact ? 'space-y-1.5 text-[0.86rem] leading-6' : 'space-y-2 text-[1rem] leading-7'} text-[var(--muted)]`}>
-              <p>{item.nameZh}</p>
-              <p>{item.nameEn}</p>
-            </div>
-          )}
+          ) : null}
 
           <div className="mt-auto flex items-end justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
               {item.badge ? (
                 <div className={`inline-flex w-fit rounded-full bg-[rgba(144,77,0,0.12)] font-bold uppercase tracking-[0.05em] text-[var(--secondary)] ${compact ? 'px-3 py-1.5 text-[0.72rem]' : 'px-4 py-2 text-sm'}`}>
-                  {item.badge.en}
+                  {label(item.badge)}
                 </div>
               ) : null}
             </div>

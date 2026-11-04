@@ -9,7 +9,7 @@ function normalizeCode(value: string | null | undefined) {
 }
 
 export function hasRequiredCustomization(item: MenuItem) {
-  if (item.optionGroups != null && activeTemplateGroups(item).some((group) => group.required)) return true
+  if (item.optionGroups != null && activeTemplateGroups(item).some((group) => group.required || (group.min_select ?? 0) > 0)) return true
   const sizeRequiresChoice = Boolean(
     item.customization?.sizes?.required
     && (item.customization.sizes.options.length > 1),
@@ -19,7 +19,7 @@ export function hasRequiredCustomization(item: MenuItem) {
 
 export function isQuickAddItem(item: MenuItem) {
   if (item.optionGroups != null) {
-    return !activeTemplateGroups(item).some((group) => group.required || group.options.some((option) => option.is_active)) && !item.customization?.combo
+    return !activeTemplateGroups(item).some((group) => group.required || (group.min_select ?? 0) > 0 || group.options.some((option) => option.is_active)) && !item.customization?.combo
   }
   const categoryCode = normalizeCode(item.categoryCode)
   const itemType = normalizeCode(item.itemType)

@@ -6,6 +6,8 @@ import { orderStatusDisplayLabel } from '../../../utils/displayLabels'
 import { OrderLineItemRow } from './OrderLineItemRow'
 import type { LocalDraftSubmitState } from '../../../offline/localDrafts'
 import { OfflineOrderStatusPanel } from '../../offline/OfflineOrderStatusPanel'
+import { useLocale } from '../../../i18n/useLocale'
+import type { MessageKey } from '../../../i18n/messages'
 
 interface OrderSummaryPanelProps {
   session: OrderSession
@@ -58,32 +60,34 @@ export function OrderSummaryPanel({
   onReturnQueuedOrderToDraft,
   compact = false,
 }: OrderSummaryPanelProps) {
+  const { t } = useLocale()
   const displaySlotLabel = slotDisplayName ?? formatSplitSlotLabel(session.slotLabel)
-  const statusLabel = orderStatusDisplayLabel(session.status)
+  const statusLabel = ['draft', 'submitted', 'preparing', 'ready', 'picked_up', 'completed', 'cancelled'].includes(session.status)
+    ? t(`order.status.${session.status}` as MessageKey) : orderStatusDisplayLabel(session.status)
   const isDraft = session.status === 'draft'
   const canConfirmUpdate = !isDraft && session.isModifiedAfterSubmit
   const primaryActionLabel = isDraft
     ? localSubmitState === 'QUEUED'
-      ? '等待网络提交'
+      ? t('order.queued')
       : localSubmitState === 'SUBMITTING'
-        ? '正在提交订单...'
+        ? t('order.submitting')
         : localSubmitState === 'FAILED_RETRYABLE'
-          ? '等待自动重试'
+          ? t('order.retrying')
           : localSubmitState === 'CONFLICT' || localSubmitState === 'FAILED_VALIDATION'
-            ? '请检查订单'
+            ? t('order.review')
             : localSubmitState === 'SUBMITTED'
-              ? '已进入服务器和厨房'
-              : '提交订单'
+              ? t('order.confirmed')
+              : t('order.submit')
     : canConfirmUpdate
-      ? '更新订单'
-      : '订单进行中'
+      ? t('order.update')
+      : t('order.inProgress')
   const primaryActionDisabled = busy || orderLocked || (!isDraft && !canConfirmUpdate)
   const itemCount = session.items.reduce((sum, item) => sum + item.quantity, 0)
 
   return (
     <div className={`order-summary-panel flex flex-col overflow-hidden bg-[rgba(255,255,255,0.82)] shadow-[0_18px_42px_rgba(26,28,25,0.06)] ${compact ? 'gap-3 rounded-[24px] p-3.5' : 'gap-5 rounded-[32px] p-5'}`}>
       <div className={`shrink-0 bg-[rgba(26,28,25,0.04)] ${compact ? 'rounded-[18px] px-4 py-3' : 'rounded-[24px] px-5 py-4'}`}>
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">当前订单</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">{t('order.current')}</p>
         <div className="mt-2 flex items-end justify-between gap-4">
           <div>
             <p className={`${compact ? 'text-[1.35rem]' : 'text-[1.7rem]'} font-bold tracking-[-0.04em] text-[var(--on-surface)]`}>{displaySlotLabel}</p>
@@ -125,7 +129,7 @@ export function OrderSummaryPanel({
           ))
         ) : (
           <div className={`rounded-[18px] bg-[rgba(26,28,25,0.04)] text-center text-[var(--muted)] ${compact ? 'px-4 py-6 text-[0.88rem]' : 'px-5 py-8 text-[1.02rem]'}`}>
-            还没有点菜，请从菜单选择菜品。
+            {t('order.empty')}
           </div>
         )}
       </div>
@@ -133,25 +137,25 @@ export function OrderSummaryPanel({
       <div className={`order-summary-footer-safe shrink-0 border-t border-[rgba(26,28,25,0.06)] bg-[rgba(255,255,255,0.92)] ${compact ? 'space-y-2.5 pt-3' : 'space-y-3.5 pt-4'}`}>
         <div className={`rounded-[18px] bg-[rgba(26,28,25,0.04)] ${compact ? 'space-y-1.5 px-4 py-3' : 'space-y-2.5 px-5 py-4'}`}>
           <div className={`flex items-center justify-between font-bold text-[rgba(83,58,50,0.82)] ${compact ? 'text-[0.85rem]' : 'text-base'}`}>
-            <span>数量：{itemCount}</span>
-            <span>小计 ${subtotal.toFixed(2)}</span>
+            <span>{t('common.quantity')}: {itemCount}</span>
+            <span>{t('order.subtotal')} ${subtotal.toFixed(2)}</span>
           </div>
           <div className={`flex items-center justify-between text-[rgba(83,58,50,0.82)] ${compact ? 'text-[0.86rem]' : 'text-base'}`}>
-            <span>税 ({TAX_RATE_LABEL})</span>
+            <span>{t('order.tax')} ({TAX_RATE_LABEL})</span>
             <span>${tax.toFixed(2)}</span>
           </div>
           <div className={`flex items-center justify-between font-extrabold tracking-[-0.04em] text-[var(--on-surface)] ${compact ? 'text-[1.25rem]' : 'text-[1.75rem]'}`}>
-            <span>合计</span>
+            <span>{t('order.total')}</span>
             <span className="text-[var(--primary)]">${total.toFixed(2)}</span>
           </div>
         </div>
 
         <div className={`grid grid-cols-2 ${compact ? 'gap-2' : 'gap-3'}`}>
           <Button variant="secondary" className={compact ? 'min-h-11 rounded-[16px] text-[0.84rem]' : 'min-h-14 rounded-[20px]'} onClick={onSaveDraft} disabled={orderLocked}>
-            {busy ? '保存中...' : '保存到本机'}
+            {busy ? t('common.saving') : t('order.saveLocal')}
           </Button>
           <Button variant="secondary" className={compact ? 'min-h-11 rounded-[16px] text-[0.84rem]' : 'min-h-14 rounded-[20px]'} onClick={onCancelOrder} disabled={orderLocked}>
-            取消订单
+            {t('order.cancel')}
           </Button>
         </div>
 

@@ -28,3 +28,8 @@ coverage/
 !backend/.env.uber-eats.example
 
 /.template-test-private/
+
+# Customer delivery inputs and credentials stay private, never public examples.
+.merchant-private/
+
+frontend/public/merchant/

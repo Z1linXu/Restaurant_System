@@ -1,8 +1,9 @@
 import { createContext } from 'react'
-import type { StoreContextResponse, StoreModuleConfiguration } from '../../services/storeWorkspaceService'
+import type { StoreContextResponse, StoreModuleConfiguration, StorePresentation } from '../../services/storeWorkspaceService'
 import { isStoreLive } from './storeOperationalState'
 
 export interface StoreContextValue {
+  presentation?: StorePresentation | null
   storeId: number
   storeName: string
   storeCode: string | null
@@ -33,6 +34,7 @@ export function mapStoreContext(
     loading = true
   }
   return {
+    presentation: data?.presentation ?? null,
     storeId,
     storeName: data?.name ?? `门店 ${storeId}`,
     storeCode: data?.code ?? null,

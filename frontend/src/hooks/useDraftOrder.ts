@@ -65,12 +65,14 @@ function optionTag(option: BackendOrderItemOptionResponse): LocalizedText {
     return {
       en: `${option.option_name_snapshot_en} x${option.quantity}`,
       zh: `${option.option_name_snapshot_zh} x${option.quantity}`,
+      ...(option.option_name_snapshot_fr ? { fr: `${option.option_name_snapshot_fr} x${option.quantity}` } : {}),
     }
   }
 
   return {
     en: option.option_name_snapshot_en,
     zh: option.option_name_snapshot_zh,
+    ...(option.option_name_snapshot_fr ? { fr: option.option_name_snapshot_fr } : {}),
   }
 }
 
@@ -193,6 +195,7 @@ function mapOrderItem(item: BackendOrderItemResponse, catalogItems: MenuItem[], 
     menuItemId: String(item.menu_item_id),
     nameEn: item.item_name_snapshot_en || menuItem?.nameEn || '',
     nameZh: item.item_name_snapshot_zh || menuItem?.nameZh || '',
+    ...(item.item_name_snapshot_fr ? { nameFr: item.item_name_snapshot_fr } : {}),
     quantity: item.quantity,
     unitPrice: Number(item.unit_price),
     lineSubtotal: Number(item.line_amount),
@@ -208,6 +211,7 @@ function mapOrderItem(item: BackendOrderItemResponse, catalogItems: MenuItem[], 
       parentOptionId: option.parent_option_id_snapshot == null ? null : String(option.parent_option_id_snapshot),
       nameEn: option.option_name_snapshot_en,
       nameZh: option.option_name_snapshot_zh,
+      ...(option.option_name_snapshot_fr ? { nameFr: option.option_name_snapshot_fr } : {}),
       priceDelta: Number(option.price_delta),
       quantity: option.quantity,
     })),
@@ -240,7 +244,7 @@ export function buildLocalLineItem(menuItem: MenuItem, draft: ItemCustomizationD
   const summaryTags: LocalizedText[] = []
   for (const group of activeTemplateGroups(menuItem)) for (const option of group.options) {
     const quantity = draft.groupSelections?.[group.group_instance_code]?.[String(option.id)] ?? 0
-    if (quantity > 0) summaryTags.push({ en: `${option.name_en}${quantity > 1 ? ` x${quantity}` : ''}`, zh: `${option.name_zh}${quantity > 1 ? ` x${quantity}` : ''}` })
+    if (quantity > 0) summaryTags.push({ en: `${option.name_en}${quantity > 1 ? ` x${quantity}` : ''}`, zh: `${option.name_zh}${quantity > 1 ? ` x${quantity}` : ''}`, ...(option.name_fr ? { fr: `${option.name_fr}${quantity > 1 ? ` x${quantity}` : ''}` } : {}) })
   }
 
   const pushOptionTag = (optionId: string | undefined) => {
@@ -302,6 +306,7 @@ export function buildLocalLineItem(menuItem: MenuItem, draft: ItemCustomizationD
     menuItemId: menuItem.id,
     nameEn: menuItem.nameEn,
     nameZh: menuItem.nameZh,
+    ...(menuItem.nameFr ? { nameFr: menuItem.nameFr } : {}),
     quantity: draft.quantity,
     unitPrice: menuItem.price,
     lineSubtotal: calculateDraftLineSubtotal(menuItem, draft),

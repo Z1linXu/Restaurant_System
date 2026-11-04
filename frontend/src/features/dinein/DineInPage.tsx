@@ -1,3 +1,6 @@
+import type { MessageKey } from '../../i18n/messages'
+import { useLocale } from '../../i18n/useLocale'
+import { translate } from '../../i18n/engine'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { followReprint, printResultMessage, reprintErrorMessage } from '../../services/manualReprintService'
 import { useMenuCatalog } from '../../hooks/useMenuCatalog'
@@ -35,7 +38,7 @@ import { TableStatusLegend } from './components/TableStatusLegend'
 import { useCurrentStore } from '../store/useStoreContext'
 import { useAuth } from '../auth/useAuth'
 import { useStoreOfflineOrders } from '../offline/useStoreOfflineOrders'
-import { offlineOrderBadgeLabel, type OfflineOrderBadge } from '../offline/offlineOrderStatus'
+import { type OfflineOrderBadge } from '../offline/offlineOrderStatus'
 import { finalizeOfflineOrderRecords } from '../../offline/orderLifecycle'
 import {
   cancelOfflineOrder,
@@ -75,7 +78,7 @@ function buildPostSubmitPrintAttentionMessage(jobs: PrintJobRecord[]) {
     .map((job) => `${printJobLabel(job)}: ${printJobReason(job)}`)
     .join(' ')
 
-  return `Printing needs attention. ${details} Reprint immediately from Print Center or Order Center.`
+  return translate('printing.attentionDetails', { details })
 }
 
 function OfflineOrdersBanner({
@@ -97,11 +100,12 @@ function OfflineOrdersBanner({
   busyClientOrderId: string | null
   formatLabel?: (value: string) => string
 }) {
+  const { t } = useLocale()
   if (!orders.length) return null
   return (
     <section className={`rounded-[20px] border border-[rgba(177,111,21,0.28)] bg-[rgba(220,153,54,0.13)] text-[rgb(112,65,8)] ${compact ? 'px-4 py-3' : 'px-5 py-4'}`}>
       <p className={`${compact ? 'text-[0.9rem]' : 'text-base'} font-black`}>
-        本机有 {orders.length} 个订单尚未确认进入厨房
+        {t('order.unconfirmedCount', { count: orders.length })}
       </p>
       <div className="mt-3 space-y-2">
         {orders.map((order) => {
@@ -114,34 +118,34 @@ function OfflineOrdersBanner({
             <div key={order.clientOrderId} className="rounded-[16px] bg-white/65 px-3 py-2.5">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-bold">
                 <span>{order.tableNo ? formatLabel(order.tableNo) : order.contextLabel}</span>
-                <span>· {offlineOrderBadgeLabel(order.state)}</span>
-                <span>· {order.itemCount} 份</span>
+                <span>· {t(`order.local.${order.state}.title` as MessageKey)}</span>
+                <span>· {t('order.itemsCount', { count: order.itemCount })}</span>
                 {order.lastErrorCode ? <span className="font-semibold">· {order.lastErrorCode}</span> : null}
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {isSubmitting ? (
                   <button type="button" disabled={busy} className="min-h-10 rounded-full bg-white px-3 py-1.5 text-xs font-black disabled:opacity-50" onClick={() => onCheckStatus(order)}>
-                    检查状态
+                    {t('order.check')}
                   </button>
                 ) : null}
                 {order.state === 'LOCAL_DRAFT' || order.state === 'QUEUED' || order.state === 'CONFLICT' || order.state === 'FAILED_VALIDATION' ? (
                   <button type="button" disabled={Boolean(busyClientOrderId)} className="min-h-10 rounded-full bg-[var(--primary)] px-3 py-1.5 text-xs font-black text-white disabled:opacity-50" onClick={() => onOpen(order)}>
-                    {order.state === 'LOCAL_DRAFT' ? '继续处理' : '返回修改'}
+                    {order.state === 'LOCAL_DRAFT' ? translate('order.continue') : translate('order.returnEdit')}
                   </button>
                 ) : null}
                 {order.state === 'FAILED_RETRYABLE' ? (
                   <span className="rounded-full bg-white/70 px-3 py-1.5 text-xs font-black">
-                    服务器结果未确认，请先立即重试
+                    {t('order.unconfirmedRetry')}
                   </span>
                 ) : null}
                 {canRetry ? (
                   <button type="button" disabled={busy} className="min-h-10 rounded-full bg-white px-3 py-1.5 text-xs font-black disabled:opacity-50" onClick={() => onRetry(order)}>
-                    立即重试
+                    {t('order.retry')}
                   </button>
                 ) : null}
                 {canCancel ? (
                   <button type="button" disabled={busy} className="min-h-10 rounded-full px-3 py-1.5 text-xs font-black underline disabled:opacity-50" onClick={() => onCancel(order)}>
-                    取消本机订单
+                    {t('order.cancelLocal')}
                   </button>
                 ) : null}
               </div>
@@ -160,7 +164,8 @@ interface DineInPageProps {
 
 export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
   const reprintFollow = useRef<(() => void) | null>(null)
-  const { storeId, organizationId } = useCurrentStore()
+  const { t } = useLocale()
+  const { storeId, organizationId, presentation } = useCurrentStore()
   useEffect(() => () => reprintFollow.current?.(), [storeId])
   const { user } = useAuth()
   const isIpadLandscape = useIpadLandscape()
@@ -246,7 +251,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
       }
       navigateTo(buildMenuPath(offlineOrderContext(order), storeId))
     } catch (error) {
-      setSubmissionMessage(error instanceof Error ? error.message : '本机订单暂时不能返回修改。')
+      setSubmissionMessage(error instanceof Error ? error.message : translate('common.error'))
     }
   }, [offlineOrderContext, offlineOrderScope, storeId])
 
@@ -256,12 +261,12 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
     try {
       const result = await retryOfflineOrder(offlineOrderScope, order.clientOrderId)
       if (result?.state === 'SUBMITTED' && result.serverOrderId != null) {
-        setSubmissionMessage(`Order #${result.serverOrderId} confirmed / 订单已由服务器确认。`)
+        setSubmissionMessage(translate('order.confirmedNumber', { id: result.serverOrderId }))
         setConfirmedPrintOrder({ orderId: result.serverOrderId, batchId: null })
       }
       await refreshFromBackend({ force: true })
     } catch (error) {
-      setSubmissionMessage(error instanceof Error ? error.message : '订单重试失败，请稍后再试。')
+      setSubmissionMessage(error instanceof Error ? error.message : translate('common.error'))
     } finally {
       setOfflineActionBusy(null)
     }
@@ -273,22 +278,22 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
     try {
       const state = await readOfflineOrderState(offlineOrderScope, order.clientOrderId)
       setSubmissionMessage(state === 'SUBMITTING'
-        ? '订单仍在确认服务器结果，请不要重复提交。'
-        : `订单当前状态：${state ?? '未找到本机记录'}。`)
+        ? translate('order.stillConfirming')
+        : translate('order.currentState', { state: state ? translate(`order.local.${state}.title` as MessageKey) : translate('order.noneYet') }))
     } finally {
       setOfflineActionBusy(null)
     }
   }, [offlineOrderScope])
 
   const handleOfflineCancel = useCallback(async (order: OfflineOrderBadge) => {
-    if (!offlineOrderScope || !window.confirm(`确定取消 ${order.tableNo ? formatLabel(order.tableNo) : order.contextLabel} 的本机订单吗？`)) return
+    if (!offlineOrderScope || !window.confirm(translate('order.cancelLocalConfirm', { name: order.tableNo ? formatLabel(order.tableNo) : order.contextLabel }))) return
     setOfflineActionBusy(order.clientOrderId)
     try {
       await cancelOfflineOrder(offlineOrderScope, order.clientOrderId)
-      setSubmissionMessage('本机订单已取消，未标记为已进入厨房。')
+      setSubmissionMessage(translate('order.cancelLocalDone'))
       await refreshFromBackend({ force: true })
     } catch (error) {
-      setSubmissionMessage(error instanceof Error ? error.message : '本机订单取消失败。')
+      setSubmissionMessage(error instanceof Error ? error.message : translate('common.error'))
     } finally {
       setOfflineActionBusy(null)
     }
@@ -430,19 +435,19 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
       },
       onUnavailable: () => {
         if (printCheckRunIdRef.current !== runId) return
-        setPrintAttentionMessage('订单已提交，但当前门店暂时无法读取打印状态；请稍后在订单记录或打印中心检查。')
+        setPrintAttentionMessage(translate('printing.statusUnavailable'))
       },
     })
   }, [cancelPrintCoordinator, storeId])
 
   const handleFinish = async (slot: TableSlot) => {
     if (!slot.orderDbId) {
-      window.alert('Unable to finish this order because the order id is missing.')
+      window.alert(t('order.missingId'))
       return
     }
 
     const confirmed = window.confirm(
-      'Finish this order?\nThis will complete the current order and free the table.',
+      t('order.finishConfirm'),
     )
 
     if (!confirmed) {
@@ -452,20 +457,20 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
     try {
       const completedOrder = await completeOrder(slot.orderDbId)
       await finalizeTerminalOrder(completedOrder.id, completedOrder.status)
-      setSubmissionMessage(`Order completed for ${slot.displayLabel ?? formatLabel(slot.label)}.`)
+      setSubmissionMessage(t('order.completedFor', { name: slot.displayLabel ?? formatLabel(slot.label) }))
       await refreshTableAfterFinish(slot.baseTableLabel)
 
       // Keep one short fallback refresh for read-model lag; realtime and 30s polling handle the rest.
       await new Promise((resolve) => window.setTimeout(resolve, 900))
       await refreshTableAfterFinish(slot.baseTableLabel)
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'Failed to finish order')
+      window.alert(error instanceof Error ? error.message : translate('common.error'))
     }
   }
 
   const handlePrint = async (slot: TableSlot) => {
     if (!slot.orderDbId) {
-      window.alert('Unable to print because the order id is missing.')
+      window.alert(t('order.missingId'))
       return
     }
     setPrintTarget(slot)
@@ -479,7 +484,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
       setPrintOptions(options)
     } catch (error) {
       if (printOptionsRequestIdRef.current === requestId) {
-        setPrintError(error instanceof Error ? error.message : 'Failed to load print options')
+        setPrintError(error instanceof Error ? error.message : translate('common.error'))
       }
     }
   }
@@ -513,7 +518,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
   const tableBoardContent = tableBoardLoading && visibleSlots.length === 0
     ? (
       <div className="flex min-h-48 items-center justify-center rounded-[24px] bg-white/60 px-5 py-8 text-center font-semibold text-[var(--muted)]">
-        Loading tables…
+        {t('tables.loading')}
       </div>
     )
     : tableBoardEmpty && syncError
@@ -521,14 +526,14 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
         <div className="flex min-h-48 flex-col items-center justify-center rounded-[24px] border border-[rgba(151,34,34,0.2)] bg-[rgba(151,34,34,0.08)] px-5 py-8 text-center text-[rgb(116,22,22)]">
           <p className="font-semibold">{syncError}</p>
           <button type="button" className="mt-4 min-h-11 rounded-full bg-[var(--primary)] px-5 py-2 font-black text-white" onClick={() => void refreshFromBackend({ force: true })}>
-            Retry
+            {t('order.retry')}
           </button>
         </div>
       )
       : tableBoardEmpty
         ? (
           <div className="flex min-h-48 items-center justify-center rounded-[24px] bg-white/60 px-5 py-8 text-center font-semibold text-[var(--muted)]">
-            No dining tables are configured for this store.
+            {t('tables.none')}
           </div>
         )
         : (
@@ -573,8 +578,8 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
         onOrderSubmitted={(slotLabel, _tableLabel, orderId, updateBatchId) => {
           setSubmissionMessage(
             activeOrderingContext.orderType === 'pickup'
-              ? `Takeout order confirmed for ${activeOrderingContext.pickupLabel ?? slotLabel}.`
-              : `Order confirmed for ${formatLabel(slotLabel)}.`,
+              ? t('order.takeoutConfirmedFor', { name: activeOrderingContext.pickupLabel ?? slotLabel })
+              : t('order.confirmedFor', { name: formatLabel(slotLabel) }),
           )
           startPostSubmitPrintCheck(orderId, updateBatchId)
           updateActiveOrderingContext(null, 'order submitted')
@@ -604,7 +609,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
               </div>
             ) : null}
 
-            {submissionMessage && confirmedPrintOrder ? <TemplatePrintDiagnosticsPanel key={`${storeId}:${confirmedPrintOrder.orderId}:${confirmedPrintOrder.batchId ?? "submit"}`} storeId={storeId} orderId={confirmedPrintOrder.orderId} batchId={confirmedPrintOrder.batchId} poll hideWhenEmpty /> : null}
+            {presentation?.kitchen_configuration !== 'STATION' && submissionMessage && confirmedPrintOrder ? <TemplatePrintDiagnosticsPanel key={`${storeId}:${confirmedPrintOrder.orderId}:${confirmedPrintOrder.batchId ?? "submit"}`} storeId={storeId} orderId={confirmedPrintOrder.orderId} batchId={confirmedPrintOrder.batchId} poll hideWhenEmpty /> : null}
 
 
             {printAttentionMessage ? (
@@ -615,9 +620,9 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
 
             {(syncError && visibleSlots.length > 0) || !isOnline ? (
               <div className="rounded-[20px] border border-[rgba(151,34,34,0.2)] bg-[rgba(151,34,34,0.08)] px-4 py-3 text-[0.92rem] font-semibold text-[rgb(116,22,22)]">
-                {syncError ?? '当前设备离线，请检查网络后重试 / Device is offline. Please check the network and try again.'}
+                {syncError ?? t('network.offline')}
                 <button type="button" className="ml-3 font-black underline" onClick={() => void refreshFromBackend({ force: true })}>
-                  Reconnect
+                  {t('network.reconnect')}
                 </button>
               </div>
             ) : null}
@@ -666,7 +671,7 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
                 </div>
               ) : null}
 
-              {submissionMessage && confirmedPrintOrder ? <TemplatePrintDiagnosticsPanel key={`${storeId}:${confirmedPrintOrder.orderId}:${confirmedPrintOrder.batchId ?? "submit"}`} storeId={storeId} orderId={confirmedPrintOrder.orderId} batchId={confirmedPrintOrder.batchId} poll hideWhenEmpty /> : null}
+              {presentation?.kitchen_configuration !== 'STATION' && submissionMessage && confirmedPrintOrder ? <TemplatePrintDiagnosticsPanel key={`${storeId}:${confirmedPrintOrder.orderId}:${confirmedPrintOrder.batchId ?? "submit"}`} storeId={storeId} orderId={confirmedPrintOrder.orderId} batchId={confirmedPrintOrder.batchId} poll hideWhenEmpty /> : null}
 
 
               {printAttentionMessage ? (
@@ -677,9 +682,9 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
 
               {(syncError && visibleSlots.length > 0) || !isOnline ? (
                 <div className="rounded-[24px] border border-[rgba(151,34,34,0.2)] bg-[rgba(151,34,34,0.08)] px-5 py-4 text-base font-semibold text-[rgb(116,22,22)]">
-                  {syncError ?? '当前设备离线，请检查网络后重试 / Device is offline. Please check the network and try again.'}
+                  {syncError ?? t('network.offline')}
                   <button type="button" className="ml-3 font-black underline" onClick={() => void refreshFromBackend({ force: true })}>
-                    Reconnect
+                    {t('network.reconnect')}
                   </button>
                 </div>
               ) : null}
@@ -706,10 +711,10 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
           <div className="w-full max-w-md rounded-[28px] bg-white p-5 shadow-2xl" onClick={(event) => event.stopPropagation()}>
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-sm font-semibold text-[var(--muted)]">Print current full order</p>
+                <p className="text-sm font-semibold text-[var(--muted)]">{t('printing.fullOrder')}</p>
                 <h2 className="mt-1 text-2xl font-extrabold">{printTarget.displayLabel ?? formatLabel(printTarget.label)}</h2>
               </div>
-              <button type="button" className="rounded-full px-3 py-2 font-bold" onClick={() => { printOptionsRequestIdRef.current += 1; setPrintTarget(null) }}>Close</button>
+              <button type="button" className="rounded-full px-3 py-2 font-bold" onClick={() => { printOptionsRequestIdRef.current += 1; setPrintTarget(null) }}>{t('common.close')}</button>
             </div>
             {printError ? <div className="mt-4 rounded-[16px] bg-red-50 px-4 py-3 font-semibold text-red-700">{printError}</div> : null}
             <div className="mt-5 space-y-3">
@@ -721,10 +726,10 @@ export function DineInPage({ routePath, routeSearch }: DineInPageProps) {
                   className="min-h-14 w-full rounded-[18px] bg-[var(--primary)] px-4 text-left font-bold text-white disabled:bg-stone-200 disabled:text-stone-500"
                   onClick={() => void handleManualReprint(option)}
                 >
-                  <span>{printBusy === option.module_code ? 'Printing...' : option.label}</span>
+                  <span>{printBusy === option.module_code ? t('printing.printing') : option.label}</span>
                   {!option.available ? <span className="mt-1 block text-xs font-medium">{option.unavailable_reason}</span> : null}
                 </button>
-              )) : !printError ? <p className="py-5 text-center text-[var(--muted)]">Loading print options...</p> : null}
+              )) : !printError ? <p className="py-5 text-center text-[var(--muted)]">{t('printing.loadingOptions')}</p> : null}
             </div>
           </div>
         </div>

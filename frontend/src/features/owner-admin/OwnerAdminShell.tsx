@@ -5,6 +5,10 @@ import { StoreSwitcher } from '../store/StoreSwitcher'
 import { buildStorePath, stripStorePrefix } from '../store/storeRoutes'
 import { useOptionalCurrentStore } from '../store/useStoreContext'
 import { isStoreModuleEnabled, isStoreModuleManagementEnabled, type StoreModuleKey } from '../store/storeModuleAccess'
+import { useLocale } from '../../i18n/useLocale'
+import type { MessageKey } from '../../i18n/messages'
+import { LanguageSelector } from '../../components/LanguageSelector'
+import { RestaurantBrand } from '../../components/RestaurantBrand'
 
 interface OwnerAdminShellProps {
   title: string
@@ -33,6 +37,9 @@ const navItems: NavItem[] = [
 ]
 
 export function OwnerAdminShell({ title, description, children }: OwnerAdminShellProps) {
+  const { t } = useLocale()
+  const headingKeys: Record<string, MessageKey> = { 'Owner Home / Stores': 'nav.ownerHome', 'Home / Dashboard': 'nav.dashboard', Dashboard: 'nav.dashboard', 'Menu Management': 'nav.menuManagement', 'Dining Tables': 'nav.tables', 'Printing Settings': 'nav.printing', 'Staff Management': 'nav.staff', 'Integrations / Uber Eats': 'nav.integrations', 'Audit Logs': 'nav.audit', Reports: 'nav.reports', 'Sales Report': 'analytics.salesReport', 'Item Sales Report': 'analytics.itemReport', 'Profit Report': 'analytics.profitReport', 'Store Comparison': 'analytics.storeReport' }
+  const heading = (value: string) => headingKeys[value] ? t(headingKeys[value]) : value
   const { user, isOwner, isManager, isFrontdesk, signOut } = useAuth()
   const currentStore = useOptionalCurrentStore()
   const moduleConfiguration = currentStore?.moduleConfiguration ?? null
@@ -61,7 +68,7 @@ export function OwnerAdminShell({ title, description, children }: OwnerAdminShel
   )
 
   const homePath = isFrontdesk ? '/frontdesk' : '/admin/dashboard'
-  const shellTitle = isFrontdesk ? 'Store Tools' : 'Owner Console'
+  const shellTitle = isFrontdesk ? t('nav.storeTools') : t('nav.ownerConsole')
   const frontdeskPath = currentStore ? buildStorePath(currentStore.storeId, '/frontdesk') : '/frontdesk'
   const currentStoreLive = !currentStore || currentStore.isLive
   const backToFrontdeskButton = (
@@ -80,7 +87,7 @@ export function OwnerAdminShell({ title, description, children }: OwnerAdminShel
           : 'cursor-not-allowed bg-stone-200 text-stone-500 shadow-none'
       }`}
     >
-      {currentStoreLive ? '返回前台' : 'Not Live'}
+      {currentStoreLive ? t('nav.backFrontdesk') : 'Not Live'}
     </button>
   )
 
@@ -91,7 +98,7 @@ export function OwnerAdminShell({ title, description, children }: OwnerAdminShel
           <div className="sticky top-0 z-40 rounded-[24px] border border-[rgba(97,0,0,0.08)] bg-[rgba(255,255,255,0.92)] px-4 py-3 shadow-[0_14px_30px_rgba(26,28,25,0.08)] backdrop-blur">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="min-w-[180px]">
-                <div className="text-[1.45rem] font-black tracking-[-0.05em] text-[var(--primary)]">Store Tools</div>
+                <div className="text-[1.45rem] font-black tracking-[-0.05em] text-[var(--primary)]">{t('nav.storeTools')}</div>
                 <div className="mt-0.5 text-[0.82rem] font-semibold text-[var(--muted)]">
                   {user?.full_name || user?.username || 'Frontdesk'}
                 </div>
@@ -112,18 +119,18 @@ export function OwnerAdminShell({ title, description, children }: OwnerAdminShel
                           : 'bg-[rgba(26,28,25,0.05)] text-[rgba(26,28,25,0.76)] hover:bg-[rgba(97,0,0,0.08)]'
                       }`}
                     >
-                      {item.label}
+                      {heading(item.label)}
                     </button>
                   )
                 })}
                 {backToFrontdeskButton}
-                <StoreSwitcher compact />
+                <LanguageSelector /><StoreSwitcher compact />
                 <button
                   type="button"
                   onClick={() => void signOut().finally(() => navigateTo('/login'))}
                   className="min-h-11 rounded-[16px] bg-[rgba(26,28,25,0.06)] px-4 text-[0.9rem] font-bold text-[var(--muted)]"
                 >
-                  退出登录
+                  {t('nav.logout')}
                 </button>
               </div>
             </div>
@@ -132,7 +139,7 @@ export function OwnerAdminShell({ title, description, children }: OwnerAdminShel
           <div className="rounded-[26px] bg-[rgba(255,255,255,0.84)] px-4 py-4 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <div className="text-[1.5rem] font-black tracking-[-0.05em]">{title}</div>
+                <div className="text-[1.5rem] font-black tracking-[-0.05em]">{heading(title)}</div>
                 {description ? <div className="mt-1 text-[0.9rem] text-[var(--muted)]">{description}</div> : null}
               </div>
             </div>
@@ -178,7 +185,7 @@ export function OwnerAdminShell({ title, description, children }: OwnerAdminShel
                       : 'bg-transparent text-[rgba(26,28,25,0.78)] hover:bg-[rgba(97,0,0,0.06)]'
                   }`}
                 >
-                  <div className="text-[0.98rem] font-semibold">{item.label}</div>
+                  <div className="text-[0.98rem] font-semibold">{heading(item.label)}</div>
                 </button>
               )
             })}
@@ -189,7 +196,7 @@ export function OwnerAdminShell({ title, description, children }: OwnerAdminShel
             onClick={() => void signOut().finally(() => navigateTo('/login'))}
             className="mt-5 w-full rounded-[18px] bg-[rgba(26,28,25,0.06)] px-4 py-3 text-left text-[0.95rem] font-bold text-[var(--muted)]"
           >
-            退出登录 / Sign out
+            {t('nav.logout')}
           </button>
         </aside>
 
@@ -198,12 +205,12 @@ export function OwnerAdminShell({ title, description, children }: OwnerAdminShel
             <div className="rounded-[28px] bg-[rgba(255,255,255,0.84)] px-5 py-4 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <div className="text-[1.7rem] font-black tracking-[-0.05em]">{title}</div>
+                  <RestaurantBrand compact /><div className="text-[1.7rem] font-black tracking-[-0.05em]">{heading(title)}</div>
                   {description ? <div className="mt-1 text-[0.92rem] text-[var(--muted)]">{description}</div> : null}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   {backToFrontdeskButton}
-                  <StoreSwitcher />
+                  <LanguageSelector /><StoreSwitcher />
                 </div>
               </div>
             </div>

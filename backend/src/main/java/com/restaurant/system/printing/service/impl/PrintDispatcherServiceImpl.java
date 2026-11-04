@@ -102,6 +102,9 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
     private final PrintingDisplayRuleService printingDisplayRuleService;
     private final DiningTableDisplayService diningTableDisplayService;
 
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    private com.restaurant.system.delivery.ReceiptContextService receiptContexts;
+
     public PrintDispatcherServiceImpl(
         PrinterConfigService printerConfigService,
         PrinterConfigRepository printerConfigRepository,
@@ -629,7 +632,10 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                     return;
                 }
             }
-            if (orderUpdateBatchId != null) {
+            if (receiptContexts != null && "ALLO_NOUILLES_TEST".equals(store.code)) {
+                renderRequest = buildRenderRequest(moduleCode, storeId, orderId, orderUpdateBatchId, ruleContext);
+            }
+            if (orderUpdateBatchId != null || (renderRequest != null && renderRequest.receipt_context != null)) {
                 ReceiptRenderer updateRenderer = renderersByModuleCode.get(moduleCode);
                 if (updateRenderer != null) {
                     if (renderRequest == null) {
@@ -674,6 +680,10 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                 orderId,
                 orderUpdateBatchId == null ? "ORDER_SUBMIT" : "ORDER_UPDATE_BATCH"
             );
+            if (receiptContexts != null) {
+                if (renderRequest == null) renderRequest = buildRenderRequest(moduleCode, storeId, orderId, orderUpdateBatchId, ruleContext);
+                payloadSnapshot = receiptContexts.withContext(payloadSnapshot, renderRequest == null ? null : renderRequest.receipt_context);
+            }
             job = dispatchSourceKey == null
                 ? printJobService.createPendingJob(
                     store.organization_id,
@@ -854,6 +864,11 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         job.printingRuleFingerprint = source.printingRuleFingerprint;
         printJobRepository.save(job);
         try {
+            boolean originalCopy = com.restaurant.system.delivery.ReceiptContextService.hasContext(source);
+            if (originalCopy && !PrintingMode.MOCK.equals(printingMode)) throw new BusinessException("ALLO_RECEIPT_TEST_MOCK_ONLY");
+            if (originalCopy && (source.rendered_text_snapshot == null || source.rendered_text_snapshot.isBlank()
+                    || source.escposPayloadBase64 == null || source.escposPayloadBase64.isBlank()))
+                throw new BusinessException("RECEIPT_ORIGINAL_ARTIFACT_MISSING");
             String content = source.rendered_text_snapshot;
             PrinterAssignment assignment = printerAssignmentRepository.findByStoreIdAndModuleCode(job.store_id, job.module_code).orElse(null);
             if (content == null || content.isBlank()) {
@@ -868,7 +883,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                 );
             } else {
                 Order originalOrder = orderRepository.findExistingById(source.order_id);
-                if (Set.of(PrintModuleCode.GRAB, PrintModuleCode.FRONTDESK_RECEIPT, PrintModuleCode.HOT_KITCHEN)
+                if (!originalCopy && Set.of(PrintModuleCode.GRAB, PrintModuleCode.FRONTDESK_RECEIPT, PrintModuleCode.HOT_KITCHEN)
                         .contains(source.module_code) && PrintTableDisplayFormatter.isDineIn(originalOrder)) {
                     content = PrintMarkup.withTopFeed(content);
                 }
@@ -918,6 +933,18 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         }
         if (PrintModuleCode.HOT_KITCHEN.equals(moduleCode) && !hasPrintableContent(moduleCode, order.store_id, order.id)) {
             throw new BusinessException("Order has no HOT_KITCHEN content to reprint");
+        }
+        if (receiptContexts != null) {
+            var candidates = printJobRepository.findAllByStoreIdAndOrderId(order.store_id, orderId).stream()
+                .filter(j -> moduleCode.equals(j.module_code) && j.order_update_batch_id == null && j.reprintSourceJobId == null
+                    && com.restaurant.system.delivery.ReceiptContextService.hasContext(j)).toList();
+            if (!candidates.isEmpty()) {
+                if (orderItemRepository.findAllByOrderId(orderId).stream()
+                        .anyMatch(item -> item.order_update_batch_id != null))
+                    throw new BusinessException("RECEIPT_USE_ORIGINAL_JOB_REPRINT: Select the original tickets in Print Center; this order has added batches.");
+                return reprintJob(candidates.get(candidates.size()-1).id, requestedByUserId);
+            }
+            if (receiptContexts.enabled(store,moduleCode)) throw new BusinessException("RECEIPT_ORIGINAL_ARTIFACT_MISSING");
         }
         PrinterAssignment assignment = printerAssignmentRepository.findByStoreIdAndModuleCode(order.store_id, moduleCode).orElse(null);
         PrinterConfig printer = PrintingMode.MOCK.equals(printingMode)
@@ -1173,6 +1200,13 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         request.is_update_ticket = updateTicket;
         request.order_update_batch_id = orderUpdateBatchId;
         request.printing_rules = ruleContext;
+        request.receipt_context = receiptContexts == null ? null : receiptContexts.forEvent(store,moduleCode,orderId,orderUpdateBatchId);
+        if (request.receipt_context != null) {
+            Set<Long> frozenIds = new java.util.HashSet<>(request.receipt_context.order_item_ids);
+            request.order_items = orderItems.stream().filter(i -> frozenIds.contains(i.id)).toList();
+            request.order_item_options = orderItemOptions.stream().filter(i -> frozenIds.contains(i.order_item_id)).toList();
+            request.kitchen_tasks = kitchenTasks.stream().filter(i -> frozenIds.contains(i.order_item_id)).toList();
+        }
         return request;
     }
 

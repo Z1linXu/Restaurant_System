@@ -12,6 +12,7 @@ public class OrderItemOptionResponse {
     public Long parent_option_id_snapshot;
     public String option_name_snapshot_zh;
     public String option_name_snapshot_en;
+    public String option_name_snapshot_fr;
     public BigDecimal price_delta;
     public Integer quantity;
 }

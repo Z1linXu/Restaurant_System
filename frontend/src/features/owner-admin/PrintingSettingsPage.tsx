@@ -46,13 +46,16 @@ import { menuManagementPath } from './menuManagementSections'
 import { ReceiptPreview } from './ReceiptPreview'
 import { KitchenRoutingPanel } from './KitchenRoutingPanel'
 import { TemplatePrintDiagnosticsPanel } from './TemplatePrintDiagnosticsPanel'
+import { ReceiptLanguagePanel } from './ReceiptLanguagePanel'
+import { appI18n, translate } from '../../i18n/engine'
+import { useLocale } from '../../i18n/useLocale'
 
 type ToastState = { kind: 'success' | 'error'; message: string } | null
 
 type PrinterEditorState = PrinterConfigRecord
 type PrintingMode = 'REAL' | 'MOCK' | 'DISABLED' | 'PAD_DIRECT'
 
-const MODULE_OPTIONS = [
+const moduleOptions = () => [
   { code: 'GRAB', label: moduleDisplayLabel('GRAB'), future: false },
   { code: 'FRONTDESK_RECEIPT', label: moduleDisplayLabel('FRONTDESK_RECEIPT'), future: false },
   { code: 'HOT_KITCHEN', label: moduleDisplayLabel('HOT_KITCHEN'), future: false },
@@ -61,23 +64,23 @@ const MODULE_OPTIONS = [
   { code: 'TAKEOUT_RECEIPT', label: moduleDisplayLabel('TAKEOUT_RECEIPT'), future: true },
 ] as const
 
-const FONT_SIZE_OPTIONS = [
-  { value: 'XS', label: '极小 XS' },
-  { value: 'SMALL', label: '小号 SMALL' },
-  { value: 'MEDIUM', label: '中号 MEDIUM' },
-  { value: 'LARGE', label: '大号 LARGE' },
-  { value: 'XL', label: '超大 XL' },
+const fontSizeOptions = () => [
+  { value: 'XS', label: 'XS' },
+  { value: 'SMALL', label: 'SMALL' },
+  { value: 'MEDIUM', label: 'MEDIUM' },
+  { value: 'LARGE', label: 'LARGE' },
+  { value: 'XL', label: 'XL' },
 ] as const
 
 const CLOUD_PRIVATE_PRINTER_BLOCKED = 'CLOUD_PRIVATE_PRINTER_BLOCKED'
 const CLOUD_PRIVATE_PRINTER_WARNING =
   '云端服务器不能直接连接店内局域网打印机。请切换到 PAD_DIRECT、MOCK、DISABLED，或使用本地打印桥。'
 
-const PRINTING_MODE_OPTIONS: Array<{ value: PrintingMode; label: string; description: string }> = [
-  { value: 'REAL', label: '真实打印机 REAL', description: '通过 TCP 连接已配置的 ESC/POS 打印机。' },
-  { value: 'MOCK', label: '无打印机测试 MOCK', description: '只生成小票预览并模拟打印成功，不连接实体打印机。' },
-  { value: 'PAD_DIRECT', label: '平板本地打印 PAD_DIRECT', description: '后端排队打印任务，由 Android Pad 本地领取并打印。' },
-  { value: 'DISABLED', label: '关闭打印 DISABLED', description: '订单照常提交，但不自动打印。' },
+const printingModeOptions = (): Array<{ value: PrintingMode; label: string; description: string }> => [
+  { value: 'REAL', label: translate('printing.real'), description: '通过 TCP 连接已配置的 ESC/POS 打印机。' },
+  { value: 'MOCK', label: translate('printing.mock'), description: '只生成小票预览并模拟打印成功，不连接实体打印机。' },
+  { value: 'PAD_DIRECT', label: translate('printing.pad'), description: '后端排队打印任务，由 Android Pad 本地领取并打印。' },
+  { value: 'DISABLED', label: translate('printing.disabled'), description: '订单照常提交，但不自动打印。' },
 ]
 
 function asString(value: unknown, fallback = '') {
@@ -102,7 +105,7 @@ function defaultPrinter(storeId: number): PrinterEditorState {
 
 function formatDateTime(value?: string | null) {
   if (!value) {
-    return '从未'
+    return translate('printing.never')
   }
   const parsed = new Date(value)
   if (Number.isNaN(parsed.getTime())) {
@@ -119,22 +122,22 @@ function formatDateTime(value?: string | null) {
 function formatAgo(value?: string | null) {
   const timestamp = timestampMs(value)
   if (timestamp == null) {
-    return '从未在线'
+    return translate('printing.neverOnline')
   }
   const ageMs = Math.max(0, Date.now() - timestamp)
   const minutes = Math.floor(ageMs / 60000)
   if (minutes < 1) {
-    return '刚刚在线'
+    return translate('printing.onlineNow')
   }
   if (minutes < 60) {
-    return `${minutes} 分钟前`
+    return new Intl.RelativeTimeFormat(appI18n.language).format(-minutes, 'minute')
   }
   const hours = Math.floor(minutes / 60)
   if (hours < 24) {
-    return `${hours} 小时前`
+    return new Intl.RelativeTimeFormat(appI18n.language).format(-hours, 'hour')
   }
   const days = Math.floor(hours / 24)
-  return `${days} 天前`
+  return new Intl.RelativeTimeFormat(appI18n.language).format(-days, 'day')
 }
 
 function lastSeenTone(value?: string | null) {
@@ -213,13 +216,13 @@ function pendingAgeNotice(job: PrintJobRecord): { message: string; tone: 'warnin
   }
   if (ageMs > 120000) {
     return {
-      message: 'Pad 可能未运行或自动处理已停止。',
+      message: translate('printing.padMayStopped'),
       tone: 'danger',
     }
   }
   if (ageMs > 30000) {
     return {
-      message: '等待 Pad 处理。',
+      message: translate('printing.pendingPad'),
       tone: 'warning',
     }
   }
@@ -229,18 +232,18 @@ function pendingAgeNotice(job: PrintJobRecord): { message: string; tone: 'warnin
 function connectionBadge(printer: PrinterConfigRecord) {
   if (printer.last_connection_success_at) {
     return {
-      label: `连接成功：${formatDateTime(printer.last_connection_success_at)}`,
+      label: `${translate('printing.connectionOK')}: ${formatDateTime(printer.last_connection_success_at)}`,
       className: 'bg-[rgba(18,141,77,0.12)] text-[rgb(25,112,69)]',
     }
   }
   if (printer.last_connection_failed_at) {
     return {
-      label: `连接失败：${formatDateTime(printer.last_connection_failed_at)}`,
+      label: `${translate('printing.connectionBad')}: ${formatDateTime(printer.last_connection_failed_at)}`,
       className: 'bg-[rgba(97,0,0,0.08)] text-[var(--primary)]',
     }
   }
   return {
-    label: '未测试',
+    label: translate('printing.notTested'),
     className: 'bg-white text-[var(--muted)]',
   }
 }
@@ -376,6 +379,7 @@ function parseAndroidPadStatus(rawStatus: string): AndroidPadDeviceStatus | null
 }
 
 export function PrintingSettingsPage() {
+  const { t } = useLocale()
   const reprintFollow = useRef<(() => void) | null>(null)
   const currentStore = useCurrentStore()
   const { storeId } = currentStore
@@ -610,7 +614,7 @@ export function PrintingSettingsPage() {
       const reloaded = await fetchPrintCenterOverview(Number(selectedStoreId))
       setPrintCenter(reloaded)
       setPrinterEditor(null)
-      setToast({ kind: 'success', message: '打印机设置已保存。' })
+      setToast({ kind: 'success', message: translate('printing.printerSaved') })
     } catch (saveError) {
       setToast({ kind: 'error', message: saveError instanceof Error ? saveError.message : '打印机保存失败' })
     } finally {
@@ -637,7 +641,7 @@ export function PrintingSettingsPage() {
       setToast(null)
       await deletePrinterConfig(printer.id, Number(selectedStoreId))
       setPrintCenter(await fetchPrintCenterOverview(Number(selectedStoreId)))
-      setToast({ kind: 'success', message: '打印机已删除。' })
+      setToast({ kind: 'success', message: translate('printing.printerDeleted') })
     } catch (actionError) {
       setToast({ kind: 'error', message: actionError instanceof Error ? actionError.message : '删除打印机失败' })
     }
@@ -667,7 +671,7 @@ export function PrintingSettingsPage() {
   const handleAllConnectionTests = async () => {
     const printers = printCenter?.printers ?? []
     if (!printers.length) {
-      setToast({ kind: 'error', message: '还没有配置打印机。' })
+      setToast({ kind: 'error', message: translate('printing.noPrinters') })
       return
     }
     try {
@@ -745,7 +749,7 @@ export function PrintingSettingsPage() {
       setToast(null)
       await updatePrintingStatus(Number(selectedStoreId), nextEnabled)
       setPrintCenter(await fetchPrintCenterOverview(Number(selectedStoreId)))
-      setToast({ kind: 'success', message: `门店自动打印已${nextEnabled ? '启用' : '关闭'}。` })
+      setToast({ kind: 'success', message: `门店自动打印已${nextEnabled ? '启用' : translate('common.close')}。` })
     } catch (statusError) {
       setToast({ kind: 'error', message: statusError instanceof Error ? statusError.message : '打印状态更新失败' })
     }
@@ -942,18 +946,22 @@ export function PrintingSettingsPage() {
   return (
     <>
       <div className="space-y-5">
-            {canManageTemplate ? <KitchenRoutingPanel key={`routing:${selectedStoreId}`} storeId={Number(selectedStoreId)} canManage={canManageTemplate} /> : null}
-            <TemplatePrintDiagnosticsPanel key={`diagnostics:${selectedStoreId}`} storeId={Number(selectedStoreId)} />
+            {currentStore.presentation?.kitchen_configuration !== 'STATION' && <>
+              {canManageTemplate ? <KitchenRoutingPanel key={`routing:${selectedStoreId}`} storeId={Number(selectedStoreId)} canManage={canManageTemplate} /> : null}
+              <TemplatePrintDiagnosticsPanel key={`diagnostics:${selectedStoreId}`} storeId={Number(selectedStoreId)} />
+            </>}
+            {currentStore.presentation?.kitchen_configuration === 'STATION' ? <p className="rounded-2xl bg-white p-4 text-sm text-[var(--muted)]">{t('printing.stationHint')}</p> : null}
+            <ReceiptLanguagePanel key={`receipt-language:${selectedStoreId}`} storeId={Number(selectedStoreId)} canManage={canManageTemplate} />
             <div className="flex flex-wrap items-center justify-between gap-4 rounded-[28px] bg-[rgba(255,255,255,0.84)] px-5 py-4 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
               <div>
-                <div className="text-[1.7rem] font-black tracking-[-0.05em] text-[var(--on-surface)]">打印中心</div>
+                <div className="text-[1.7rem] font-black tracking-[-0.05em] text-[var(--on-surface)]">{t('printing.center')}</div>
                 <div className="mt-1 text-[0.9rem] text-[var(--muted)]">
-                  管理厨房票、前台小票和热厨票的打印机、分配、测试与打印任务。
+                  {translate('printing.description')}
                 </div>
               </div>
 
               <div className="rounded-[16px] bg-[rgba(26,28,25,0.04)] px-3 py-2.5">
-                <div className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">门店范围</div>
+                <div className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">{translate('printing.scope')}</div>
                 <select
                   value={selectedStoreId}
                   onChange={(event) => setSelectedStoreId(event.target.value)}
@@ -989,13 +997,13 @@ export function PrintingSettingsPage() {
             <section className="rounded-[26px] bg-[rgba(255,255,255,0.84)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <div className="text-[1.15rem] font-bold text-[var(--on-surface)]">打印模式</div>
+                  <div className="text-[1.15rem] font-bold text-[var(--on-surface)]">{translate('printing.mode')}</div>
                   <div className="mt-1 text-[0.86rem] text-[var(--muted)]">
-                    选择真实打印机、无打印机测试、平板本地打印或关闭自动打印。
+                    {translate('printing.modeHint')}
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {PRINTING_MODE_OPTIONS.map((option) => (
+                  {printingModeOptions().map((option) => (
                     <button
                       key={option.value}
                       type="button"
@@ -1021,17 +1029,17 @@ export function PrintingSettingsPage() {
               </div>
               {printingMode === 'MOCK' ? (
                 <div className="mt-4 rounded-[18px] bg-[rgba(38,86,160,0.1)] px-4 py-3 text-[0.9rem] font-semibold text-[rgb(38,86,160)]">
-                  当前为无打印机测试模式，系统不会连接任何实体打印机。订单会生成 print jobs，并保存可预览的小票内容。
+                  {translate('printing.mockHint')}
                 </div>
               ) : null}
               {printingMode === 'PAD_DIRECT' ? (
                 <div className="mt-4 rounded-[18px] bg-[rgba(118,77,21,0.12)] px-4 py-3 text-[0.9rem] font-semibold text-[rgb(118,77,21)]">
-                  当前为平板本地打印模式。后端只排队打印任务，由 Android Pad 在店内局域网领取并打印。
+                  {translate('printing.padHint')}
                 </div>
               ) : null}
               {printingMode === 'DISABLED' ? (
                 <div className="mt-4 rounded-[18px] bg-[rgba(97,0,0,0.08)] px-4 py-3 text-[0.9rem] font-semibold text-[var(--primary)]">
-                  当前已关闭自动打印。订单仍会正常提交，但自动打印任务会取消。
+                  {translate('printing.offHint')}
                 </div>
               ) : null}
               {cloudPrivatePrinterWarning ? (
@@ -1045,15 +1053,15 @@ export function PrintingSettingsPage() {
                 disabled={loading}
                 className="mt-4 rounded-full bg-[rgba(26,28,25,0.06)] px-4 py-2 text-[0.82rem] font-semibold text-[var(--muted)]"
               >
-                旧版总开关：{printCenter?.printing_enabled ? '已启用' : '已关闭'}
+                {t('printing.legacySwitch')}: {t(printCenter?.printing_enabled ? 'common.enabled' : 'common.disabled')}
               </button>
             </section>
 
             <section className="rounded-[26px] bg-white/85 p-5">
-              <h2 className="font-bold">Printing Display Rules</h2>
-              <p className="mt-1 text-sm text-[var(--muted)]">Manage receipt wording in Menu Management. / 小票显示文字已移至菜单管理。</p>
+              <h2 className="font-bold">{t('menu.displayRules')}</h2>
+              <p className="mt-1 text-sm text-[var(--muted)]">{t('printing.displayHint')}</p>
               <a className="mt-3 inline-flex min-h-11 items-center rounded-[14px] bg-[var(--primary)] px-4 py-2 font-semibold text-white"
-                href={menuManagementPath(Number(selectedStoreId), 'printing_display_rules')}>Open Printing Display Rules / 打开打印显示规则</a>
+                href={menuManagementPath(Number(selectedStoreId), 'printing_display_rules')}>{t('printing.openDisplay')}</a>
             </section>
 
             <button
@@ -1067,20 +1075,20 @@ export function PrintingSettingsPage() {
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <div className="text-[1.1rem] font-black">需要处理的打印任务：{attentionPrintJobs.length}</div>
+                  <div className="text-[1.1rem] font-black">{t('printing.attentionCount', { count: attentionPrintJobs.length })}</div>
                   <div className="mt-1 text-[0.86rem] font-medium">
                     {attentionPrintJobs.length
-                      ? `${failedPrintJobs.length} 个失败任务。PAD_DIRECT 等待 ${padDirectQueueStats.pendingCount} 个，最老等待 ${durationLabel(padDirectQueueStats.oldestPendingAgeMs)}，过期 PRINTING ${padDirectQueueStats.stalePrintingCount} 个。`
-                      : '今天没有失败、取消或 Pad Direct 过期任务。'}
+                      ? t('printing.counts', { failed: failedPrintJobs.length, pending: padDirectQueueStats.pendingCount, age: durationLabel(padDirectQueueStats.oldestPendingAgeMs), stale: padDirectQueueStats.stalePrintingCount })
+                      : translate('printing.noIssues')}
                   </div>
                   {padDirectQueueStats.oldestPendingAgeMs != null && padDirectQueueStats.oldestPendingAgeMs > 120000 ? (
                     <div className="mt-2 rounded-[14px] bg-[rgba(151,34,34,0.1)] px-3 py-2 text-[0.82rem] font-bold text-[rgb(116,22,22)]">
-                      队列最前方有旧任务未处理，可能阻塞后续打印。请确认 Android Pad 自动处理是否开启。
+                      {translate('printing.queueWarning')}
                     </div>
                   ) : null}
                 </div>
                 <span className="rounded-full bg-white/70 px-4 py-2 text-[0.84rem] font-bold">
-                  查看打印问题
+                  {translate('printing.issues')}
                 </span>
               </div>
             </button>
@@ -1088,9 +1096,9 @@ export function PrintingSettingsPage() {
             <section className="rounded-[26px] bg-[rgba(255,255,255,0.84)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <div className="text-[1.15rem] font-bold text-[var(--on-surface)]">Pad Direct 设备</div>
+                  <div className="text-[1.15rem] font-bold text-[var(--on-surface)]">{translate('printing.devices')}</div>
                   <div className="mt-1 text-[0.86rem] text-[var(--muted)]">
-                    已注册的 Android Pad 本地打印设备。设备 token 注册后不会再次显示。
+                    {translate('printing.deviceHint')}
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -1112,7 +1120,7 @@ export function PrintingSettingsPage() {
                     onClick={() => void refreshDevices()}
                     className="rounded-full bg-[rgba(26,28,25,0.06)] px-4 py-2 text-[0.84rem] font-semibold text-[var(--on-surface)]"
                   >
-                    {devicesLoading ? '刷新中...' : '刷新设备'}
+                    {devicesLoading ? translate('common.loading') : translate('printing.refreshDevices')}
                   </button>
                 </div>
               </div>
@@ -1125,12 +1133,12 @@ export function PrintingSettingsPage() {
               }`}
               >
                 {!padBridgeAvailable ? (
-                  <span>普通浏览器无法保存 Pad 凭证。请在 Android Pad App 内打开打印中心进行配对。</span>
+                  <span>{translate('printing.browserPairHint')}</span>
                 ) : padDeviceStatus?.paired ? (
                   <span>
                     本机已保存设备 #{padDeviceStatus.device_id}，门店 #{padStatusStoreId ?? '-'}
                     {padDeviceStatus.device_name ? `，${padDeviceStatus.device_name}` : ''}
-                    {padDeviceStatus.auto_print_enabled != null ? `，自动打印${padDeviceStatus.auto_print_enabled ? '开启' : '关闭'}` : ''}
+                    {padDeviceStatus.auto_print_enabled != null ? `，自动打印${padDeviceStatus.auto_print_enabled ? '开启' : translate('common.close')}` : ''}
                     {padDeviceStatus.token_last4 ? `，token ****${padDeviceStatus.token_last4}` : ''}
                     {padStatusStoreId && Number(padStatusStoreId) !== Number(selectedStoreId)
                       ? '。当前页面门店与本机配对门店不一致，请重新配对后再启用自动领取。'
@@ -1157,9 +1165,9 @@ export function PrintingSettingsPage() {
             <section className="rounded-[26px] bg-[rgba(255,255,255,0.84)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <div className="text-[1.15rem] font-bold text-[var(--on-surface)]">打印机列表</div>
+                  <div className="text-[1.15rem] font-bold text-[var(--on-surface)]">{translate('printing.printerList')}</div>
                   <div className="mt-1 text-[0.86rem] text-[var(--muted)]">
-                    添加和维护各打印模块使用的 TCP 打印机。RP820 本地测试建议默认使用 `GBK` 编码。
+                    {t('printing.printerHint')}
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -1169,14 +1177,14 @@ export function PrintingSettingsPage() {
                     disabled={testingAllConnections || !(printCenter?.printers ?? []).length}
                     className="rounded-full bg-[rgba(38,86,160,0.12)] px-4 py-2 text-[0.88rem] font-semibold text-[rgb(38,86,160)] disabled:opacity-60"
                   >
-                    {testingAllConnections ? '测试中...' : '测试全部连接'}
+                    {testingAllConnections ? translate('printing.testing') : translate('printing.testAll')}
                   </button>
                   <button
                     type="button"
                     onClick={startCreatePrinter}
                     className="rounded-full bg-[var(--primary)] px-4 py-2 text-[0.88rem] font-semibold text-white"
                   >
-                    添加打印机
+                    {translate('printing.addPrinter')}
                   </button>
                 </div>
               </div>
@@ -1185,7 +1193,7 @@ export function PrintingSettingsPage() {
                 <div className="mt-4 rounded-[20px] bg-[rgba(26,28,25,0.04)] p-4">
                   <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                     <label className="text-[0.84rem] text-[var(--muted)]">
-                      名称
+                      {translate('common.name')}
                       <input
                         value={printerEditor.name}
                         onChange={(event) => setPrinterEditor((current) => current ? { ...current, name: event.target.value } : current)}
@@ -1193,7 +1201,7 @@ export function PrintingSettingsPage() {
                       />
                     </label>
                     <label className="text-[0.84rem] text-[var(--muted)]">
-                      打印机 IP
+                      {translate('printing.ip')}
                       <input
                         value={printerEditor.ip_address}
                         onChange={(event) => setPrinterEditor((current) => current ? { ...current, ip_address: event.target.value } : current)}
@@ -1201,7 +1209,7 @@ export function PrintingSettingsPage() {
                       />
                     </label>
                     <label className="text-[0.84rem] text-[var(--muted)]">
-                      端口
+                      {translate('printing.port')}
                       <input
                         type="number"
                         value={printerEditor.port}
@@ -1210,7 +1218,7 @@ export function PrintingSettingsPage() {
                       />
                     </label>
                     <label className="text-[0.84rem] text-[var(--muted)]">
-                      超时 (ms)
+                      {translate('printing.timeout')}
                       <input
                         type="number"
                         value={printerEditor.timeout_ms}
@@ -1219,7 +1227,7 @@ export function PrintingSettingsPage() {
                       />
                     </label>
                     <label className="text-[0.84rem] text-[var(--muted)]">
-                      文本编码
+                      {translate('printing.encoding')}
                       <select
                         value={printerEditor.text_encoding ?? 'GBK'}
                         onChange={(event) => setPrinterEditor((current) => current ? { ...current, text_encoding: event.target.value } : current)}
@@ -1231,7 +1239,7 @@ export function PrintingSettingsPage() {
                       </select>
                     </label>
                     <label className="text-[0.84rem] text-[var(--muted)]">
-                      ESC/POS 代码页
+                      {translate('printing.codepage')}
                       <input
                         type="number"
                         value={printerEditor.escpos_code_page ?? ''}
@@ -1245,18 +1253,18 @@ export function PrintingSettingsPage() {
                               : current,
                           )
                         }
-                        placeholder="可选"
+                        placeholder={t('printing.optional')}
                         className="mt-1 w-full rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-[0.95rem] text-[var(--on-surface)] outline-none"
                       />
                     </label>
                     <label className="text-[0.84rem] text-[var(--muted)]">
-                      字体大小
+                      {translate('printing.fontSize')}
                       <select
                         value={printerEditor.font_size ?? 'MEDIUM'}
                         onChange={(event) => setPrinterEditor((current) => current ? { ...current, font_size: event.target.value } : current)}
                         className="mt-1 w-full rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-[0.95rem] text-[var(--on-surface)] outline-none"
                       >
-                        {FONT_SIZE_OPTIONS.map((option) => (
+                        {fontSizeOptions().map((option) => (
                           <option key={option.value} value={option.value}>
                             {option.label}
                           </option>
@@ -1267,7 +1275,7 @@ export function PrintingSettingsPage() {
 
                   <div className="mt-3 flex flex-wrap items-center gap-3">
                     <span className="rounded-full bg-[rgba(18,141,77,0.1)] px-3 py-1.5 text-[0.78rem] font-semibold text-[rgb(25,112,69)]">
-                      打印机配置默认有效。请通过「分配状态」控制某个模块是否打印。
+                      {translate('printing.assignmentHint')}
                     </span>
                     <button
                       type="button"
@@ -1275,14 +1283,14 @@ export function PrintingSettingsPage() {
                       disabled={saving}
                       className="rounded-full bg-[var(--primary)] px-4 py-2 text-[0.88rem] font-semibold text-white disabled:opacity-60"
                     >
-                      {saving ? '保存中...' : '保存打印机'}
+                      {saving ? translate('common.saving') : translate('printing.savePrinter')}
                     </button>
                     <button
                       type="button"
                       onClick={() => setPrinterEditor(null)}
                       className="rounded-full bg-[rgba(26,28,25,0.06)] px-4 py-2 text-[0.88rem] font-semibold text-[var(--on-surface)]"
                     >
-                      取消
+                      {translate('common.cancel')}
                     </button>
                   </div>
                 </div>
@@ -1299,13 +1307,13 @@ export function PrintingSettingsPage() {
                         <div className="mt-1 text-[0.84rem] text-[var(--muted)]">
                           {printer.ip_address}:{printer.port} · {printer.printer_type} · {printer.paper_width_mm}mm · {printer.text_encoding ?? 'GBK'}
                           {printer.escpos_code_page != null ? ` · CP ${printer.escpos_code_page}` : ''}
-                          {` · ${FONT_SIZE_OPTIONS.find((option) => option.value === (printer.font_size ?? 'MEDIUM'))?.label ?? (printer.font_size ?? 'MEDIUM')}`}
+                          {` · ${fontSizeOptions().find((option) => option.value === (printer.font_size ?? 'MEDIUM'))?.label ?? (printer.font_size ?? 'MEDIUM')}`}
                         </div>
                         <div className="mt-2 flex flex-wrap gap-2 text-[0.78rem] font-medium text-[var(--muted)]">
-                          <span className="rounded-full bg-white px-2.5 py-1">模块：{assignmentsByPrinter.get(printer.id!)?.map(moduleDisplayLabel).join('、') || '无'}</span>
-                          <span className="rounded-full bg-white px-2.5 py-1">上次成功：{formatDateTime(printer.last_successful_print_at)}</span>
-                          <span className="rounded-full bg-white px-2.5 py-1">上次失败：{formatDateTime(printer.last_failed_print_at)}</span>
-                          <span className={`rounded-full px-2.5 py-1 ${connection.className}`}>连接：{connection.label}</span>
+                          <span className="rounded-full bg-white px-2.5 py-1">{t('printing.module')}: {assignmentsByPrinter.get(printer.id!)?.map(moduleDisplayLabel).join('、') || '无'}</span>
+                          <span className="rounded-full bg-white px-2.5 py-1">{t('printing.lastSuccess')}: {formatDateTime(printer.last_successful_print_at)}</span>
+                          <span className="rounded-full bg-white px-2.5 py-1">{t('printing.lastFailure')}: {formatDateTime(printer.last_failed_print_at)}</span>
+                          <span className={`rounded-full px-2.5 py-1 ${connection.className}`}>{t('printing.connection')}: {connection.label}</span>
                         </div>
                         {printer.last_error_message || printer.last_connection_error ? (
                           <div className="mt-2 rounded-[14px] bg-[rgba(97,0,0,0.07)] px-3 py-2 text-[0.78rem] font-medium text-[var(--primary)]">
@@ -1319,21 +1327,21 @@ export function PrintingSettingsPage() {
                           onClick={() => startEditPrinter(printer)}
                           className="rounded-full bg-[rgba(26,28,25,0.06)] px-3 py-1.5 text-[0.82rem] font-semibold text-[var(--on-surface)]"
                         >
-                          编辑
+                          {translate('common.edit')}
                         </button>
                         <button
                           type="button"
                           onClick={() => handleTestPrint(printer.id!, 'FRONTDESK_RECEIPT')}
                           className="rounded-full bg-[rgba(18,141,77,0.12)] px-3 py-1.5 text-[0.82rem] font-semibold text-[rgb(25,112,69)]"
                         >
-                          直接测试打印
+                          {translate('printing.testPrint')}
                         </button>
                         <button
                           type="button"
                           onClick={() => handleConnectionTest(printer.id!)}
                           className="rounded-full bg-[rgba(38,86,160,0.12)] px-3 py-1.5 text-[0.82rem] font-semibold text-[rgb(38,86,160)]"
                         >
-                          连接测试
+                          {translate('printing.connectionTest')}
                         </button>
                         {isFeatureEnabled('DEVELOPER_TOOLS') ? (
                           <>
@@ -1342,7 +1350,7 @@ export function PrintingSettingsPage() {
                               onClick={() => handleEncodingTest(printer)}
                               className="rounded-full bg-[rgba(38,86,160,0.12)] px-3 py-1.5 text-[0.82rem] font-semibold text-[rgb(38,86,160)]"
                             >
-                              编码测试
+                              {translate('printing.encodingTest')}
                             </button>
                             <button
                               type="button"
@@ -1365,7 +1373,7 @@ export function PrintingSettingsPage() {
                           onClick={() => handleDeletePrinter(printer)}
                           className="rounded-full bg-[rgba(97,0,0,0.08)] px-3 py-1.5 text-[0.82rem] font-semibold text-[var(--primary)]"
                         >
-                          删除
+                          {translate('structure.delete')}
                         </button>
                       </div>
                     </div>
@@ -1374,7 +1382,7 @@ export function PrintingSettingsPage() {
                 })}
                 {!loading && !(printCenter?.printers?.length ?? 0) ? (
                   <div className="rounded-[18px] bg-[rgba(26,28,25,0.04)] px-4 py-5 text-[0.9rem] text-[var(--muted)]">
-                    还没有配置打印机。
+                    {translate('printing.noPrinters')}
                   </div>
                 ) : null}
               </div>
@@ -1383,9 +1391,9 @@ export function PrintingSettingsPage() {
             <section id="failed-print-jobs" className="scroll-mt-4 rounded-[26px] bg-[rgba(255,255,255,0.84)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <div className="text-[1.15rem] font-bold text-[var(--on-surface)]">打印失败任务</div>
+                  <div className="text-[1.15rem] font-bold text-[var(--on-surface)]">{translate('printing.failedJobs')}</div>
                   <div className="mt-1 text-[0.86rem] text-[var(--muted)]">
-                    营业前请处理失败任务；如看到 PRINTING_DISABLED，通常表示门店关闭了自动打印。
+                    {t('printing.failedHint')}
                   </div>
                 </div>
                 <button
@@ -1393,12 +1401,12 @@ export function PrintingSettingsPage() {
                   onClick={() => void refreshJobs()}
                   className="rounded-full bg-[rgba(26,28,25,0.06)] px-4 py-2 text-[0.84rem] font-semibold text-[var(--on-surface)]"
                 >
-                  {jobsLoading ? '刷新中...' : '刷新任务'}
+                  {jobsLoading ? translate('common.loading') : translate('printing.refreshJobs')}
                 </button>
               </div>
               <PrintJobsTable
                 jobs={attentionPrintJobs}
-                emptyText="今天没有失败、取消或 Pad Direct 过期任务。"
+                emptyText={translate('printing.noIssues')}
                 onReprint={handleReprintJob}
                 onAcknowledge={handleAcknowledgePrintJob}
                 onPreview={setPreviewJob}
@@ -1411,28 +1419,28 @@ export function PrintingSettingsPage() {
             </section>
 
             <section className="rounded-[26px] bg-[rgba(255,255,255,0.84)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
-              <div className="text-[1.15rem] font-bold text-[var(--on-surface)]">最近打印任务</div>
+              <div className="text-[1.15rem] font-bold text-[var(--on-surface)]">{translate('printing.recentJobs')}</div>
               <div className="mt-1 text-[0.86rem] text-[var(--muted)]">
-                查看今天厨房总票、前台小票和热厨票的打印状态。
+                {t('printing.recentHint')}
               </div>
               <PrintJobsTable
                 jobs={printJobs.slice(0, 12)}
-                emptyText="今天还没有打印任务。"
+                emptyText={translate('printing.noJobs')}
                 onReprint={handleReprintJob}
                 onAcknowledge={handleAcknowledgePrintJob}
                 onPreview={setPreviewJob}
               />
               {jobsError ? (
                 <div className="mt-3 rounded-[16px] bg-[rgba(97,0,0,0.08)] px-4 py-3 text-[0.86rem] font-medium text-[var(--primary)]">
-                  最近打印任务暂时不可用。上方打印机设置仍可编辑。
+                  {t('printing.recentUnavailable')}
                 </div>
               ) : null}
             </section>
 
             <section className="rounded-[26px] bg-[rgba(255,255,255,0.84)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
-              <div className="text-[1.15rem] font-bold text-[var(--on-surface)]">打印机分配</div>
+              <div className="text-[1.15rem] font-bold text-[var(--on-surface)]">{translate('printing.assignments')}</div>
               <div className="mt-1 text-[0.86rem] text-[var(--muted)]">
-                当前启用模块：厨房总票 GRAB、前台小票 FRONTDESK_RECEIPT、热厨票 HOT_KITCHEN。其他模块暂时保留。
+                {t('printing.rolesHint')}
               </div>
 
               <div className="mt-4 space-y-3">
@@ -1442,9 +1450,9 @@ export function PrintingSettingsPage() {
                   </div>
                 ) : null}
                 <div className="rounded-[18px] bg-[rgba(97,0,0,0.06)] px-4 py-3 text-[0.86rem] text-[rgba(97,0,0,0.84)]">
-                  字体大小可以按模块分配单独设置；如果模块未设置，则使用打印机默认字体。
+                  {translate('printing.fontHint')}
                 </div>
-                {MODULE_OPTIONS.map((moduleOption) => {
+                {moduleOptions().map((moduleOption) => {
                   const currentAssignment = assignmentsByModule.get(moduleOption.code) ?? {
                     store_id: Number(selectedStoreId),
                     printer_id: null,
@@ -1473,7 +1481,7 @@ export function PrintingSettingsPage() {
           <div className="max-h-[88vh] w-full max-w-[760px] overflow-hidden rounded-[26px] bg-[#fbfaf5] shadow-[0_24px_80px_rgba(0,0,0,0.24)]">
             <div className="flex items-start justify-between gap-4 border-b border-[rgba(26,28,25,0.08)] px-5 py-4">
               <div>
-                <div className="text-[1.1rem] font-black text-[var(--on-surface)]">小票预览</div>
+                <div className="text-[1.1rem] font-black text-[var(--on-surface)]">{translate('printing.preview')}</div>
                 <div className="mt-1 text-[0.82rem] text-[var(--muted)]">
                   任务 #{previewJob.id} · {moduleDisplayLabel(previewJob.module_code)} · {printStatusDisplayLabel(previewJob.status)}
                 </div>
@@ -1488,7 +1496,7 @@ export function PrintingSettingsPage() {
                 onClick={() => setPreviewJob(null)}
                 className="rounded-full bg-[rgba(26,28,25,0.06)] px-3 py-1.5 text-[0.82rem] font-semibold text-[var(--on-surface)]"
               >
-                关闭
+                {translate('common.close')}
               </button>
             </div>
             <ReceiptPreview content={previewJob.rendered_text_snapshot} />
@@ -1515,7 +1523,7 @@ function PadDevicesTable({
   if (!devices.length) {
     return (
       <div className="mt-4 rounded-[18px] bg-[rgba(26,28,25,0.04)] px-4 py-5 text-[0.9rem] text-[var(--muted)]">
-        这家店还没有注册 Pad Direct 设备。
+        {translate('printing.noDevices')}
       </div>
     )
   }
@@ -1538,13 +1546,13 @@ function PadDevicesTable({
       <table className="min-w-full text-left text-[0.84rem]">
         <thead className="text-[0.72rem] uppercase tracking-[0.14em] text-[var(--muted)]">
           <tr>
-            <th className="px-3 py-3">设备</th>
-            <th className="px-3 py-3">门店/组织</th>
-            <th className="px-3 py-3">状态</th>
-            <th className="px-3 py-3">最后在线</th>
-            <th className="px-3 py-3">App/平台</th>
-            <th className="px-3 py-3">标记</th>
-            <th className="px-3 py-3 text-right">操作</th>
+            <th className="px-3 py-3">{translate('printing.device')}</th>
+            <th className="px-3 py-3">{translate('printing.storeOrg')}</th>
+            <th className="px-3 py-3">{translate('printing.state')}</th>
+            <th className="px-3 py-3">{translate('printing.lastSeen')}</th>
+            <th className="px-3 py-3">{translate('printing.platform')}</th>
+            <th className="px-3 py-3">{translate('printing.flags')}</th>
+            <th className="px-3 py-3 text-right">{translate('printing.actions')}</th>
           </tr>
         </thead>
         <tbody>
@@ -1590,16 +1598,16 @@ function PadDevicesTable({
                 <td className="px-3 py-3">
                   <div className="flex flex-wrap gap-1.5">
                     {isCurrentPad ? (
-                      <span className="rounded-full bg-[rgba(38,86,160,0.12)] px-2.5 py-1 text-[0.72rem] font-bold text-[rgb(38,86,160)]">本机</span>
+                      <span className="rounded-full bg-[rgba(38,86,160,0.12)] px-2.5 py-1 text-[0.72rem] font-bold text-[rgb(38,86,160)]">{translate('printing.thisDevice')}</span>
                     ) : null}
                     {duplicateName ? (
-                      <span className="rounded-full bg-[rgba(180,120,20,0.16)] px-2.5 py-1 text-[0.72rem] font-bold text-[rgb(130,82,14)]">疑似重复</span>
+                      <span className="rounded-full bg-[rgba(180,120,20,0.16)] px-2.5 py-1 text-[0.72rem] font-bold text-[rgb(130,82,14)]">{translate('printing.possibleDuplicate')}</span>
                     ) : null}
                     {oldDevice ? (
-                      <span className="rounded-full bg-[rgba(97,0,0,0.08)] px-2.5 py-1 text-[0.72rem] font-bold text-[var(--primary)]">旧设备</span>
+                      <span className="rounded-full bg-[rgba(97,0,0,0.08)] px-2.5 py-1 text-[0.72rem] font-bold text-[var(--primary)]">{translate('printing.oldDevice')}</span>
                     ) : null}
                     {!isCurrentPad && !duplicateName && !oldDevice ? (
-                      <span className="rounded-full bg-white px-2.5 py-1 text-[0.72rem] font-bold text-[var(--muted)]">正常</span>
+                      <span className="rounded-full bg-white px-2.5 py-1 text-[0.72rem] font-bold text-[var(--muted)]">{translate('printing.normal')}</span>
                     ) : null}
                   </div>
                 </td>
@@ -1610,7 +1618,7 @@ function PadDevicesTable({
                       onClick={() => onRename(device)}
                       className="rounded-full bg-white px-3 py-1.5 text-[0.78rem] font-semibold text-[var(--on-surface)]"
                     >
-                      改名
+                      {translate('printing.rename')}
                     </button>
                     <button
                       type="button"
@@ -1618,7 +1626,7 @@ function PadDevicesTable({
                       disabled={!active}
                       className="rounded-full bg-[rgba(180,120,20,0.14)] px-3 py-1.5 text-[0.78rem] font-semibold text-[rgb(130,82,14)] disabled:opacity-45"
                     >
-                      停用
+                      {translate('printing.disable')}
                     </button>
                     <button
                       type="button"
@@ -1626,7 +1634,7 @@ function PadDevicesTable({
                       disabled={device.status === 'REVOKED'}
                       className="rounded-full bg-[rgba(97,0,0,0.08)] px-3 py-1.5 text-[0.78rem] font-semibold text-[var(--primary)] disabled:opacity-45"
                     >
-                      吊销
+                      {translate('printing.revoke')}
                     </button>
                   </div>
                 </td>
@@ -1665,16 +1673,16 @@ function PrintJobsTable({
       <table className="min-w-full text-left text-[0.84rem]">
         <thead className="text-[0.72rem] uppercase tracking-[0.14em] text-[var(--muted)]">
           <tr>
-            <th className="px-3 py-3">创建时间</th>
-            <th className="px-3 py-3">订单</th>
-            <th className="px-3 py-3">模块</th>
-            <th className="px-3 py-3">打印机</th>
-            <th className="px-3 py-3">状态</th>
-            <th className="px-3 py-3">耗时</th>
-            <th className="px-3 py-3">Pad 领取</th>
-            <th className="px-3 py-3">重试</th>
-            <th className="px-3 py-3">错误</th>
-            <th className="px-3 py-3 text-right">操作</th>
+            <th className="px-3 py-3">{translate('printing.created')}</th>
+            <th className="px-3 py-3">{translate('nav.orders')}</th>
+            <th className="px-3 py-3">{translate('printing.module')}</th>
+            <th className="px-3 py-3">{translate('printing.printers')}</th>
+            <th className="px-3 py-3">{translate('printing.state')}</th>
+            <th className="px-3 py-3">{translate('printing.duration')}</th>
+            <th className="px-3 py-3">{translate('printing.claim')}</th>
+            <th className="px-3 py-3">{translate('printing.retries')}</th>
+            <th className="px-3 py-3">{translate('printing.error')}</th>
+            <th className="px-3 py-3 text-right">{translate('printing.actions')}</th>
           </tr>
         </thead>
         <tbody>
@@ -1708,12 +1716,12 @@ function PrintJobsTable({
                   ) : null}
                 </td>
                 <td className="px-3 py-3 text-[0.74rem] text-[var(--muted)]">
-                  <div>年龄：{durationLabel(jobAgeMs(job))}</div>
-                  <div>排队：{durationLabel(queueDelayMs(job))}</div>
-                  <div>总计：{durationLabel(totalJobTimeMs(job))}</div>
-                  {job.claimed_at ? <div>领取：{formatDateTime(job.claimed_at)}</div> : null}
-                  {job.printed_at ? <div>打印：{formatDateTime(job.printed_at)}</div> : null}
-                  {job.failed_at ? <div>失败：{formatDateTime(job.failed_at)}</div> : null}
+                  <div>{translate('printing.lastJobAge')}: {durationLabel(jobAgeMs(job))}</div>
+                  <div>{translate('printing.queueTime')}: {durationLabel(queueDelayMs(job))}</div>
+                  <div>{translate('printing.totalTime')}: {durationLabel(totalJobTimeMs(job))}</div>
+                  {job.claimed_at ? <div>{translate('printing.claimedAt')}: {formatDateTime(job.claimed_at)}</div> : null}
+                  {job.printed_at ? <div>{translate('printing.printedAt')}: {formatDateTime(job.printed_at)}</div> : null}
+                  {job.failed_at ? <div>{translate('printing.failedAt')}: {formatDateTime(job.failed_at)}</div> : null}
                 </td>
                 <td className="px-3 py-3 text-[var(--muted)]">
                   {job.claimed_by_device_id ? (
@@ -1732,7 +1740,7 @@ function PrintJobsTable({
                       <div className="text-[0.74rem]">Pad Direct</div>
                     </div>
                   ) : job.execution_mode === 'PAD_DIRECT' ? (
-                    <span>等待 Pad</span>
+                    <span>{translate('printing.waitingPad')}</span>
                   ) : (
                     <span>-</span>
                   )}
@@ -1741,7 +1749,7 @@ function PrintJobsTable({
                 <td className="max-w-[20rem] px-3 py-3 text-[var(--muted)]" title={job.error_message ?? ''}>
                   {acknowledged ? (
                     <div className="mb-2 rounded-[12px] bg-[rgba(18,141,77,0.1)] px-2.5 py-1.5 text-[0.72rem] font-semibold text-[rgb(25,112,69)]">
-                      已人工处理{job.attention_acknowledgement_note ? `：${job.attention_acknowledgement_note}` : ''}
+                      {translate('printing.manuallyHandled')}{job.attention_acknowledgement_note ? `：${job.attention_acknowledgement_note}` : ''}
                     </div>
                   ) : null}
                   {job.error_code ? (
@@ -1766,7 +1774,7 @@ function PrintJobsTable({
                   {nativeDiagnostics ? (
                     <div className="mb-2 rounded-[12px] bg-[rgba(151,34,34,0.08)] px-2.5 py-1.5 text-[0.72rem] font-semibold text-[rgb(116,22,22)]">
                       <div>
-                        原生诊断：
+                        {translate('printing.nativeDiagnostics')}:
                         {nativeDiagnostics.nativeErrorCode ? ` ${nativeDiagnostics.nativeErrorCode}` : ''}
                         {nativeDiagnostics.phase ? ` / ${nativeDiagnostics.phase}` : ''}
                       </div>
@@ -1783,7 +1791,7 @@ function PrintJobsTable({
                   </div>
                   {job.operator_message && job.error_message && job.operator_message !== job.error_message ? (
                     <div className="mt-1 max-w-[20rem] truncate text-[0.72rem] text-[var(--muted)]">
-                      技术信息：{job.error_message}
+                      {translate('orders.techInfo')}: {job.error_message}
                     </div>
                   ) : null}
                 </td>
@@ -1794,14 +1802,14 @@ function PrintJobsTable({
                       onClick={() => onPreview(job)}
                       className="rounded-full bg-[rgba(38,86,160,0.12)] px-3 py-1.5 text-[0.78rem] font-semibold text-[rgb(38,86,160)]"
                     >
-                      预览小票
+                      {translate('printing.preview')}
                     </button>
                     <button
                       type="button"
                       onClick={() => onReprint(job.id)}
                       className="rounded-full bg-[rgba(18,141,77,0.12)] px-3 py-1.5 text-[0.78rem] font-semibold text-[rgb(25,112,69)]"
                     >
-                      重新打印
+                      {translate('printing.reprint')}
                     </button>
                     {onAcknowledge && !acknowledged && printJobNeedsAttention(job) ? (
                       <button
@@ -1809,7 +1817,7 @@ function PrintJobsTable({
                         onClick={() => onAcknowledge(job)}
                         className="rounded-full bg-[rgba(118,77,21,0.14)] px-3 py-1.5 text-[0.78rem] font-semibold text-[rgb(118,77,21)]"
                       >
-                        标记已处理
+                        {translate('printing.acknowledge')}
                       </button>
                     ) : null}
                   </div>
@@ -1844,21 +1852,21 @@ function AssignmentRow({
   const selectedPrinter = printers.find((printer) => printer.id === draft.printer_id)
   const status = !draft.printer_id
     ? {
-        label: `${moduleDisplayLabel(moduleCode)} 未分配打印机`,
+        label: `${moduleDisplayLabel(moduleCode)}: ${translate('printing.unassigned')}`,
         className: 'bg-[rgba(151,34,34,0.12)] text-[rgb(116,22,22)]',
       }
     : !draft.enabled
       ? {
-          label: '分配已停用',
+          label: translate('printing.assignmentState'),
           className: 'bg-[rgba(180,120,20,0.16)] text-[rgb(130,82,14)]',
         }
       : selectedPrinter && selectedPrinter.enabled === false
         ? {
-            label: '已分配打印机已停用',
+            label: translate('printing.assignedPrinterDisabled'),
             className: 'bg-[rgba(151,34,34,0.12)] text-[rgb(116,22,22)]',
           }
         : {
-            label: '已启用',
+            label: translate('common.enabled'),
             className: 'bg-[rgba(18,141,77,0.12)] text-[rgb(25,112,69)]',
           }
 
@@ -1872,13 +1880,13 @@ function AssignmentRow({
         <div>
           <div className="text-[0.96rem] font-bold text-[var(--on-surface)]">{label}</div>
           <div className="mt-1 text-[0.82rem] text-[var(--muted)]">
-            {future ? '预留给后续打印路由。' : `${selectedPrinter?.name ?? '未选择打印机'} · ${draft.enabled ? '模块打印已启用' : '模块打印已关闭'}`}
+            {future ? translate('printing.futureHint') : `${selectedPrinter?.name ?? translate('printing.noPrinterSelected')} · ${draft.enabled ? translate('printing.roleEnabled') : translate('printing.roleDisabled')}`}
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <span className={`rounded-full px-3 py-1.5 text-[0.78rem] font-semibold ${status.className}`}>{future ? '未来模块' : status.label}</span>
+          <span className={`rounded-full px-3 py-1.5 text-[0.78rem] font-semibold ${status.className}`}>{future ? translate('printing.futureRole') : status.label}</span>
           {future ? (
-            <span className="rounded-full bg-[rgba(26,28,25,0.06)] px-3 py-1.5 text-[0.78rem] font-semibold text-[var(--muted)]">预留</span>
+            <span className="rounded-full bg-[rgba(26,28,25,0.06)] px-3 py-1.5 text-[0.78rem] font-semibold text-[var(--muted)]">{translate('printing.reserved')}</span>
           ) : null}
         </div>
       </div>
@@ -1890,7 +1898,7 @@ function AssignmentRow({
           onChange={(event) => setDraft((current) => ({ ...current, printer_id: event.target.value ? Number(event.target.value) : null }))}
           className="rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-[0.94rem] text-[var(--on-surface)] outline-none disabled:opacity-60"
         >
-          <option value="">未分配</option>
+          <option value="">{translate('printing.unassigned')}</option>
           {printers.map((printer) => (
             <option key={printer.id} value={printer.id}>
               {printer.name} ({printer.ip_address}:{printer.port}){printer.enabled === false ? ' - 配置已停用' : ''}
@@ -1904,7 +1912,7 @@ function AssignmentRow({
           onChange={(event) => setDraft((current) => ({ ...current, font_size: event.target.value }))}
           className="rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-[0.94rem] text-[var(--on-surface)] outline-none disabled:opacity-60"
         >
-          {FONT_SIZE_OPTIONS.map((option) => (
+          {fontSizeOptions().map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>
@@ -1919,12 +1927,12 @@ function AssignmentRow({
             className="rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-[0.94rem] text-[var(--on-surface)] outline-none disabled:opacity-60"
             aria-label="Takeout receipt copies"
           >
-            <option value={1}>外卖小票：1 份</option>
-            <option value={2}>外卖小票：2 份</option>
+            <option value={1}>{translate('printing.copies', { count: 1 })}</option>
+            <option value={2}>{translate('printing.copies', { count: 2 })}</option>
           </select>
         ) : (
           <div className="rounded-[14px] bg-[rgba(26,28,25,0.035)] px-3 py-2 text-[0.82rem] font-semibold text-[var(--muted)]">
-            份数：不适用
+            {translate('printing.copiesNA')}
           </div>
         )}
 
@@ -1935,7 +1943,7 @@ function AssignmentRow({
             checked={draft.enabled}
             onChange={(event) => setDraft((current) => ({ ...current, enabled: event.target.checked }))}
           />
-          已启用
+          {translate('common.enabled')}
         </label>
 
         <button
@@ -1944,7 +1952,7 @@ function AssignmentRow({
           onClick={() => onSave({ ...draft, module_code: moduleCode })}
           className="rounded-full bg-[var(--primary)] px-4 py-2 text-[0.84rem] font-semibold text-white disabled:cursor-not-allowed disabled:bg-[rgba(97,0,0,0.18)]"
         >
-          保存
+          {translate('common.save')}
         </button>
         {!future && (moduleCode === 'FRONTDESK_RECEIPT' || moduleCode === 'GRAB' || moduleCode === 'HOT_KITCHEN') ? (
           <button
@@ -1952,7 +1960,7 @@ function AssignmentRow({
             onClick={() => onTest(moduleCode)}
             className="rounded-full bg-[rgba(18,141,77,0.12)] px-4 py-2 text-[0.84rem] font-semibold text-[rgb(25,112,69)]"
           >
-            测试 {moduleDisplayLabel(moduleCode)}
+            {translate('printing.testRole', { name: moduleDisplayLabel(moduleCode) })}
           </button>
         ) : null}
       </div>

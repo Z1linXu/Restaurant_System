@@ -142,8 +142,8 @@ describe('MenuManagementPage Store-scoped panels', () => {
     await switchStore(2)
     const rows = view!.root.findByType('tbody').findAllByType('tr')
     expect(rows).toHaveLength(1)
-    expect(rows[0].findAllByType('div').some((node) => node.children.includes('门店2菜品'))).toBe(true)
-    expect(rows[0].findAllByType('div').some((node) => node.children.includes('门店1菜品'))).toBe(false)
+    expect(rows[0].findAllByType('div').some((node) => node.children.includes(item(2).name_en))).toBe(true)
+    expect(rows[0].findAllByType('div').some((node) => node.children.includes(item(1).name_en))).toBe(false)
     await act(async () => button('Options').props.onClick())
     expect(view!.root.findByProps({ 'data-testid': 'menu-options' }).props).toMatchObject({
       'data-store-id': 2, 'data-item-id': 201,

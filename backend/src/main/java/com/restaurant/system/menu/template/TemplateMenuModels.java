@@ -13,6 +13,13 @@ public final class TemplateMenuModels {
     public static class Group {
         public String group_instance_code;
         public String name;
+        public java.util.Map<String,String> name_translations;
+        public Integer min_select;
+        public Integer max_select;
+        @com.fasterxml.jackson.annotation.JsonIgnore public boolean min_select_supplied;
+        @com.fasterxml.jackson.annotation.JsonIgnore public boolean max_select_supplied;
+        @com.fasterxml.jackson.annotation.JsonSetter("min_select") public void setMinSelect(Integer value){min_select=value;min_select_supplied=true;}
+        @com.fasterxml.jackson.annotation.JsonSetter("max_select") public void setMaxSelect(Integer value){max_select=value;max_select_supplied=true;}
         public String kind = "CUSTOM";
         public String selection_mode = "SINGLE";
         public boolean required;
@@ -31,6 +38,7 @@ public final class TemplateMenuModels {
         public int sort_order;
         public String name_zh;
         public String name_en;
+        public String name_fr;
         public BigDecimal price_delta = BigDecimal.ZERO;
         public boolean is_active = true;
         public boolean is_default;

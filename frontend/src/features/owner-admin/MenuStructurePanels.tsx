@@ -1,3 +1,4 @@
+import { useLocale } from '../../i18n/useLocale'
 import { useMemo, useState } from 'react'
 import {
   createMenuCategory,
@@ -32,6 +33,7 @@ function categoryRecord(record: Record<string, unknown>): MenuCategoryAdminRecor
     code: asString(record.code),
     name_zh: asString(record.name_zh),
     name_en: asString(record.name_en),
+    name_fr: asString(record.name_fr),
     sort_order: record.sort_order == null ? null : asNumber(record.sort_order),
     is_active: asBoolean(record.is_active, true),
   }
@@ -66,6 +68,7 @@ export function CategoryManagementPanel({
   onChanged: () => Promise<void>
   setToast: ToastSetter
 }) {
+  const { t, label } = useLocale()
   const categories = useMemo(
     () => records.map(categoryRecord).filter((category) => category.store_id === storeId),
     [records, storeId],
@@ -78,6 +81,7 @@ export function CategoryManagementPanel({
     code: '',
     name_zh: '',
     name_en: '',
+    name_fr: '',
     sort_order: nextSortOrder(categories),
     is_active: true,
   })
@@ -90,6 +94,7 @@ export function CategoryManagementPanel({
         store_id: storeId,
         name_zh: draft.name_zh,
         name_en: draft.name_en,
+        name_fr: draft.name_fr,
         sort_order: draft.sort_order ?? 0,
         enabled: draft.is_active,
       }
@@ -100,7 +105,7 @@ export function CategoryManagementPanel({
       }
       setDraft(null)
       await onChanged()
-      setToast('Category saved. Pads will refresh after menu revision update.')
+      setToast(t('structure.categorySaved'))
     } catch (error) {
       setToast(error instanceof Error ? error.message : 'Failed to save category', 'error')
     } finally {
@@ -114,7 +119,7 @@ export function CategoryManagementPanel({
       setSaving(true)
       await deleteMenuCategory(storeId, category.id)
       await onChanged()
-      setToast('Empty category deleted.')
+      setToast(t('structure.categoryDeleted'))
     } catch (error) {
       setToast(error instanceof Error ? error.message : 'Category delete rejected', 'error')
     } finally {
@@ -126,11 +131,11 @@ export function CategoryManagementPanel({
     <section className="rounded-[26px] bg-[rgba(255,255,255,0.84)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="text-[1.1rem] font-bold text-[var(--on-surface)]">Categories / 分类</div>
-          <div className="mt-1 text-[0.85rem] text-[var(--muted)]">Names, ordering, enable/disable, and safe delete.</div>
+          <div className="text-[1.1rem] font-bold text-[var(--on-surface)]">{t('menu.categories')}</div>
+          <div className="mt-1 text-[0.85rem] text-[var(--muted)]">{t('structure.hint')}</div>
         </div>
         <button type="button" onClick={openNew} className="rounded-[14px] bg-[var(--primary)] px-3 py-2 text-[0.82rem] font-semibold text-white">
-          + New Category
+          {t('structure.newCategory')}
         </button>
       </div>
 
@@ -138,12 +143,12 @@ export function CategoryManagementPanel({
         {categories.map((category) => (
           <div key={category.id ?? category.code} className="flex flex-wrap items-center justify-between gap-2 rounded-[16px] bg-[rgba(26,28,25,0.035)] px-3 py-3">
             <div>
-              <div className="font-semibold text-[var(--on-surface)]">{category.name_zh} / {category.name_en}</div>
-              <div className="text-[0.74rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">{category.code} · order {category.sort_order ?? 0} · {category.is_active ? 'Enabled' : 'Disabled'}</div>
+              <div className="font-semibold text-[var(--on-surface)]">{label({ en: category.name_en, zh: category.name_zh, fr: category.name_fr })}</div>
+              <div className="text-[0.74rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">{category.code} · order {category.sort_order ?? 0} · {category.is_active ? t('common.enabled') : t('common.disabled')}</div>
             </div>
             <div className="flex gap-2">
-              <button type="button" onClick={() => setDraft({ ...category })} className="rounded-[12px] bg-white px-3 py-2 text-[0.78rem] font-semibold text-[var(--on-surface)]">Edit</button>
-              <button type="button" onClick={() => void remove(category)} disabled={saving} className="rounded-[12px] bg-[rgba(97,0,0,0.08)] px-3 py-2 text-[0.78rem] font-semibold text-[var(--primary)] disabled:opacity-60">Delete</button>
+              <button type="button" onClick={() => setDraft({ ...category })} className="rounded-[12px] bg-white px-3 py-2 text-[0.78rem] font-semibold text-[var(--on-surface)]">{t('common.edit')}</button>
+              <button type="button" onClick={() => void remove(category)} disabled={saving} className="rounded-[12px] bg-[rgba(97,0,0,0.08)] px-3 py-2 text-[0.78rem] font-semibold text-[var(--primary)] disabled:opacity-60">{t('structure.delete')}</button>
             </div>
           </div>
         ))}
@@ -151,15 +156,16 @@ export function CategoryManagementPanel({
 
       {draft ? (
         <div className="mt-4 grid gap-3 rounded-[18px] bg-[rgba(26,28,25,0.035)] p-4 md:grid-cols-2">
-          <input value={draft.name_zh} onChange={(event) => setDraft({ ...draft, name_zh: event.target.value })} placeholder="Chinese name" className="rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-[0.88rem] outline-none" />
-          <input value={draft.name_en} onChange={(event) => setDraft({ ...draft, name_en: event.target.value })} placeholder="English name" className="rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-[0.88rem] outline-none" />
+          <input value={draft.name_zh} onChange={(event) => setDraft({ ...draft, name_zh: event.target.value })} placeholder={t('common.chinese')} className="rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-[0.88rem] outline-none" />
+          <input value={draft.name_en} onChange={(event) => setDraft({ ...draft, name_en: event.target.value })} placeholder={t('common.english')} className="rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-[0.88rem] outline-none" />
+          <input value={draft.name_fr ?? ''} onChange={(event) => setDraft({ ...draft, name_fr: event.target.value })} placeholder={t('common.french')} className="rounded-[14px] border border-stone-200 bg-white px-3 py-2 text-sm" />
           <input type="number" value={draft.sort_order ?? 0} onChange={(event) => setDraft({ ...draft, sort_order: Number(event.target.value) })} className="rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-[0.88rem] outline-none" aria-label="Category display order" />
           <button type="button" onClick={() => setDraft({ ...draft, is_active: !draft.is_active })} className="rounded-[14px] bg-white px-3 py-2 text-[0.88rem] font-semibold text-[var(--on-surface)]">
-            {draft.is_active ? 'Enabled' : 'Disabled'}
+            {draft.is_active ? t('common.enabled') : t('common.disabled')}
           </button>
           <div className="flex gap-2 md:col-span-2">
-            <button type="button" onClick={() => void save()} disabled={saving} className="rounded-[14px] bg-[var(--primary)] px-4 py-2 text-[0.88rem] font-semibold text-white disabled:opacity-60">Save</button>
-            <button type="button" onClick={() => setDraft(null)} className="rounded-[14px] bg-white px-4 py-2 text-[0.88rem] font-semibold text-[var(--on-surface)]">Cancel</button>
+            <button type="button" onClick={() => void save()} disabled={saving} className="rounded-[14px] bg-[var(--primary)] px-4 py-2 text-[0.88rem] font-semibold text-white disabled:opacity-60">{t('common.save')}</button>
+            <button type="button" onClick={() => setDraft(null)} className="rounded-[14px] bg-white px-4 py-2 text-[0.88rem] font-semibold text-[var(--on-surface)]">{t('common.cancel')}</button>
           </div>
         </div>
       ) : null}
@@ -178,6 +184,7 @@ export function StationManagementPanel({
   onChanged: () => Promise<void>
   setToast: ToastSetter
 }) {
+  const { t, label } = useLocale()
   const stations = useMemo(
     () => records.map(stationRecord).filter((station) => station.store_id === storeId),
     [records, storeId],
@@ -215,7 +222,7 @@ export function StationManagementPanel({
       }
       setDraft(null)
       await onChanged()
-      setToast('Station saved. Routing and menu revision were updated.')
+      setToast(t('structure.stationSaved'))
     } catch (error) {
       setToast(error instanceof Error ? error.message : 'Failed to save station', 'error')
     } finally {
@@ -229,7 +236,7 @@ export function StationManagementPanel({
       setSaving(true)
       await deleteMenuStation(storeId, station.id)
       await onChanged()
-      setToast('Unused station deleted.')
+      setToast(t('structure.stationDeleted'))
     } catch (error) {
       setToast(error instanceof Error ? error.message : 'Station delete rejected', 'error')
     } finally {
@@ -241,11 +248,11 @@ export function StationManagementPanel({
     <section className="rounded-[26px] bg-[rgba(255,255,255,0.84)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="text-[1.1rem] font-bold text-[var(--on-surface)]">Stations / 出餐站点</div>
-          <div className="mt-1 text-[0.85rem] text-[var(--muted)]">Station names, type, ordering, safe enable/disable, and routing guards.</div>
+          <div className="text-[1.1rem] font-bold text-[var(--on-surface)]">{t('menu.stations')}</div>
+          <div className="mt-1 text-[0.85rem] text-[var(--muted)]">{t('structure.stationHint')} {t('structure.stationPrintingHint')}</div>
         </div>
         <button type="button" onClick={openNew} className="rounded-[14px] bg-[var(--primary)] px-3 py-2 text-[0.82rem] font-semibold text-white">
-          + New Station
+          {t('structure.newStation')}
         </button>
       </div>
 
@@ -253,12 +260,12 @@ export function StationManagementPanel({
         {stations.map((station) => (
           <div key={station.id ?? station.code} className="flex flex-wrap items-center justify-between gap-2 rounded-[16px] bg-[rgba(26,28,25,0.035)] px-3 py-3">
             <div>
-              <div className="font-semibold text-[var(--on-surface)]">{station.name_zh ?? station.name} / {station.name_en ?? station.name}</div>
-              <div className="text-[0.74rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">{station.code} · {station.station_type ?? 'KITCHEN'} · order {station.sort_order ?? 0} · {station.is_active ? 'Enabled' : 'Disabled'}</div>
+              <div className="font-semibold text-[var(--on-surface)]">{label({ en: station.name_en, zh: station.name_zh, name: station.name })}</div>
+              <div className="text-[0.74rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">{station.code} · {station.station_type ?? 'KITCHEN'} · order {station.sort_order ?? 0} · {station.is_active ? t('common.enabled') : t('common.disabled')}</div>
             </div>
             <div className="flex gap-2">
-              <button type="button" onClick={() => setDraft({ ...station })} className="rounded-[12px] bg-white px-3 py-2 text-[0.78rem] font-semibold text-[var(--on-surface)]">Edit</button>
-              <button type="button" onClick={() => void remove(station)} disabled={saving} className="rounded-[12px] bg-[rgba(97,0,0,0.08)] px-3 py-2 text-[0.78rem] font-semibold text-[var(--primary)] disabled:opacity-60">Delete</button>
+              <button type="button" onClick={() => setDraft({ ...station })} className="rounded-[12px] bg-white px-3 py-2 text-[0.78rem] font-semibold text-[var(--on-surface)]">{t('common.edit')}</button>
+              <button type="button" onClick={() => void remove(station)} disabled={saving} className="rounded-[12px] bg-[rgba(97,0,0,0.08)] px-3 py-2 text-[0.78rem] font-semibold text-[var(--primary)] disabled:opacity-60">{t('structure.delete')}</button>
             </div>
           </div>
         ))}
@@ -266,22 +273,22 @@ export function StationManagementPanel({
 
       {draft ? (
         <div className="mt-4 grid gap-3 rounded-[18px] bg-[rgba(26,28,25,0.035)] p-4 md:grid-cols-2">
-          <input value={draft.name_zh ?? ''} onChange={(event) => setDraft({ ...draft, name_zh: event.target.value })} placeholder="Chinese name" className="rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-[0.88rem] outline-none" />
-          <input value={draft.name_en ?? ''} onChange={(event) => setDraft({ ...draft, name_en: event.target.value })} placeholder="English name" className="rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-[0.88rem] outline-none" />
+          <input value={draft.name_zh ?? ''} onChange={(event) => setDraft({ ...draft, name_zh: event.target.value })} placeholder={t('common.chinese')} className="rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-[0.88rem] outline-none" />
+          <input value={draft.name_en ?? ''} onChange={(event) => setDraft({ ...draft, name_en: event.target.value })} placeholder={t('common.english')} className="rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-[0.88rem] outline-none" />
           <select value={draft.station_type ?? 'KITCHEN'} onChange={(event) => setDraft({ ...draft, station_type: event.target.value })} className="rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-[0.88rem] outline-none">
-            <option value="KITCHEN">Kitchen</option>
-            <option value="COLD">Cold</option>
-            <option value="BAR">Bar</option>
-            <option value="PASS">Pass</option>
-            <option value="OTHER">Other</option>
+            <option value="KITCHEN">{t('structure.kitchen')}</option>
+            <option value="COLD">{t('structure.cold')}</option>
+            <option value="BAR">{t('structure.bar')}</option>
+            <option value="PASS">{t('structure.pass')}</option>
+            <option value="OTHER">{t('structure.other')}</option>
           </select>
           <input type="number" value={draft.sort_order ?? 0} onChange={(event) => setDraft({ ...draft, sort_order: Number(event.target.value) })} className="rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-[0.88rem] outline-none" aria-label="Station display order" />
           <button type="button" onClick={() => setDraft({ ...draft, is_active: !draft.is_active })} className="rounded-[14px] bg-white px-3 py-2 text-[0.88rem] font-semibold text-[var(--on-surface)]">
-            {draft.is_active ? 'Enabled' : 'Disabled'}
+            {draft.is_active ? t('common.enabled') : t('common.disabled')}
           </button>
           <div className="flex gap-2 md:col-span-2">
-            <button type="button" onClick={() => void save()} disabled={saving} className="rounded-[14px] bg-[var(--primary)] px-4 py-2 text-[0.88rem] font-semibold text-white disabled:opacity-60">Save</button>
-            <button type="button" onClick={() => setDraft(null)} className="rounded-[14px] bg-white px-4 py-2 text-[0.88rem] font-semibold text-[var(--on-surface)]">Cancel</button>
+            <button type="button" onClick={() => void save()} disabled={saving} className="rounded-[14px] bg-[var(--primary)] px-4 py-2 text-[0.88rem] font-semibold text-white disabled:opacity-60">{t('common.save')}</button>
+            <button type="button" onClick={() => setDraft(null)} className="rounded-[14px] bg-white px-4 py-2 text-[0.88rem] font-semibold text-[var(--on-surface)]">{t('common.cancel')}</button>
           </div>
         </div>
       ) : null}

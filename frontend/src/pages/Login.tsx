@@ -1,5 +1,9 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
+import { useLocale } from '../i18n/useLocale'
+import { LanguageSelector } from '../components/LanguageSelector'
+import { RestaurantBrand } from '../components/RestaurantBrand'
+import type { MessageKey } from '../i18n/messages'
 import { useAuth } from '../features/auth/useAuth'
 import { defaultWorkspacePathForRole } from '../features/store/storeRoutes'
 import { fetchWorkspaces } from '../services/storeWorkspaceService'
@@ -11,35 +15,40 @@ function navigateTo(path: string) {
 }
 
 export default function Login() {
+  const { t } = useLocale()
   const { signIn } = useAuth()
   const [loginIdentifier, setLoginIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [errorKey, setErrorKey] = useState<MessageKey | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setError(null)
+    setErrorKey(null)
     setIsSubmitting(true)
     try {
       const response = await signIn(loginIdentifier, password).catch((exception) => {
         if (exception instanceof ApiRequestError && exception.status === 401) {
-          throw new Error('账号或密码错误。')
+          throw new Error('LOGIN_INVALID')
         }
         throw exception
       })
       const workspaces = await fetchWorkspaces(response.user.id).catch((exception) => {
         console.error('[Login] workspace loading failed after successful login', exception)
-        throw new Error('登录成功，但门店权限加载失败，请联系管理员检查门店权限。')
+        throw new Error('WORKSPACE_LOAD_FAILED')
       })
       const targetPath = defaultWorkspacePathForRole(response.user.role_code, workspaces)
       if (!targetPath) {
-        setError('此账号还没有分配门店权限。')
+        setErrorKey('auth.noStore')
         return
       }
       navigateTo(targetPath)
     } catch (exception) {
-      setError(getApiUserMessage(exception, '登录失败，请稍后重试。'))
+      if (exception instanceof Error && exception.message === 'LOGIN_INVALID') setErrorKey('auth.invalid')
+      else if (exception instanceof Error && exception.message === 'WORKSPACE_LOAD_FAILED') setErrorKey('auth.workspaceFailed')
+      else setError(getApiUserMessage(exception, t('auth.failed')))
     } finally {
       setIsSubmitting(false)
     }
@@ -47,26 +56,27 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-[var(--surface)] px-6 py-8 text-[var(--on-surface)]">
+      <div className="mx-auto flex max-w-[980px] justify-end"><LanguageSelector /></div>
       <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-[980px] items-center justify-center">
         <div className="grid w-full overflow-hidden rounded-[32px] bg-white shadow-[0_24px_70px_rgba(26,28,25,0.12)] md:grid-cols-[1fr_1.05fr]">
           <div className="bg-[var(--primary)] px-8 py-10 text-white">
-            <div className="text-[2.4rem] font-black leading-none tracking-[-0.07em]">餐厅 POS</div>
+            <div className="rounded-2xl bg-white px-4 py-3"><RestaurantBrand /></div>
             <div className="mt-5 text-[1.05rem] font-semibold opacity-90">
-              店主、前台和厨房共用的本地餐厅系统登录入口。
+              {t('auth.welcome')}
             </div>
             <div className="mt-8 rounded-[22px] bg-white/12 px-5 py-4 text-[0.95rem] font-medium leading-7">
-              本地测试账号仅用于开发和试运行；正式上线前请更换密码。
+              {t('auth.description')}
             </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5 px-8 py-10">
             <div>
-              <div className="text-[1.8rem] font-black tracking-[-0.05em]">登录</div>
-              <div className="mt-1 text-[0.95rem] font-medium text-[var(--muted)]">使用餐厅员工账号进入系统。</div>
+              <div className="text-[1.8rem] font-black tracking-[-0.05em]">{t('auth.title')}</div>
+              <div className="mt-1 text-[0.95rem] font-medium text-[var(--muted)]">{t('auth.description')}</div>
             </div>
 
             <label className="block">
-              <span className="text-[0.85rem] font-bold uppercase tracking-[0.12em] text-[var(--muted)]">账号</span>
+              <span className="text-[0.85rem] font-bold uppercase tracking-[0.12em] text-[var(--muted)]">{t('auth.account')}</span>
               <input
                 value={loginIdentifier}
                 onChange={(event) => setLoginIdentifier(event.target.value)}
@@ -76,7 +86,7 @@ export default function Login() {
             </label>
 
             <label className="block">
-              <span className="text-[0.85rem] font-bold uppercase tracking-[0.12em] text-[var(--muted)]">密码</span>
+              <span className="text-[0.85rem] font-bold uppercase tracking-[0.12em] text-[var(--muted)]">{t('auth.password')}</span>
               <input
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
@@ -86,8 +96,8 @@ export default function Login() {
               />
             </label>
 
-            {error ? (
-              <div className="rounded-[18px] bg-red-50 px-4 py-3 text-[0.95rem] font-semibold text-red-700">{error}</div>
+            {error || errorKey ? (
+              <div className="rounded-[18px] bg-red-50 px-4 py-3 text-[0.95rem] font-semibold text-red-700">{errorKey ? t(errorKey) : error}</div>
             ) : null}
 
             <button
@@ -95,7 +105,7 @@ export default function Login() {
               disabled={isSubmitting}
               className="h-14 w-full rounded-[18px] bg-[var(--primary)] text-[1.05rem] font-black text-white shadow-[0_12px_26px_rgba(97,0,0,0.22)] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSubmitting ? '登录中...' : '登录'}
+              {isSubmitting ? t('auth.signingIn') : t('auth.title')}
             </button>
 
             <button
@@ -103,7 +113,7 @@ export default function Login() {
               onClick={() => navigateTo('/')}
               className="h-12 w-full rounded-[16px] bg-[rgba(26,28,25,0.05)] text-[0.95rem] font-bold text-[var(--on-surface)]"
             >
-              返回首页
+              {t('common.back')}
             </button>
           </form>
         </div>

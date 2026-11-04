@@ -18,6 +18,7 @@ public class CreateOrderItemRequest {
     public String item_name_snapshot_zh;
 
     public String item_name_snapshot_en;
+    public String item_name_snapshot_fr;
 
     public BigDecimal unit_price_snapshot;
 

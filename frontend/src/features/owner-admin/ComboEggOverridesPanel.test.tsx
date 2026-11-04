@@ -10,6 +10,7 @@ import {
 } from '../../services/ownerMenuOptionService'
 import { fetchAdminMenuItems, type MenuItemAdminRecord } from '../../services/platformAdminService'
 import { ComboEggOverridesPanel } from './ComboEggOverridesPanel'
+import { appI18n } from '../../i18n/engine'
 
 vi.mock('../../services/ownerMenuOptionService', () => ({
   fetchOwnerMenuItemOptions: vi.fn(),
@@ -61,7 +62,7 @@ function button(text: string) {
 }
 
 async function openAdd() {
-  await act(async () => button('Add Exception / 添加例外').props.onClick())
+  await act(async () => button('Add Exception').props.onClick())
 }
 
 async function select(label: string, value: string) {
@@ -72,7 +73,8 @@ async function submit() {
   await act(async () => view!.root.findByType('form').props.onSubmit({ preventDefault: vi.fn() }))
 }
 
-beforeEach(() => {
+beforeEach(async () => {
+  await appI18n.changeLanguage('en')
   vi.resetAllMocks()
   vi.mocked(fetchAdminMenuItems).mockResolvedValue([item(1)])
   vi.mocked(fetchOwnerMenuItemOptions).mockResolvedValue([option()])
@@ -142,7 +144,7 @@ describe('ComboEggOverridesPanel', () => {
     await mount({ ...initial, item_overrides: [exception] })
     expect(view!.root.findByProps({ role: 'alert' }).findByType('p').children).toEqual(['Menu unavailable'])
     expect(view!.root.findAllByType('li')).toHaveLength(1)
-    expect(button('Add Exception / 添加例外').props.disabled).toBe(true)
+    expect(button('Add Exception').props.disabled).toBe(true)
     await act(async () => view!.root.findByProps({ 'aria-label': 'Remove egg default for Existing item' }).props.onClick())
     expect(updateOwnerMenuItemComboEggDefault).toHaveBeenCalledWith(8, null)
   })
@@ -165,11 +167,11 @@ describe('ComboEggOverridesPanel', () => {
     await mount({ ...initial, item_overrides: [{ ...exception, default_combo_egg_component_code: 'combo_disabled' }] })
     await act(async () => view!.root.findByProps({ 'aria-label': 'Edit egg default for Existing item' }).props.onClick())
     expect(view!.root.findByProps({ 'aria-label': 'Item default egg' }).props.value).toBe('combo_disabled')
-    expect(button('Save Exception / 保存例外').props.disabled).toBe(true)
+    expect(button('Save Exception').props.disabled).toBe(true)
     await submit()
     expect(updateOwnerMenuItemComboEggDefault).not.toHaveBeenCalled()
     await select('Item default egg', 'combo_fried_egg')
-    expect(button('Save Exception / 保存例外').props.disabled).toBe(false)
+    expect(button('Save Exception').props.disabled).toBe(false)
   })
 
   it('does not refresh or notify the new page when a save completes after unmount', async () => {
@@ -184,4 +186,23 @@ describe('ComboEggOverridesPanel', () => {
     expect(fetchStoreComboConfiguration).not.toHaveBeenCalled()
     expect(changed).not.toHaveBeenCalled()
   })
+  it('renders the real child in French and preserves selected draft across a locale switch', async () => {
+    await appI18n.changeLanguage('fr-CA')
+    await mount()
+    expect(JSON.stringify(view!.toJSON())).toContain('Exceptions par article')
+    expect(JSON.stringify(view!.toJSON())).not.toContain('Item Overrides /')
+    await act(async () => button('Ajouter une exception').props.onClick())
+    await select('Article de l’exception', '1')
+    await select('Œuf par défaut de l’article', 'combo_fried_egg')
+    const callsBeforeSwitch = vi.mocked(fetchAdminMenuItems).mock.calls.length
+    await act(async () => { await appI18n.changeLanguage('zh-CN') })
+    expect(view!.root.findByProps({ 'aria-label': '例外菜品' }).props.value).toBe('1')
+    expect(view!.root.findByProps({ 'aria-label': '菜品默认蛋' }).props.value).toBe('combo_fried_egg')
+    expect(button('保存例外').props.disabled).toBe(false)
+    expect(fetchAdminMenuItems).toHaveBeenCalledTimes(callsBeforeSwitch)
+    expect(updateOwnerMenuItemComboEggDefault).not.toHaveBeenCalled()
+    await submit()
+    expect(updateOwnerMenuItemComboEggDefault).toHaveBeenCalledWith(1, 'combo_fried_egg')
+  })
+
 })

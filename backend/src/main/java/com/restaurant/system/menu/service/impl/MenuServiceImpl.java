@@ -89,7 +89,7 @@ public class MenuServiceImpl implements MenuService {
                 option -> option.menu_item_id,
                 LinkedHashMap::new,
                 Collectors.mapping(
-                    option -> new MenuCatalogResponse.OptionResponse(
+                    option -> { var response = new MenuCatalogResponse.OptionResponse(
                         option.id,
                         option.option_type,
                         option.option_code,
@@ -100,7 +100,7 @@ public class MenuServiceImpl implements MenuService {
                         option.name_en,
                         option.price_delta,
                         option.is_active
-                    ),
+                    ); response.name_fr = option.name_fr; return response; },
                     Collectors.toList()
                 )
             ));
@@ -140,6 +140,8 @@ public class MenuServiceImpl implements MenuService {
                 item.sort_order,
                 optionsByItemId.getOrDefault(item.id, List.of())
             );
+            itemResponse.name_fr = item.name_fr;
+            itemResponse.refill_category_code = item.refill_category_code;
             itemResponse.default_combo_egg_component_code = item.default_combo_egg_component_code;
             if(templateMenus != null && templateMenus.manages(item)) itemResponse.option_groups=templateMenus.getItem(storeId,item.id).groups;
             itemsByCategoryId.computeIfAbsent(item.category_id, ignored -> new ArrayList<>()).add(itemResponse);
@@ -149,7 +151,7 @@ public class MenuServiceImpl implements MenuService {
             .sorted(Comparator
                 .comparing((MenuCategory category) -> category.sort_order == null ? Integer.MAX_VALUE : category.sort_order)
                 .thenComparing(category -> category.id))
-            .map(category -> new MenuCatalogResponse.CategoryResponse(
+            .map(category -> { var response = new MenuCatalogResponse.CategoryResponse(
                 category.id,
                 category.code,
                 category.name_zh,
@@ -157,7 +159,7 @@ public class MenuServiceImpl implements MenuService {
                 category.sort_order,
                 category.is_active,
                 itemsByCategoryId.getOrDefault(category.id, List.of())
-            ))
+            ); response.name_fr = category.name_fr; return response; })
             .toList();
 
         MenuCatalogResponse response = new MenuCatalogResponse(

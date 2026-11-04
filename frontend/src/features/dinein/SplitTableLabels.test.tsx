@@ -1,5 +1,6 @@
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
-import { afterEach, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+import { appI18n } from '../../i18n/engine'
 import { TableCard } from './components/TableCard'
 import { OrderingTopBar } from '../ordering/components/OrderingTopBar'
 import { OrderSummaryPanel } from '../ordering/components/OrderSummaryPanel'
@@ -11,6 +12,7 @@ import { buildDraftContextKey } from '../../offline/localDrafts'
 
 vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
 let view: ReactTestRenderer | undefined
+beforeEach(async () => { await appI18n.changeLanguage('zh-CN') })
 afterEach(async () => { if (view) await act(async () => view!.unmount()); view = undefined })
 const noop = () => undefined
 

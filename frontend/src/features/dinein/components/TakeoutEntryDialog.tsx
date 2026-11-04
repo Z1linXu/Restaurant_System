@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Button } from '../../../components/ui/Button'
 import { Card } from '../../../components/ui/Card'
+import { useLocale } from '../../../i18n/useLocale'
 
 interface TakeoutEntryDialogProps {
   open: boolean
@@ -17,10 +18,11 @@ export function TakeoutEntryDialog({
   onClose,
   initialValue = '',
   allowEmpty = false,
-  confirmLabel = 'Continue',
-  helperText = 'Enter a customer name or phone number.',
+  confirmLabel,
+  helperText,
   onConfirm,
 }: TakeoutEntryDialogProps) {
+  const { t } = useLocale()
   const [value, setValue] = useState(initialValue)
 
   useEffect(() => {
@@ -36,7 +38,7 @@ export function TakeoutEntryDialog({
   const handleConfirm = () => {
     const normalized = value.trim()
     if (!normalized && !allowEmpty) {
-      window.alert('Please enter a customer name or phone number.')
+      window.alert(t('order.customerInfoHint'))
       return
     }
     onConfirm(normalized)
@@ -54,31 +56,31 @@ export function TakeoutEntryDialog({
         <div className="space-y-4">
           <div>
             <h2 className="font-display text-[1.55rem] font-extrabold tracking-[-0.04em] text-[var(--on-surface)]">
-              Takeout / 外带
+              {t('order.takeout')}
             </h2>
             <p className="mt-1 text-[0.92rem] text-[var(--muted)]">
-              {helperText}
+              {helperText ?? t('order.customerInfoHint')}
             </p>
           </div>
 
           <label className="block space-y-2">
             <span className="text-[0.78rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
-              Customer Name or Phone
+              {t('order.customerInfo')}
             </span>
             <input
               value={value}
               onChange={(event) => setValue(event.target.value)}
-              placeholder="Optional name / phone"
+              placeholder={t('order.customerInfoOptional')}
               className="min-h-12 w-full rounded-[16px] bg-[var(--surface-container-lowest)] px-4 text-[0.95rem] text-[var(--on-surface)] shadow-[inset_0_0_0_1px_rgba(26,28,25,0.06)] outline-none focus:shadow-[inset_0_0_0_2px_rgba(97,0,0,0.22)]"
             />
           </label>
 
           <div className="grid grid-cols-2 gap-3">
             <Button variant="secondary" className="min-h-11 rounded-[16px]" onClick={handleClose}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button className="min-h-11 rounded-[16px]" onClick={handleConfirm}>
-              {confirmLabel}
+              {confirmLabel ?? t('common.continue')}
             </Button>
           </div>
         </div>

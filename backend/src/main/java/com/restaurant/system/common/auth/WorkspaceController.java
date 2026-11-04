@@ -18,6 +18,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1")
 public class WorkspaceController {
+    private com.restaurant.system.delivery.StorePresentationService presentation;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setPresentation(com.restaurant.system.delivery.StorePresentationService service){this.presentation=service;}
+
 
     private final RequestUserContextService requestUserContextService;
     private final StoreAccessService storeAccessService;
@@ -76,6 +80,7 @@ public class WorkspaceController {
         response.id = store.id;
         response.name = store.name;
         response.code = store.code;
+        if(presentation!=null)response.presentation=presentation.publicView(store);
         response.status = store.status;
         response.storeKind = store.store_kind;
         response.lifecycleStatus = store.lifecycle_status;

@@ -11,6 +11,7 @@ public class MenuItemOptionUpsertRequest {
     public Integer sort_order;
     public String name_zh;
     public String name_en;
+    public String name_fr;
     public BigDecimal price_delta;
     public Boolean is_active;
 }

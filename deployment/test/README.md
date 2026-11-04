@@ -94,7 +94,55 @@ ssh restaurant-prod "python3 /srv/restaurant-pos/test/releases/<SHA>/remote.py e
 
 异常回退同样受CAS约束：仅同一受控inode且内容仍为本次old/candidate（源文件另允许本次已计数写入可证明的半写状态）才能恢复；第三方内容/rename/不可证明的effective半写均fail closed，保留备份并报告，不盲目回写旧值。共享锁要求其他已review运维工具遵守同一锁，不能声称可阻止恶意root绕锁修改。
 
-只撤除Test入口时用`edge-rollback`并提供当前hash；只恢复保存的原始prefix。若后来出现非Test变动，工具拒绝覆盖，交Root审阅差异。证书可保留；不删数据库卷、不回滚迁移、不触旧部署。后续候选通常只更新Test应用，无须再次改共享vhost。Test证书的独立续期是运行后续项，需沿同一cert-name/webroot及Test-only校验/reload边界安排，不擅改已有续期任务或续签旧域名。
+## Allô Nouilles：退休旧 Test 后复用原入口
+
+Owner 最新授权（`9faee6af-1c26-4c30-a7f6-1f493fdbfd2e/已粘贴的文本.txt`）替代先前“两套 Test 同时保留、修改 upstream”的方案：确认归属后可永久删除旧 Template Test 四容器及其专属数据资源，不要求备份其测试数据。Allô 使用原 Test 域名及监听端口，**共享 Nginx、HTTPS 证书和入口网络保持不变**。本节描述工具合同；实际删除、部署和验收结果仅记入本店 `DELIVERY_TRACKER.md`，不能将本地守卫测试当作运行成功。
+
+只支持 `restaurant-template-test`（历史默认）及显式 `allo-nouilles-test` 两个固定 target。固定身份由 `deployment_targets.py` 生成，不接受任意 project、root、DB、URL 或 host port。两套身份现在复用同一端口，**不能同时启动**；Allô deploy 在读私有配置、拉镜像或启动前，拒绝任何仍存在的旧 Template Test 精确四容器名（包括已停止容器）。Root 须先按照精确对象清单验证 Compose project、完整容器 ID、挂载及引用关系，再执行已经授权的退休操作；这个部署 helper 不含清理／删除命令。
+
+| 身份 | 历史 Template 默认值（实际退休另记证据） | Allô 固定值 |
+| --- | --- | --- |
+| 根目录 | `/srv/restaurant-pos/test` | `/srv/restaurant-pos/allo-nouilles-test` |
+| Project / image 前缀 | `restaurant-template-test` | `allo-nouilles-test` |
+| DB / user | `restaurant_template_test` / `template_test` | `restaurant_allo_nouilles_test` / `allo_test` |
+| Spring profile | `template-test` | `allo-test` |
+| Frontend host bind | `127.0.0.1:28080` | `127.0.0.1:28080` |
+| 受限 host relay | `172.18.0.1:28480` | `172.18.0.1:28480` |
+| 网络 / 卷 | 原 project 的 `_internal`、`_ingress`、`_postgres` | 新 project 的 `_internal`、`_ingress`、`_postgres` |
+
+Allô 保持 db/backend 仅 internal、无宿主端口；frontend 独占 Allô ingress 网络；新 Allô relay 仅允许已验证 edge 来源，配置字节沿用原受限 relay。Allô 不加入 Template、Production 或 Staging 网络，不复用其密码或数据库 Volume。保护集为原八个 Production/Staging 容器，不再依赖将被删除的四个 Template 容器。快照比较 ID、镜像、StartedAt、restart count、Running、Restarting 和 health 状态，故 Staging 原为停止状态可以保持停止，不能借部署将其启动。所有观测使用白名单结构字段，不读取保护容器 Env、命令或 health 日志。
+
+在 Production 其他发布结束、运行状态稳定后，Root 必须通过现有 Production ops／Staging hygiene 锁串行执行退休与部署，禁止与其他发布并发。部署 helper 的普通 `deploy` 路径仍使用既有预检、COPY-only 镜像组装和隔离 Compose；它不替代调用方的共享主机操作锁。首次启动门槛仍为 MemAvailable≥1100MiB、磁盘≥6GiB，预算仍为 backend512/DB128/frontend32/relay16MiB，不因替换旧 Test 而降低。启动期间及之后由 Root 复检 Production 健康和资源；若 Allô 影响 Production，只停止 Allô 专属组件，保留代码、日志及 Test 数据，不恢复旧 Template、不停止或修复 Production。
+
+每个 target 只读取自己的 `private/runtime.env`，缺少时生成独立随机值。Allô 账户变量为 `ALLO_TEST_OWNER_PASSWORD` / `ALLO_TEST_MANAGER_PASSWORD`；DB/JWT 文件和随机值独立，不能复制 Template env。`allo-test` profile、菜单初始化、启动前 DB/Flyway/MOCK/外部出口守卫由 Backend 提供，工具不关闭守卫以绕过启动。Vite 构建同时设置精确 `VITE_APP_BUILD_VERSION=<APP_SHA>` 和稳定 `VITE_DEPLOYMENT_NAMESPACE=allo-nouilles-test`；后者不随 SHA 改变。同域名旧浏览器 Draft/Outbox 不由服务器清理，也不能由 Allô 读取或重放。
+
+### 封包合同
+
+Allô receipt 须五组实际检查 PASS、独立审查 ACCEPT、精确已测 jar/dist SHA，并绑定：
+
+```json
+{
+  "deployment_target": "allo-nouilles-test",
+  "client_namespace": "allo-nouilles-test",
+  "merchant_menu_sha256": "<已测试的受保护菜单文件实际SHA256>"
+}
+```
+
+`environment=ISOLATED_SYNTHETIC_MOCK` 表示隔离 Test 与合成交易。菜单为 Owner 提供的客户菜单，其来源和对账另有证据，不能称为合成菜单。缺 target 的历史 receipt 仍只解释为 Template；旧 Template 包与 Allô 包不能交叉投递。
+
+```sh
+python3 deployment/test/release.py --target allo-nouilles-test pack --evidence <PRIVATE_RECEIPT> --merchant-menu <PRIVATE_MENU_JSON> --out <NEW_PRIVATE_BUNDLE>
+python3 deployment/test/release.py --target allo-nouilles-test upload --bundle <PRIVATE_BUNDLE> --expected-sha <APP_SHA>
+python3 <ALLO_RELEASE>/remote.py deploy --target allo-nouilles-test --sha <APP_SHA> --apply-tested-candidate <APP_SHA>
+```
+
+菜单须为无 symlink、owner-only、最多4MiB 的 UTF-8 JSON 常规文件，不进入 Git。包内固定 `merchant/menu.source.json`，manifest 和 receipt 同时绑定摘要，Backend 仅挂载至 `/run/merchant/menu.source.json:ro`。封存 release 及父目录0700，菜单和传输包0600；真正启动时仅该非秘密菜单调整0444供 UID10001 读取，父目录仍0700。不得上传客户 PDF、凭据、dump、Git 源码或 node_modules；不增加部署平台。私有配置和测试账号通过受保护文件交付。
+
+### 共享入口保持不变与失败边界
+
+Allô 的 `edge-http`、`edge-https`、`edge-rollback`、`edge-switch`、`edge-restore`、`issue-cert` 一律拒绝，且在读取 release 前拒绝。低层 `apply_edge`、已退休的 managed-slot helper 及证书函数也不能绕过限制。现有 HTTPS Test upstream 仍为 `172.18.0.1:28480`，无需 nginx reload，不创建第二 vhost，不更改证书续期或共享入口文件。
+
+Root 必须保存并比较共享 Nginx 配置摘要、Production 容器身份／健康和 Staging 停止状态；`verify_runtime` 沿原 edge→原28480→新 Allô frontend→Backend 链检查精确 SHA、健康和网络边界。若旧入口已漂移、端口被未知进程占用、资源归属不明或容量门槛失败，保留不明确资源并停止相应动作，不采用模糊删除、kill、prune 或降低门槛。
 
 ## 停止条件
 

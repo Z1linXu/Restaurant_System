@@ -7,10 +7,11 @@ import { OwnerAdminDashboardPage } from './OwnerAdminDashboardPage'
 vi.mock('../../services/ownerDashboardService', () => ({ fetchOwnerDashboard: vi.fn() }))
 vi.mock('../../services/storeWorkspaceService', () => ({ fetchWorkspaces: vi.fn() }))
 vi.mock('../auth/useAuth', () => ({ useAuth: () => ({ user: { id: 1 }, isOfflineRestricted: false }) }))
-vi.mock('../store/useStoreContext', () => ({ useCurrentStore: () => ({ storeId: 1, storeName: 'Store', storeCode: 'ST1', organizationId: 1 }) }))
+vi.mock('../store/useStoreContext', () => ({ useCurrentStore: () => ({ storeId: 1, storeName: 'Store', storeCode: 'ST1', organizationId: 1, presentation: scope.generic ? { reporting_style: 'GENERIC' } : undefined }) }))
 vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
 vi.stubGlobal('window', { setInterval: () => 1, clearInterval: vi.fn() })
 let view: ReactTestRenderer | undefined
+const scope = vi.hoisted(() => ({ generic: false }))
 const metric = { value: 100, previous_value: 90, change_pct: 10 }
 const soup = { reporting_group: 'SOUP_NOODLE' as const, quantity_sold: 2, revenue: 70, percentage: 70 }
 const fried = { reporting_group: 'FRIED_NOODLE' as const, quantity_sold: 0, revenue: 0, percentage: 0 }
@@ -23,6 +24,7 @@ const data: OwnerDashboardResponse = {
 }
 beforeEach(() => {
   vi.clearAllMocks()
+  scope.generic = false
   vi.mocked(fetchOwnerDashboard).mockResolvedValue(data)
   vi.mocked(fetchWorkspaces).mockResolvedValue({ stores: [{ id: 1, organization_id: 1, name: 'Store', code: 'ST1', status: 'ACTIVE', role_code: 'OWNER' }] } as Awaited<ReturnType<typeof fetchWorkspaces>>)
 })
@@ -50,8 +52,23 @@ it('replaces operational dashboard panels with readable noodle sales and revenue
 
 it('changes selected range without restoring removed panels', async () => {
   await act(async () => { view = create(<OwnerAdminDashboardPage />) })
-  const week = view!.root.findAllByType('button').find((node) => node.children.join('') === 'Week')!
+  const week = view!.root.findAllByType('button').find((node) => node.children.join('') === 'This week')!
   await act(async () => week.props.onClick())
   expect(fetchOwnerDashboard).toHaveBeenLastCalledWith(expect.objectContaining({ storeId: 1, range: 'week' }))
   expect(JSON.stringify(view!.toJSON())).not.toContain('Today Sales')
+})
+
+
+it('keeps original sales values and timestamps while omitting noodle-specific panels for explicit generic reporting', async () => {
+  scope.generic = true
+  const before = JSON.stringify(data)
+  await act(async () => { view = create(<OwnerAdminDashboardPage />) })
+  const output = JSON.stringify(view!.toJSON())
+  expect(output).not.toContain('今日面类销售')
+  expect(output).not.toContain('今日营业额构成')
+  expect(output).not.toContain('SOUP_NOODLE')
+  expect(output).toContain('$100.00')
+  expect(output).toContain('first submission time')
+  expect(JSON.stringify(data)).toBe(before)
+  expect(fetchOwnerDashboard).toHaveBeenCalledWith(expect.objectContaining({ storeId: 1, range: 'today' }))
 })

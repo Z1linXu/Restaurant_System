@@ -5,6 +5,7 @@ import com.restaurant.system.modules.dto.StoreModuleConfigurationResponse;
 
 public class StoreContextResponse {
     public Long id;
+    public java.util.Map<String,Object> presentation;
     public String name;
     public String code;
     public String status;

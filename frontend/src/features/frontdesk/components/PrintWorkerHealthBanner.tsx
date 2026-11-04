@@ -1,3 +1,5 @@
+import { useLocale } from '../../../i18n/useLocale'
+import { translate } from '../../../i18n/engine'
 import { useEffect, useMemo, useState } from 'react'
 import {
   getAndroidPadDeviceBridge,
@@ -50,26 +52,27 @@ function toneClass(tone: string) {
 
 function statusTitle(status: AndroidPadPrintWorkerStatus | null, bridgeAvailable: boolean) {
   if (!bridgeAvailable) {
-    return '打印执行器状态仅 Android Pad 可见'
+    return translate('printing.worker.browser')
   }
   if (!status?.auto_enabled) {
-    return '自动打印未开启'
+    return translate('printing.worker.off')
   }
   if (status?.error_stopped || status?.worker_state === 'ERROR_STOPPED') {
-    return `自动打印已停止${status.last_stop_reason ? `：${status.last_stop_reason}` : ''}`
+    return `${translate('printing.worker.stopped')}${status.last_stop_reason ? `：${status.last_stop_reason}` : ''}`
   }
   if (status?.recovering || status?.worker_state === 'RECOVERING') {
     const delay = status.recovery_delay_ms && status.recovery_delay_ms > 0 ? `，${Math.round(status.recovery_delay_ms / 1000)} 秒后重试` : ''
-    return `自动打印网络异常，正在恢复${delay}`
+    return `${translate('printing.worker.recovering')}${delay}`
   }
   if (status?.worker_running) {
     const age = secondsSince(status.last_poll_at_ms)
-    return `自动打印运行中${age == null ? '' : `，最后检查 ${age} 秒前`}`
+    return `${translate('printing.worker.running')}${age == null ? '' : `，最后检查 ${age} 秒前`}`
   }
-  return '自动打印未运行'
+  return translate('printing.worker.idle')
 }
 
 export function PrintWorkerHealthBanner() {
+  const { t, locale } = useLocale()
   const [bridgeAvailable, setBridgeAvailable] = useState(false)
   const [status, setStatus] = useState<AndroidPadPrintWorkerStatus | null>(null)
   const [actionMessage, setActionMessage] = useState<string | null>(null)
@@ -100,20 +103,20 @@ export function PrintWorkerHealthBanner() {
   }, [])
 
   const tone = useMemo(() => statusTone(status, bridgeAvailable), [bridgeAvailable, status])
-  const title = useMemo(() => statusTitle(status, bridgeAvailable), [bridgeAvailable, status])
+  const title = useMemo(() => statusTitle(status, bridgeAvailable), [bridgeAvailable, status, locale])
 
   const handleKick = () => {
     const bridge = getAndroidPadDeviceBridge()
     if (!bridge?.kickPrintWorker) {
-      setActionMessage('当前不是 Android Pad App，无法唤醒本地打印执行器。')
+      setActionMessage(translate('printing.worker.notNative'))
       return
     }
     if (status && status.auto_enabled === false) {
-      setActionMessage('自动打印未开启。请到 Android Control Panel 点击 Start Auto Print。')
+      setActionMessage(translate('printing.worker.enableHint'))
       return
     }
     const recoverErrorStopped = Boolean(status?.error_stopped || status?.worker_state === 'ERROR_STOPPED')
-    if (recoverErrorStopped && !window.confirm('自动打印处于异常停止。确认已经检查风险后恢复自动处理吗？')) {
+    if (recoverErrorStopped && !window.confirm(translate('printing.worker.confirmRecovery'))) {
       return
     }
     try {
@@ -123,10 +126,10 @@ export function PrintWorkerHealthBanner() {
           recover_error_stopped: recoverErrorStopped,
         })),
       )
-      setActionMessage(result?.data?.message ?? result?.message ?? '已请求 Android Pad 检查打印队列。')
+      setActionMessage(result?.data?.message ?? result?.message ?? translate('printing.worker.requested'))
       window.setTimeout(refreshStatus, 300)
     } catch (error) {
-      setActionMessage(error instanceof Error ? error.message : '唤醒打印失败。')
+      setActionMessage(error instanceof Error ? error.message : translate('printing.worker.failed'))
     }
   }
 
@@ -138,10 +141,10 @@ export function PrintWorkerHealthBanner() {
           <div className="mt-1 text-[0.78rem] font-semibold opacity-80">
             {bridgeAvailable
               ? `状态：${status?.worker_state_label ?? status?.worker_state ?? '未知'} · Device ${status?.device_id ?? '-'} · Store ${status?.store_id ?? '-'}`
-              : '普通浏览器只能查看 Web 页面，实际本地打印 worker 在 Android Pad App 内运行。'}
+              : translate('printing.worker.browserHint')}
           </div>
           {status?.last_error ? (
-            <div className="mt-1 text-[0.78rem] font-semibold opacity-90">最近错误：{status.last_error}</div>
+            <div className="mt-1 text-[0.78rem] font-semibold opacity-90">{t('printing.worker.lastError')}: {status.last_error}</div>
           ) : null}
           {actionMessage ? (
             <div className="mt-1 text-[0.78rem] font-semibold opacity-90">{actionMessage}</div>
@@ -152,7 +155,7 @@ export function PrintWorkerHealthBanner() {
           className="min-h-11 rounded-[16px] bg-[var(--primary)] px-4 text-[0.92rem] font-black text-white shadow-[0_12px_24px_rgba(97,0,0,0.18)] disabled:bg-stone-200 disabled:text-stone-500"
           onClick={handleKick}
         >
-          检查打印 / 唤醒打印
+          {t('printing.worker.check')}
         </button>
       </div>
     </div>

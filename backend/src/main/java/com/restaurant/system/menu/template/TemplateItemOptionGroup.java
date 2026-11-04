@@ -12,6 +12,9 @@ public class TemplateItemOptionGroup {
     @Column(name="menu_item_id") public Long menu_item_id;
     @Column(name="group_code") public String group_code;
     public String name;
+    @Column(name="name_translations_json") public String name_translations_json;
+    @Column(name="min_select") public Integer min_select;
+    @Column(name="max_select") public Integer max_select;
     public String kind;
     @Column(name="selection_mode") public String selection_mode;
     public boolean required;

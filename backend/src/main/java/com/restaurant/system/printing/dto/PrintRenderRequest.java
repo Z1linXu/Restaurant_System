@@ -21,4 +21,5 @@ public class PrintRenderRequest {
     public Boolean is_update_ticket;
     public Long order_update_batch_id;
     public PrintingDisplayRuleContext printing_rules;
+    public ReceiptPresentation receipt_context;
 }

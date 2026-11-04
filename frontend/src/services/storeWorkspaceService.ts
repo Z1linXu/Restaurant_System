@@ -88,7 +88,20 @@ export interface StoreModuleConfiguration {
   validation_issues: StoreModuleValidationIssue[]
 }
 
+export interface StorePresentation {
+  kitchen_configuration?: 'STATION' | null
+  phone?: string | null
+  address?: string | null
+  display_name?: string | null
+  logo_url?: string | null
+  primary_color?: string | null
+  default_locale?: string | null
+  reporting_style?: 'GENERIC' | 'LEGACY'
+  notice?: Partial<Record<'zh-CN' | 'en' | 'fr-CA', string>> | null
+}
+
 export interface StoreContextResponse {
+  presentation?: StorePresentation | null
   id: number
   name: string
   code: string | null

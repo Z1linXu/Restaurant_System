@@ -3,12 +3,14 @@ import type { TemplateOptionGroup } from '../services/templatePlatformService'
 export interface LocalizedText {
   en: string
   zh: string
+  fr?: string | null
 }
 
 export interface ChoiceOption {
   id: string
   labelEn: string
   labelZh: string
+  labelFr?: string | null
   priceDelta?: number
   optionType?: string
   optionCode?: string | null
@@ -22,6 +24,7 @@ export interface MenuCategory {
   id: string
   labelEn: string
   labelZh: string
+  labelFr?: string | null
   code?: string
 }
 
@@ -30,6 +33,7 @@ export interface ComboChoiceGroup {
   groupCode: string
   labelEn: string
   labelZh: string
+  labelFr?: string | null
   selectionRule: 'EXACTLY_ONE' | 'OPTIONAL_ONE' | string
   required: boolean
   defaultOptionId?: string
@@ -61,6 +65,7 @@ export interface MenuItemCustomizationConfig {
 }
 
 export interface MenuItem {
+  refillCategoryCode?: 'NOODLE' | 'RICE' | null
   /** Undefined keeps the legacy customization path; [] explicitly enables group-free ordering. */
   optionGroups?: TemplateOptionGroup[]
   id: string
@@ -72,6 +77,7 @@ export interface MenuItem {
   itemType?: string
   nameEn: string
   nameZh: string
+  nameFr?: string | null
   descriptionEn: string
   descriptionZh: string
   price: number
@@ -89,6 +95,7 @@ export interface OrderLineOptionSnapshot {
   parentOptionId: string | null
   nameEn: string
   nameZh: string
+  nameFr?: string | null
   priceDelta: number
   quantity: number
 }
@@ -115,6 +122,7 @@ export interface OrderLineItem {
   menuItemId: string
   nameEn: string
   nameZh: string
+  nameFr?: string | null
   quantity: number
   unitPrice: number
   lineSubtotal: number
@@ -185,6 +193,7 @@ export interface BackendStoreComboConfigurationGroup {
   component_group: 'COMBO_EGG' | 'COMBO_SIDE' | string
   name_zh: string
   name_en: string
+  name_fr?: string | null
   selection_rule?: 'EXACTLY_ONE' | 'OPTIONAL_ONE' | string
   required?: boolean
   enabled?: boolean
@@ -200,6 +209,7 @@ export interface BackendStoreComboComponent {
   component_code: string
   name_zh: string
   name_en: string
+  name_fr?: string | null
   enabled: boolean
   display_order: number
   is_default: boolean
@@ -215,18 +225,21 @@ export interface BackendMenuCategory {
   code: string
   name_zh: string
   name_en: string
+  name_fr?: string | null
   sort_order: number | null
   is_active: boolean
   items: BackendMenuItem[]
 }
 
 export interface BackendMenuItem {
+  refill_category_code?: 'NOODLE' | 'RICE' | null
   option_groups?: TemplateOptionGroup[] | null
   id: number
   category_id: number
   station_id: number
   name_zh: string
   name_en: string
+  name_fr?: string | null
   sku: string
   item_type: string
   base_price: number
@@ -246,6 +259,7 @@ export interface BackendMenuOption {
   sort_order: number | null
   name_zh: string
   name_en: string
+  name_fr?: string | null
   price_delta: number
   is_active: boolean
   side_item_remove_options?: BackendMenuOption[]
@@ -325,6 +339,7 @@ export interface BackendOrderItemResponse {
   item_sku_snapshot?: string | null
   item_name_snapshot_zh: string
   item_name_snapshot_en: string
+  item_name_snapshot_fr?: string | null
   quantity: number
   unit_price: number
   line_amount: number
@@ -375,6 +390,7 @@ export interface BackendOrderItemOptionResponse {
   parent_option_id_snapshot: number | null
   option_name_snapshot_zh: string
   option_name_snapshot_en: string
+  option_name_snapshot_fr?: string | null
   price_delta: number
   quantity: number
 }

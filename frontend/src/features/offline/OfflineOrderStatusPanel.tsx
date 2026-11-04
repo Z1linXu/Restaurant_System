@@ -1,3 +1,5 @@
+import { useLocale } from '../../i18n/useLocale'
+import type { MessageKey } from '../../i18n/messages'
 import { Button } from '../../components/ui/Button'
 import type { LocalDraftSubmitState } from '../../offline/localDrafts'
 import { offlineOrderStatusView } from './offlineOrderStatus'
@@ -37,6 +39,7 @@ export function OfflineOrderStatusPanel({
   onReturnToDraft,
   onCancelLocal,
 }: OfflineOrderStatusPanelProps) {
+  const { t } = useLocale()
   const view = offlineOrderStatusView(state)
   const showActions = (view.canRetry && onRetry) || (view.canReturnToDraft && onReturnToDraft)
 
@@ -46,36 +49,36 @@ export function OfflineOrderStatusPanel({
       className={`shrink-0 rounded-[18px] border ${toneClasses[view.tone]} ${compact ? 'space-y-2 px-3 py-2.5' : 'space-y-3 px-4 py-3.5'}`}
     >
       <div>
-        <p className={`${compact ? 'text-[0.82rem]' : 'text-sm'} font-black`}>{view.title}</p>
-        <p className={`${compact ? 'mt-0.5 text-[0.76rem]' : 'mt-1 text-sm'} font-semibold`}>{view.description}</p>
+        <p className={`${compact ? 'text-[0.82rem]' : 'text-sm'} font-black`}>{t(`order.local.${state}.title` as MessageKey)}</p>
+        <p className={`${compact ? 'mt-0.5 text-[0.76rem]' : 'mt-1 text-sm'} font-semibold`}>{t(`order.local.${state}.description` as MessageKey)}</p>
       </div>
       <div className={`${compact ? 'text-[0.68rem]' : 'text-xs'} font-semibold opacity-75`}>
-        最近连接服务器成功：{displayTime(lastBackendSuccessAt)}
-        {nextRetryAt ? ` · 下次重试：${displayTime(nextRetryAt)}` : ''}
+        {t('order.lastServer')}: {displayTime(lastBackendSuccessAt)}
+        {nextRetryAt ? ` · ${t('order.nextRetry')}: ${displayTime(nextRetryAt)}` : ''}
       </div>
       {lastErrorCode ? (
         <details className={`${compact ? 'text-[0.7rem]' : 'text-xs'} font-semibold`}>
-          <summary className="cursor-pointer select-none underline">查看错误</summary>
-          <p className="mt-1 break-all">错误码：{lastErrorCode}</p>
+          <summary className="cursor-pointer select-none underline">{t('order.errorDetails')}</summary>
+          <p className="mt-1 break-all">{t('order.errorCode')}: {lastErrorCode}</p>
         </details>
       ) : null}
       {showActions ? (
         <div className="grid grid-cols-2 gap-2">
           {view.canRetry && onRetry ? (
             <Button variant="secondary" className="min-h-11 rounded-[14px] px-2 text-[0.78rem]" onClick={onRetry}>
-              立即重试
+              {t('order.retry')}
             </Button>
           ) : <span />}
           {view.canReturnToDraft && onReturnToDraft ? (
             <Button variant="secondary" className="min-h-11 rounded-[14px] px-2 text-[0.78rem]" onClick={onReturnToDraft}>
-              返回修改
+              {t('order.returnEdit')}
             </Button>
           ) : null}
         </div>
       ) : null}
       {view.canCancelLocal && state !== 'LOCAL_DRAFT' && onCancelLocal ? (
         <button type="button" className="min-h-11 w-full rounded-[14px] px-3 text-left text-xs font-black underline" onClick={onCancelLocal}>
-          取消本机订单
+          {t('order.cancelLocal')}
         </button>
       ) : null}
     </section>

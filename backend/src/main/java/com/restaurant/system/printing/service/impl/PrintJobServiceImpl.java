@@ -163,6 +163,39 @@ public class PrintJobServiceImpl implements PrintJobService {
         if (printingRuleFingerprint != null && !printingRuleFingerprint.isBlank()) {
             target.printingRuleFingerprint = printingRuleFingerprint;
         }
+        if (com.restaurant.system.delivery.ReceiptContextService.hasContext(target) && renderedTextSnapshot != null) {
+            // This approved seam is MOCK-only. Freeze UTF-8 proof bytes, never send them to a physical device.
+            if (target.reprintSourceJobId != null) {
+                PrintJob source = requireJob(target.reprintSourceJobId);
+                if (!target.store_id.equals(source.store_id) || !target.module_code.equals(source.module_code)
+                        || !renderedTextSnapshot.equals(source.rendered_text_snapshot)
+                        || source.escposPayloadBase64 == null || source.escposPayloadBase64.isBlank())
+                    throw new BusinessException("RECEIPT_ORIGINAL_ARTIFACT_MISSING");
+                validateOriginalArtifact(source);
+                target.escposPayloadBase64 = source.escposPayloadBase64;
+            } else {
+                PrinterConfig proofPrinter = new PrinterConfig();
+                proofPrinter.text_encoding = "UTF-8"; proofPrinter.paper_width_mm = 80; proofPrinter.font_size = com.restaurant.system.printing.transport.EscPosFontSizeMode.DEFAULT_CODE;
+                try {
+                    java.nio.charset.StandardCharsets.UTF_8.newEncoder()
+                        .onMalformedInput(java.nio.charset.CodingErrorAction.REPORT)
+                        .onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT)
+                        .encode(java.nio.CharBuffer.wrap(renderedTextSnapshot));
+                } catch (java.nio.charset.CharacterCodingException e) { throw new BusinessException("RECEIPT_ENCODING_UNSUPPORTED"); }
+                target.escposPayloadBase64 = buildEscPosPayloadBase64(renderedTextSnapshot, proofPrinter, com.restaurant.system.printing.transport.EscPosFontSizeMode.DEFAULT_CODE);
+                try {
+                    var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                    var node = (com.fasterxml.jackson.databind.node.ObjectNode)mapper.readTree(target.payload_snapshot);
+                    var artifact = node.putObject("receipt_artifact");
+                    artifact.put("encoding", "UTF-8"); artifact.put("paper_width_mm", 80); artifact.put("font", com.restaurant.system.printing.transport.EscPosFontSizeMode.DEFAULT_CODE);
+                    artifact.put("transport", "MOCK_ONLY_NOT_PHYSICAL_PROOF");
+                    var digest = java.security.MessageDigest.getInstance("SHA-256");
+                    artifact.put("text_sha256", java.util.HexFormat.of().formatHex(digest.digest(renderedTextSnapshot.getBytes(StandardCharsets.UTF_8))));
+                    artifact.put("bytes_sha256", java.util.HexFormat.of().formatHex(digest.digest(Base64.getDecoder().decode(target.escposPayloadBase64))));
+                    target.payload_snapshot = mapper.writeValueAsString(node);
+                } catch (Exception e) { throw new BusinessException("RECEIPT_ARTIFACT_INVALID"); }
+            }
+        }
         target.updated_at = LocalDateTime.now();
         return printJobRepository.save(target);
     }
@@ -177,6 +210,7 @@ public class PrintJobServiceImpl implements PrintJobService {
     @Transactional
     public PrintJob markPadDirectQueued(PrintJob job, PrinterConfig printer, String fontSize) {
         PrintJob target = requireJob(job.id);
+        if (com.restaurant.system.delivery.ReceiptContextService.hasContext(target)) throw new BusinessException("ALLO_RECEIPT_TEST_MOCK_ONLY");
         if (!PrintJobStatus.PENDING.equals(target.status)) throw new BusinessException("An existing active or terminal job cannot be requeued; create a new manual reprint");
         target.executionMode = "PAD_DIRECT";
         target.status = PrintJobStatus.PENDING;
@@ -399,6 +433,19 @@ public class PrintJobServiceImpl implements PrintJobService {
             return value;
         }
         return value.substring(0, maxLength);
+    }
+
+    private void validateOriginalArtifact(PrintJob source) {
+        try {
+            var artifact = new com.fasterxml.jackson.databind.ObjectMapper().readTree(source.payload_snapshot).path("receipt_artifact");
+            var digest = java.security.MessageDigest.getInstance("SHA-256");
+            String textHash = java.util.HexFormat.of().formatHex(digest.digest(source.rendered_text_snapshot.getBytes(StandardCharsets.UTF_8)));
+            String bytesHash = java.util.HexFormat.of().formatHex(digest.digest(Base64.getDecoder().decode(source.escposPayloadBase64)));
+            if (!"UTF-8".equals(artifact.path("encoding").asText())
+                    || !"MOCK_ONLY_NOT_PHYSICAL_PROOF".equals(artifact.path("transport").asText())
+                    || !textHash.equals(artifact.path("text_sha256").asText()) || !bytesHash.equals(artifact.path("bytes_sha256").asText()))
+                throw new BusinessException("RECEIPT_ORIGINAL_ARTIFACT_INVALID");
+        } catch (Exception e) { throw new BusinessException("RECEIPT_ORIGINAL_ARTIFACT_INVALID"); }
     }
 
     private String buildEscPosPayloadBase64(String renderedTextSnapshot, PrinterConfig printer) {

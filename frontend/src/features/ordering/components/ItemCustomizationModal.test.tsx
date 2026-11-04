@@ -35,7 +35,7 @@ describe('noodle type presentation labels', () => {
     let view: ReturnType<typeof create>
     const render = () => <ItemCustomizationModal item={item} draft={draft} mode="add" subtotal={15} onClose={vi.fn()} onChange={onChange} onSubmit={vi.fn()} />
     await act(async () => { view = create(render()) })
-    const toggle = () => view!.root.findAllByType('button').find((button) => button.findAllByType('span').some((node) => node.children.includes('Make it a Combo / 设为套餐')))!
+    const toggle = () => view!.root.findAllByType('button').find((button) => typeof button.props['aria-pressed'] === 'boolean')!
     for (const enabled of [true, false, true]) {
       await act(async () => toggle().props.onClick())
       expect(draft.comboEnabled).toBe(enabled)

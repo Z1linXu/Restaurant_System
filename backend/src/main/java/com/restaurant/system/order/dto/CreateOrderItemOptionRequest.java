@@ -20,6 +20,7 @@ public class CreateOrderItemOptionRequest {
     public String option_name_snapshot_zh;
 
     public String option_name_snapshot_en;
+    public String option_name_snapshot_fr;
 
     public BigDecimal option_price_snapshot;
 

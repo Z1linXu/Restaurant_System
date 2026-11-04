@@ -640,6 +640,7 @@ public class OrderServiceImpl implements OrderService {
             addedItems.add(orderItemRepository.save(addedItem));
         }
 
+        if (templateMenus != null) templateMenus.validateRefillEligibility(order, orderItemRepository.findAllByOrderId(order.id));
         List<OrderItemOption> addedOptions = loadOptionsForOrderItems(addedItems);
         List<KitchenTask> kitchenTasks = createKitchenTasks(order, addedItems, addedOptions, now);
         List<FrontdeskBeverageItem> beverageItems = createFrontdeskBeverageItems(order, addedItems, addedOptions, now);
@@ -1024,6 +1025,7 @@ public class OrderServiceImpl implements OrderService {
         orderItem.item_sku_snapshot = firstNonBlank(itemRequest.item_sku_snapshot, menuItem == null ? null : menuItem.sku);
         orderItem.item_name_snapshot_zh = firstNonBlank(itemRequest.item_name_snapshot_zh, menuItem == null ? null : menuItem.name_zh);
         orderItem.item_name_snapshot_en = firstNonBlank(itemRequest.item_name_snapshot_en, menuItem == null ? null : menuItem.name_en);
+        orderItem.item_name_snapshot_fr = menuItem == null ? null : menuItem.name_fr;
         orderItem.quantity = itemRequest.quantity;
         orderItem.unit_price = itemRequest.unit_price_snapshot != null
             ? itemRequest.unit_price_snapshot
@@ -1150,6 +1152,7 @@ public class OrderServiceImpl implements OrderService {
                 orderItemOption.parent_option_id_snapshot = menuItemOption.parent_option_id;
                 orderItemOption.option_name_snapshot_zh = menuItemOption.name_zh;
                 orderItemOption.option_name_snapshot_en = menuItemOption.name_en;
+                orderItemOption.option_name_snapshot_fr = menuItemOption.name_fr;
                 orderItemOption.price_delta = menuItemOption.price_delta;
             } else if ((menuItemOption != null && addonResolver.requiresAssignment(storeId, menuItemOption.option_group, menuItemOption.option_code))
                 || addonResolver.requiresAssignment(storeId, orderItemOption.option_group_snapshot, orderItemOption.option_code_snapshot)) {
@@ -1170,6 +1173,7 @@ public class OrderServiceImpl implements OrderService {
                 orderItemOption.parent_option_id_snapshot=comboSideParentOptionId == null ? menuItemOption.parent_option_id : comboSideParentOptionId;
                 orderItemOption.option_name_snapshot_zh=menuItemOption.name_zh;
                 orderItemOption.option_name_snapshot_en=menuItemOption.name_en;
+                orderItemOption.option_name_snapshot_fr=menuItemOption.name_fr;
                 orderItemOption.price_delta=menuItemOption.price_delta;
             }
             savedOptions.add(orderItemOptionRepository.save(orderItemOption));
@@ -1794,6 +1798,7 @@ public class OrderServiceImpl implements OrderService {
             response.parent_option_id_snapshot = orderItemOption.parent_option_id_snapshot;
             response.option_name_snapshot_zh = orderItemOption.option_name_snapshot_zh;
             response.option_name_snapshot_en = orderItemOption.option_name_snapshot_en;
+            response.option_name_snapshot_fr = orderItemOption.option_name_snapshot_fr;
             response.price_delta = defaultIfNull(orderItemOption.price_delta);
             response.quantity = orderItemOption.quantity;
             optionsByOrderItemId.computeIfAbsent(orderItemOption.order_item_id, key -> new ArrayList<>()).add(response);
@@ -1824,6 +1829,7 @@ public class OrderServiceImpl implements OrderService {
             response.item_sku_snapshot = orderItem.item_sku_snapshot;
             response.item_name_snapshot_zh = orderItem.item_name_snapshot_zh;
             response.item_name_snapshot_en = orderItem.item_name_snapshot_en;
+            response.item_name_snapshot_fr = orderItem.item_name_snapshot_fr;
             response.quantity = orderItem.quantity;
             response.unit_price = defaultIfNull(orderItem.unit_price);
             response.line_amount = defaultIfNull(orderItem.line_amount);
@@ -1930,6 +1936,7 @@ public class OrderServiceImpl implements OrderService {
         snapshot.sku = firstNonBlank(orderItem.item_sku_snapshot, live == null ? null : live.sku);
         snapshot.name_zh = orderItem.item_name_snapshot_zh;
         snapshot.name_en = orderItem.item_name_snapshot_en;
+        snapshot.name_fr = orderItem.item_name_snapshot_fr;
         snapshot.base_price = orderItem.unit_price;
         return snapshot;
     }

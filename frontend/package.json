@@ -16,8 +16,10 @@
     "@stomp/stompjs": "^7.3.0",
     "@tailwindcss/vite": "^4.2.2",
     "@types/sockjs-client": "^1.5.4",
+    "i18next": "26.7.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "react-i18next": "17.1.12",
     "sockjs-client": "^1.6.1",
     "tailwindcss": "^4.2.2"
   },

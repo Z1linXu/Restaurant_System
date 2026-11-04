@@ -19,4 +19,8 @@ class TemplateTestRuntimeSafetyTest {
  @Test void realPrintingIsRejectedBeforeMigration(){policy.setAllowedModes(List.of("MOCK","DISABLED","REAL"));assertThrows(IllegalStateException.class,()->TemplateTestRuntimeSafety.validateBeforeMigration(env,policy));}
  @Test void endpointsAreRejectedBeforeMigration(){policy.setEndpointConfigurationEnabled(true);assertThrows(IllegalStateException.class,()->TemplateTestRuntimeSafety.validateBeforeMigration(env,policy));}
  @Test void externalWorkerIsRejectedBeforeMigration(){env.setProperty("UBER_EATS_WORKER_ENABLED","true");assertThrows(IllegalStateException.class,()->TemplateTestRuntimeSafety.validateBeforeMigration(env,policy));}
+ @Test void alloHasItsOwnExactDatabaseAndUser(){env.setActiveProfiles("allo-test");env.setProperty("spring.datasource.url","jdbc:postgresql://127.0.0.1:25442/restaurant_allo_nouilles_test");env.setProperty("spring.datasource.username","allo_test");assertDoesNotThrow(()->TemplateTestRuntimeSafety.validateBeforeMigration(env,policy));}
+ @Test void alloCannotUseTemplateDatabase(){env.setActiveProfiles("allo-test");assertThrows(IllegalStateException.class,()->TemplateTestRuntimeSafety.validateBeforeMigration(env,policy));}
+ @Test void templateCannotUseAlloDatabase(){env.setActiveProfiles("template-test");env.setProperty("spring.datasource.url","jdbc:postgresql://db:5432/restaurant_allo_nouilles_test");env.setProperty("spring.datasource.username","allo_test");assertThrows(IllegalStateException.class,()->TemplateTestRuntimeSafety.validateBeforeMigration(env,policy));}
+ @Test void combinedTestProfilesAreRejected(){env.setActiveProfiles("allo-test","template-test");assertThrows(IllegalStateException.class,()->TemplateTestRuntimeSafety.validateBeforeMigration(env,policy));}
 }

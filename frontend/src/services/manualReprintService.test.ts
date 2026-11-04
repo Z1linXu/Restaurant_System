@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiRequestError, apiRequest } from './apiClient'
 import { followReprint, manualReprint, printResultMessage, reprintErrorMessage } from './manualReprintService'
 import type { PrintJobRecord } from './printingAdminService'
+import { appI18n } from '../i18n/engine'
 
 vi.mock('./apiClient', async () => ({ ...await vi.importActual<typeof import('./apiClient')>('./apiClient'), apiRequest: vi.fn(),
   getAccessToken: () => `header.${btoa(JSON.stringify({ user_id: 1, organization_id: 1 }))}.signature` }))
@@ -9,7 +10,8 @@ const api = vi.mocked(apiRequest)
 const storage = new Map<string, string>()
 const kick = vi.fn()
 const job = (status = 'PENDING', id = 101) => ({ id, status, store_id: 1, order_id: 9 } as PrintJobRecord)
-beforeEach(() => {
+beforeEach(async () => {
+  await appI18n.changeLanguage('zh-CN')
   vi.stubGlobal('localStorage', { getItem: (k: string) => storage.get(k) ?? null, setItem: (k: string, v: string) => storage.set(k, v), removeItem: (k: string) => storage.delete(k) })
   vi.stubGlobal('window', { location: { origin: 'http://synthetic.invalid' }, RestaurantPadDevice: { kickPrintWorker: kick } })
   api.mockReset(); kick.mockReset()
@@ -25,6 +27,18 @@ describe('shared Dine-in / Orders / Print Center reprint contract', () => {
     expect(printResultMessage(job('FAILED'))).toContain('打印失败')
     expect(printResultMessage({ ...job('FAILED'), error_code: 'ANDROID_PRINT_UNCERTAIN' })).toContain('结果待确认')
     expect(reprintErrorMessage(new ApiRequestError(0, 'timeout'))).toContain('结果待确认')
+  })
+  it.each([
+    ['zh-CN', '打印完成', '结果待确认'],
+    ['en', 'Print complete', 'Result unconfirmed'],
+    ['fr-CA', 'Impression terminée', 'Résultat non confirmé'],
+  ])('uses %s system text while keeping print outcome semantics', async (locale, printed, uncertain) => {
+    await appI18n.changeLanguage(locale)
+    expect(printResultMessage(job('PRINTED'))).toContain(printed)
+    const outcome = { ...job('FAILED'), error_code: 'ANDROID_PRINT_UNCERTAIN' }
+    expect(printResultMessage(outcome)).toContain(uncertain)
+    expect(outcome.error_code).toBe('ANDROID_PRINT_UNCERTAIN')
+    expect(reprintErrorMessage(new ApiRequestError(0, 'timeout'))).toContain(uncertain)
   })
   it('coalesces double click, keeps identity after lost response and kicks only returned new job', async () => {
     const path = '/api/v1/orders/9/reprint'

@@ -1,4 +1,6 @@
-export const OFFLINE_DATABASE_NAME = 'restaurant-pos-offline'
+import { deploymentStorageKey } from '../utils/deploymentNamespace'
+
+export const OFFLINE_DATABASE_NAME = deploymentStorageKey('restaurant-pos-offline')
 export const OFFLINE_DATABASE_VERSION = 4
 
 export const OFFLINE_STORES = {

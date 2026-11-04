@@ -1,3 +1,4 @@
+import { useLocale } from '../../../i18n/useLocale'
 import type { AnalyticsReportRange } from '../../../services/analyticsReportService'
 
 export interface ReportsStoreOption {
@@ -39,10 +40,11 @@ export function ReportsTopBar({
   onCustomStartDateChange,
   onCustomEndDateChange,
 }: ReportsTopBarProps) {
+  const { t } = useLocale()
   return (
     <div className="flex flex-wrap items-center justify-end gap-3">
       <label className="rounded-[18px] bg-[rgba(26,28,25,0.04)] px-3 py-2.5">
-        <div className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">Store</div>
+        <div className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">{t('printing.scope')}</div>
         <select
           value={selectedStoreId}
           onChange={(event) => onStoreChange(event.target.value)}
@@ -70,7 +72,7 @@ export function ReportsTopBar({
                   : 'bg-[rgba(255,255,255,0.7)] text-[var(--on-surface)] hover:bg-[rgba(97,0,0,0.08)] hover:text-[var(--primary)]'
               }`}
             >
-              {option.label}
+              {t(option.value === 'today' ? 'analytics.today' : option.value === 'week' ? 'analytics.week' : option.value === 'month' ? 'analytics.month' : 'analytics.custom')}
             </button>
           )
         })}
@@ -79,7 +81,7 @@ export function ReportsTopBar({
       {selectedRange === 'custom' ? (
         <div className="flex flex-wrap gap-2 rounded-[18px] bg-[rgba(26,28,25,0.04)] px-3 py-2.5">
           <label className="text-[0.74rem] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
-            Start
+            {t('analytics.start')}
             <input
               type="date"
               value={customStartDate}
@@ -88,7 +90,7 @@ export function ReportsTopBar({
             />
           </label>
           <label className="text-[0.74rem] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
-            End
+            {t('analytics.end')}
             <input
               type="date"
               value={customEndDate}
@@ -108,7 +110,7 @@ export function ReportsTopBar({
             : 'bg-[rgba(26,28,25,0.04)] text-[var(--on-surface)] hover:bg-[rgba(97,0,0,0.08)] hover:text-[var(--primary)]'
         }`}
       >
-        Compare previous period
+        {t('analytics.compare')}
       </button>
     </div>
   )

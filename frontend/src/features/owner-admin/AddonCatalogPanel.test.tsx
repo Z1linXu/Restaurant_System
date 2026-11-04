@@ -8,6 +8,7 @@ import {
   type StoreAddonCatalog,
 } from '../../services/ownerAddonService'
 import { AddonCatalogPanel } from './AddonCatalogPanel'
+import { appI18n } from '../../i18n/engine'
 
 vi.mock('../../services/ownerAddonService', () => ({
   fetchStoreAddons: vi.fn(),
@@ -39,7 +40,7 @@ async function mount(onSaved = vi.fn()) {
 }
 
 async function openNew() {
-  await act(async () => button('Add Add-on / 添加加料').props.onClick())
+  await act(async () => button('Add Add-on').props.onClick())
 }
 
 async function change(label: string, value: string | boolean) {
@@ -52,7 +53,8 @@ async function submit() {
   await act(async () => view!.root.findByType('form').props.onSubmit({ preventDefault: vi.fn() }))
 }
 
-beforeEach(() => {
+beforeEach(async () => {
+  await appI18n.changeLanguage('en')
   vi.resetAllMocks()
   vi.mocked(fetchStoreAddons).mockResolvedValue({ addons: [teaEgg, friedEgg], conflicts: [] })
 })
@@ -63,13 +65,36 @@ afterEach(async () => {
 })
 
 describe('AddonCatalogPanel', () => {
+  it('switches system text through three languages without discarding an edited catalog value or saving it', async () => {
+    await mount()
+    await act(async () => view!.root.findByProps({ 'aria-label': 'Edit Add-on tea_egg' }).props.onClick())
+    await change('Add-on English name', 'Store-owned egg label')
+    await change('Add-on price', '2.25')
+    for (const [locale, nameLabel, priceLabel, heading, saveLabel] of [
+      ['fr-CA', 'Nom anglais du supplément', 'Prix du supplément', 'Suppléments', 'Enregistrer le supplément'],
+      ['zh-CN', '加料英文名称', '加料价格', '加料', '保存加料'],
+      ['en', 'Add-on English name', 'Add-on price', 'Add-ons', 'Save Add-on'],
+    ]) {
+      await act(async () => { await appI18n.changeLanguage(locale) })
+      expect(view!.root.findByType('h2').children).toEqual([heading])
+      expect(view!.root.findByProps({ 'aria-label': nameLabel }).props.value).toBe('Store-owned egg label')
+      expect(view!.root.findByProps({ 'aria-label': priceLabel }).props.value).toBe('2.25')
+      expect(button(saveLabel).props.disabled).toBe(false)
+      expect(text()).toContain('卤蛋')
+      expect(text()).toContain('Tea Egg')
+    }
+    expect(fetchStoreAddons).toHaveBeenCalledTimes(1)
+    expect(createStoreAddon).not.toHaveBeenCalled()
+    expect(updateStoreAddon).not.toHaveBeenCalled()
+  })
+
   it('lists Store availability and Printing coverage independently, keeping fallback Add-ons editable', async () => {
     await mount()
     expect(fetchStoreAddons).toHaveBeenCalledWith(3)
-    expect(text()).toContain('Active / 可用')
-    expect(text()).toContain('Inactive / 停用')
-    expect(text()).toContain('Printing configured / 已配置打印')
-    expect(text()).toContain('Using fallback / 使用默认打印显示')
+    expect(text()).toContain('Active')
+    expect(text()).toContain('Inactive')
+    expect(text()).toContain('Printing configured')
+    expect(text()).toContain('Using fallback')
     expect(text()).toContain('$1.50')
     expect(view!.root.findByProps({ 'aria-label': 'Edit Add-on fried_egg' }).props.disabled).toBe(false)
     expect(view!.root.findAllByType('input')).toHaveLength(0)
@@ -122,7 +147,7 @@ describe('AddonCatalogPanel', () => {
     const conflicts = view!.root.findByProps({ 'aria-label': 'Add-on values awaiting Owner decision' })
     expect(conflicts.findAllByType('input')).toHaveLength(0)
     expect(conflicts.findAllByType('button')).toHaveLength(0)
-    for (const value of ['茶叶蛋', 'Marinated Egg', '$1.50', '$2.25', '旧加料', 'Legacy Add-on', '$3.00', 'Missing code / 缺少代码']) {
+    for (const value of ['茶叶蛋', 'Marinated Egg', '$1.50', '$2.25', '旧加料', 'Legacy Add-on', '$3.00', 'Missing code']) {
       expect(text()).toContain(value)
     }
     const edit = view!.root.findByProps({ 'aria-label': 'Edit Add-on tea_egg' })
@@ -182,10 +207,10 @@ describe('AddonCatalogPanel', () => {
     await mount()
     expect(text()).toContain('Add-on catalog unavailable')
     expect(view!.root.findAllByProps({ role: 'status' })).toHaveLength(0)
-    expect(button('Add Add-on / 添加加料').props.disabled).toBe(true)
-    await act(async () => button('Retry / 重试').props.onClick())
+    expect(button('Add Add-on').props.disabled).toBe(true)
+    await act(async () => button('Retry').props.onClick())
     expect(text()).toContain('No catalog Add-ons yet.')
-    expect(button('Add Add-on / 添加加料').props.disabled).toBe(false)
+    expect(button('Add Add-on').props.disabled).toBe(false)
     expect(view!.root.findAllByProps({ role: 'alert' })).toHaveLength(0)
   })
 
@@ -195,7 +220,7 @@ describe('AddonCatalogPanel', () => {
       .mockResolvedValueOnce({ addons: [{ ...friedEgg, store_id: 4 }], conflicts: [] })
     await mount()
     expect(view!.root.findByProps({ role: 'status' })).toBeTruthy()
-    expect(button('Add Add-on / 添加加料').props.disabled).toBe(true)
+    expect(button('Add Add-on').props.disabled).toBe(true)
     await act(async () => view!.update(<AddonCatalogPanel storeId={4} />))
     await act(async () => resolveOld({ addons: [teaEgg], conflicts: [] }))
     expect(view!.root.findAllByProps({ 'aria-label': 'Edit Add-on tea_egg' })).toHaveLength(0)
@@ -210,7 +235,7 @@ describe('AddonCatalogPanel', () => {
     await mount(onSaved)
     await act(async () => view!.root.findByProps({ 'aria-label': 'Edit Add-on tea_egg' }).props.onClick())
     await submit()
-    expect(button('Saving... / 保存中...').props.disabled).toBe(true)
+    expect(button('Saving…').props.disabled).toBe(true)
     await act(async () => view!.unmount())
     view = undefined
     await act(async () => resolveSave(teaEgg))

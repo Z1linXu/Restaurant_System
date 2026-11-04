@@ -76,6 +76,7 @@ export interface MenuItemAdminRecord {
   station_id: number
   name_zh: string
   name_en: string
+  name_fr?: string | null
   sku: string
   item_type: string
   base_price: number | null
@@ -94,6 +95,7 @@ export interface MenuCategoryAdminRecord {
   code: string
   name_zh: string
   name_en: string
+  name_fr?: string | null
   sort_order: number | null
   is_active: boolean
 }
@@ -114,6 +116,7 @@ export interface MenuCategoryPayload {
   store_id: number
   name_zh: string
   name_en: string
+  name_fr?: string | null
   sort_order: number
   enabled: boolean
 }

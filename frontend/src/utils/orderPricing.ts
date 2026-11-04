@@ -113,6 +113,7 @@ export function buildOptionSnapshots(menuItem: MenuItem, draft: ItemCustomizatio
       parentOptionId: option.parentOptionId ?? null,
       nameEn: option.labelEn,
       nameZh: option.labelZh,
+      ...(option.labelFr ? { nameFr: option.labelFr } : {}),
       priceDelta: option.priceDelta ?? 0,
       quantity,
     }

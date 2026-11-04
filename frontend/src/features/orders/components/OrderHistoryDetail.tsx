@@ -1,3 +1,4 @@
+import { useLocale } from '../../../i18n/useLocale'
 import type { BackendOrderResponse, OrderPrintOption } from '../../../types/ordering'
 import { orderLocationDisplay } from '../../../utils/tableDisplay'
 import type { PrintJobRecord } from '../../../services/printingAdminService'
@@ -28,11 +29,12 @@ export function OrderHistoryDetail({
   printStatusMessage,
   onReprint,
 }: OrderHistoryDetailProps) {
+  const { t, label } = useLocale()
   if (loading) {
-    return <div className="rounded-[28px] bg-white p-8 text-center text-[var(--muted)]">正在加载订单详情...</div>
+    return <div className="rounded-[28px] bg-white p-8 text-center text-[var(--muted)]">{t('common.loading')}</div>
   }
   if (!order) {
-    return <div className="rounded-[28px] bg-white p-8 text-center text-[var(--muted)]">请选择一个订单查看详情。</div>
+    return <div className="rounded-[28px] bg-white p-8 text-center text-[var(--muted)]">{t('orders.select')}</div>
   }
 
   const location = orderLocationDisplay(order, '现场')
@@ -41,7 +43,7 @@ export function OrderHistoryDetail({
     <section className="rounded-[28px] bg-white p-5 shadow-[0_16px_36px_rgba(26,28,25,0.06)]">
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-stone-100 pb-4">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">订单详情</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">{t('orders.details')}</p>
           <h2 className="mt-1 text-3xl font-extrabold">{location}</h2>
         </div>
         <span className="rounded-full bg-stone-100 px-4 py-2 font-bold">{orderStatusDisplayLabel(order.status)}</span>
@@ -52,13 +54,13 @@ export function OrderHistoryDetail({
           <div key={item.id} className="rounded-[18px] bg-stone-50 px-4 py-3">
             <div className="flex justify-between gap-4">
               <div>
-                <p className="text-lg font-bold">{item.item_name_snapshot_zh || item.item_name_snapshot_en}</p>
+                <p className="text-lg font-bold">{label({ en: item.item_name_snapshot_en, zh: item.item_name_snapshot_zh, fr: item.item_name_snapshot_fr })}</p>
                 {item.options.length ? (
                   <p className="mt-1 text-sm text-[var(--muted)]">
-                    {item.options.map((option) => option.option_name_snapshot_zh || option.option_name_snapshot_en).join(' · ')}
+                    {item.options.map((option) => label({ en: option.option_name_snapshot_en, zh: option.option_name_snapshot_zh, fr: option.option_name_snapshot_fr })).join(' · ')}
                   </p>
                 ) : null}
-                {item.notes ? <p className="mt-1 text-sm font-semibold">备注：{item.notes}</p> : null}
+                {item.notes ? <p className="mt-1 text-sm font-semibold">{t('order.note')}: {item.notes}</p> : null}
               </div>
               <div className="text-right">
                 <p className="font-bold">x{item.quantity}</p>
@@ -70,12 +72,12 @@ export function OrderHistoryDetail({
       </div>
 
       <div className="mt-5 flex items-center justify-between border-t border-stone-100 pt-4 text-xl font-extrabold">
-        <span>合计</span>
+        <span>{t('order.total')}</span>
         <span>${Number(order.total_amount).toFixed(2)}</span>
       </div>
 
       <div className="mt-5">
-        <p className="mb-2 text-sm font-bold text-[var(--muted)]">重打完整订单</p>
+        <p className="mb-2 text-sm font-bold text-[var(--muted)]">{t('orders.reprintFull')}</p>
         {printStatusMessage ? (
           <div className={`mb-3 rounded-[16px] px-4 py-3 text-sm font-bold ${
             printStatusMessage.kind === 'success'
@@ -87,9 +89,9 @@ export function OrderHistoryDetail({
         ) : null}
         {attentionJobs.length ? (
           <div className="mb-3 rounded-[18px] border border-[rgba(151,34,34,0.24)] bg-[rgba(151,34,34,0.1)] px-4 py-3 text-sm text-[rgb(116,22,22)]">
-            <div className="font-black">打印需要处理</div>
+            <div className="font-black">{t('orders.printAttention')}</div>
             <div className="mt-1 font-semibold">
-              有厨房票或前台小票没有打印成功。请先处理打印机或打印模式，然后使用下方按钮重打完整订单。
+              {t('orders.printAttentionHint')}
             </div>
           </div>
         ) : null}
@@ -102,7 +104,7 @@ export function OrderHistoryDetail({
               onClick={() => onReprint(option)}
               className="min-h-12 rounded-[16px] bg-[var(--primary)] px-4 font-bold text-white disabled:bg-stone-200 disabled:text-stone-500"
             >
-              {printBusy === option.module_code ? '打印中...' : printOptionDisplayLabel(option.module_code, option.label)}
+              {printBusy === option.module_code ? t('printing.printing') : printOptionDisplayLabel(option.module_code, option.label)}
               {!option.available ? <span className="block text-xs">{option.unavailable_reason}</span> : null}
             </button>
           ))}
@@ -110,7 +112,7 @@ export function OrderHistoryDetail({
       </div>
 
       <div className="mt-5 border-t border-stone-100 pt-4">
-        <p className="mb-2 text-sm font-bold text-[var(--muted)]">打印记录</p>
+        <p className="mb-2 text-sm font-bold text-[var(--muted)]">{t('orders.printHistory')}</p>
         {printJobs.length ? (
           <div className="space-y-2">
             {printJobs.map((job) => (
@@ -147,7 +149,7 @@ export function OrderHistoryDetail({
                 ) : null}
                 {job.operator_message && job.error_message && job.operator_message !== job.error_message ? (
                   <div className="mt-1 text-xs text-[var(--muted)]">
-                    技术信息：{job.error_message}
+                    {t('orders.techInfo')}: {job.error_message}
                   </div>
                 ) : null}
               </div>
@@ -155,7 +157,7 @@ export function OrderHistoryDetail({
           </div>
         ) : (
           <div className="rounded-[16px] bg-stone-50 px-4 py-3 text-sm font-semibold text-[var(--muted)]">
-            这个订单还没有打印记录。
+            {t('orders.noPrintHistory')}
           </div>
         )}
       </div>

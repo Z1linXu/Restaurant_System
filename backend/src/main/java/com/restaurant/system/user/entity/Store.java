@@ -33,6 +33,9 @@ public class Store {
     @Column(name = "timezone", length = 64)
     public String timezone;
 
+    @Column(name = "presentation_json")
+    public String presentation_json;
+
     @Column(name = "status")
     public String status;
 

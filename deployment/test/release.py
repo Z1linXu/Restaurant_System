@@ -12,13 +12,15 @@ from pathlib import Path
 import re
 import subprocess
 import tarfile
+import stat
+from deployment_targets import DEFAULT_TARGET, ALLO_TARGET, TARGET_NAMES, target_config, rendered_files, validate_inventory
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
 SHA = re.compile(r"[0-9a-f]{40}")
 CHECKS = ("backend", "frontend", "integration", "security", "legacy")
 FILES = ("compose.yml", "Dockerfile.backend", "Dockerfile.frontend", "nginx.conf",
-         "relay.conf", "images.json", "remote.py")
+         "relay.conf", "images.json", "remote.py", "deployment_targets.py")
 SSH = ["ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
        "-o", "UpdateHostKeys=no", "-o", "ControlMaster=no", "-o", "ControlPath=none",
        "-o", "PermitLocalCommand=no", "-o", "RequestTTY=no", "restaurant-prod"]
@@ -42,7 +44,12 @@ def tree_digest(files):
     return h.hexdigest()
 
 
-def receipt_ok(receipt, sha, jar_hash, dist_hash):
+def receipt_ok(receipt, sha, jar_hash, dist_hash, target=DEFAULT_TARGET, menu_hash=None):
+    target_config(target)
+    if receipt.get("deployment_target", DEFAULT_TARGET) != target:
+        raise ValueError("receipt belongs to another Test target")
+    if target == ALLO_TARGET and (menu_hash is None or receipt.get("merchant_menu_sha256") != menu_hash or receipt.get("client_namespace") != ALLO_TARGET):
+        raise ValueError("Allo receipt requires exact menu artifact and stable client namespace")
     if receipt.get("code_sha") != sha or not SHA.fullmatch(sha):
         raise ValueError("receipt/code SHA mismatch")
     if any(receipt.get("checks", {}).get(k) != "PASS" for k in CHECKS):
@@ -55,7 +62,25 @@ def receipt_ok(receipt, sha, jar_hash, dist_hash):
         raise ValueError("receipt is not for the isolated synthetic MOCK environment")
 
 
-def pack(evidence, output):
+def read_merchant_menu(path, target):
+    if target != ALLO_TARGET or path is None:
+        raise ValueError("Allo target requires a private customer menu file; Template cannot import it")
+    path = Path(path).absolute()
+    if path.is_symlink() or any(p.is_symlink() for p in path.parents):
+        raise ValueError("menu file must not traverse symlinks")
+    observed = path.stat()
+    if not stat.S_ISREG(observed.st_mode) or observed.st_mode & 0o077 or observed.st_size > 4 * 1024 * 1024:
+        raise ValueError("menu must be a private regular JSON file of at most 4MiB")
+    raw = path.read_bytes()
+    json.loads(raw.decode('utf-8'))  # Business schema validation belongs to the tested merchant importer.
+    return raw
+
+
+def pack(evidence, output, target=DEFAULT_TARGET, merchant_menu=None):
+    target_config(target)
+    if target == DEFAULT_TARGET and merchant_menu is not None:
+        raise ValueError("customer menu forbidden for Template target")
+    menu = read_merchant_menu(merchant_menu, target) if target == ALLO_TARGET else None
     sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=REPO, text=True).strip()
     dirty = subprocess.check_output(["git", "status", "--porcelain"], cwd=REPO)
     if dirty:
@@ -66,18 +91,23 @@ def pack(evidence, output):
     files = dist_files(REPO / "frontend/dist")
     jar = jars[0].read_bytes()
     receipt = json.loads(Path(evidence).read_text())
-    receipt_ok(receipt, sha, digest(jar), tree_digest(files))
+    receipt_ok(receipt, sha, digest(jar), tree_digest(files), target, digest(menu) if menu is not None else None)
     if not any(sha.encode() in b for b in files.values()):
         raise ValueError("frontend must be built with VITE_APP_BUILD_VERSION=exact SHA")
-    files.update({n: (HERE / n).read_bytes() for n in FILES})
+    if target == ALLO_TARGET and not any(ALLO_TARGET.encode() in b for b in files.values()):
+        raise ValueError("Allo frontend must contain its stable VITE_DEPLOYMENT_NAMESPACE")
+    files.update(rendered_files(HERE, target))
+    if menu is not None:
+        files["merchant/menu.source.json"] = menu
     files["app.jar"] = jar
     files["code-sha.txt"] = (sha + '\n').encode()
     files["checks.json"] = json.dumps(receipt, sort_keys=True).encode()
     migrations = REPO / "backend/src/main/resources/db/migration"
-    manifest = {"code_sha": sha, "environment": "ISOLATED_SYNTHETIC_MOCK",
+    manifest = {"code_sha": sha, "environment": "ISOLATED_SYNTHETIC_MOCK", "deployment_target": target,
                 "files": {n: digest(b) for n, b in sorted(files.items())},
                 "jar_sha256": digest(jar), "dist_sha256": tree_digest(dist_files(REPO / "frontend/dist")),
                 "expected_migrations": sorted(p.name for p in migrations.glob("V*__*.sql"))}
+    if menu is not None: manifest["merchant_menu_sha256"] = digest(menu)
     files["manifest.json"] = json.dumps(manifest, sort_keys=True, indent=2).encode()
     output = Path(output).resolve()
     if output.exists() or REPO in output.parents:
@@ -94,7 +124,8 @@ def pack(evidence, output):
                       "dist_sha256": manifest["dist_sha256"]}))
 
 
-def upload(bundle, sha):
+def upload(bundle, sha, target=DEFAULT_TARGET):
+    selected = target_config(target)
     if not SHA.fullmatch(sha):
         raise ValueError("full expected SHA required")
     raw = Path(bundle).read_bytes()
@@ -105,6 +136,8 @@ def upload(bundle, sha):
         if any(not m.isfile() or m.name.startswith("/") or ".." in Path(m.name).parts for m in members):
             raise ValueError("unsafe archive member")
         manifest = json.load(t.extractfile("manifest.json"))
+        if manifest.get("deployment_target", DEFAULT_TARGET) != target:
+            raise ValueError("bundle belongs to another Test target")
         if manifest["code_sha"] != sha:
             raise ValueError("wrong bundle SHA")
         data = {m.name: t.extractfile(m).read() for m in members}
@@ -112,11 +145,17 @@ def upload(bundle, sha):
             raise ValueError("archive inventory mismatch")
         if any(digest(data[n]) != h for n, h in manifest["files"].items()):
             raise ValueError("archive file hash mismatch")
+        validate_inventory(manifest["files"], target)
+        menu = data.get("merchant/menu.source.json")
+        if target == ALLO_TARGET and (menu is None or digest(menu) != manifest.get("merchant_menu_sha256")):
+            raise ValueError("Allo bundle menu hash mismatch")
+        if target == DEFAULT_TARGET and menu is not None: raise ValueError("customer menu in Template bundle")
         receipt_ok(json.loads(data["checks.json"]), sha, digest(data["app.jar"]),
-                   tree_digest({n: b for n, b in data.items() if n.startswith("dist/")}))
+                   tree_digest({n: b for n, b in data.items() if n.startswith("dist/")}), target,
+                   digest(menu) if menu is not None else None)
     # No shell interpolation of bundle data; only a validated hex SHA is inserted.
     code = """import sys,pathlib,tarfile,io,os
-r=pathlib.Path('/srv/restaurant-pos/test')
+r=pathlib.Path('TARGET_ROOT_VALUE')
 for p in [r,r/'releases']:
  if p.is_symlink(): raise SystemExit('symlink refused')
  p.mkdir(mode=0o700,exist_ok=True)
@@ -132,7 +171,7 @@ with tarfile.open(fileobj=io.BytesIO(sys.stdin.buffer.read()),mode='r:gz') as t:
   with p.open('xb') as f:
    os.fchmod(f.fileno(),0o600);f.write(t.extractfile(m).read())
 print('Test bundle transferred; no service created')
-""".replace("SHA_VALUE", sha)
+""".replace("SHA_VALUE", sha).replace("TARGET_ROOT_VALUE", str(selected["root"]))
     import shlex
     result = subprocess.run(SSH + ["python3 -c " + shlex.quote(code)], input=raw, capture_output=True)
     if result.returncode:
@@ -142,13 +181,14 @@ print('Test bundle transferred; no service created')
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument("--target", choices=TARGET_NAMES, default=DEFAULT_TARGET)
     s = p.add_subparsers(dest="action", required=True)
-    x = s.add_parser("pack"); x.add_argument("--evidence", required=True); x.add_argument("--out", required=True)
+    x = s.add_parser("pack"); x.add_argument("--evidence", required=True); x.add_argument("--out", required=True); x.add_argument("--merchant-menu")
     x = s.add_parser("upload"); x.add_argument("--bundle", required=True); x.add_argument("--expected-sha", required=True)
     s.add_parser("artifact-hashes")
     a = p.parse_args()
-    if a.action == "pack": pack(a.evidence, a.out)
-    elif a.action == "upload": upload(a.bundle, a.expected_sha)
+    if a.action == "pack": pack(a.evidence, a.out, a.target, a.merchant_menu)
+    elif a.action == "upload": upload(a.bundle, a.expected_sha, a.target)
     else:
         jars = list((REPO / "backend/target").glob("*.jar"))
         if len(jars) != 1: raise ValueError("one jar required")

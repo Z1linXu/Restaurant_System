@@ -1,3 +1,5 @@
+import { translate } from '../i18n/engine'
+import { deploymentStorageKey } from '../utils/deploymentNamespace'
 import type { BackendApiResponse } from '../types/ordering'
 import { attestPrintRequest } from './printRequestAttestation'
 import {
@@ -6,8 +8,8 @@ import {
   type AuthRefreshOutcome,
 } from './networkStatus'
 
-const ACCESS_TOKEN_KEY = 'restaurant_pos_access_token'
-const REFRESH_TOKEN_KEY = 'restaurant_pos_refresh_token'
+const ACCESS_TOKEN_KEY = deploymentStorageKey('restaurant_pos_access_token')
+const REFRESH_TOKEN_KEY = deploymentStorageKey('restaurant_pos_refresh_token')
 const REFRESH_ENDPOINT = '/api/v1/auth/refresh'
 const DEFAULT_REQUEST_TIMEOUT_MS = 20_000
 const REFRESH_REQUEST_TIMEOUT_MS = 15_000
@@ -75,41 +77,51 @@ function isSafeBackendMessage(message: string | undefined) {
     && !normalized.includes('org.springframework')
 }
 
+function receiptUserMessage(code?: string) {
+  if (code?.startsWith('RECEIPT_USE_ORIGINAL_JOB_REPRINT')) return translate('printing.error.RECEIPT_USE_ORIGINAL_JOB_REPRINT')
+  if (code?.startsWith('RECEIPT_STATION_NOT_ASSIGNED')) return translate('printing.error.RECEIPT_STATION_NOT_ASSIGNED')
+  return undefined
+}
+
 export function userMessageForStatus(status: number, backendMessage?: string) {
+  const receiptMessage = receiptUserMessage(backendMessage)
+  if (receiptMessage) return receiptMessage
   if (status === 400 && isSafeBackendMessage(backendMessage)) {
     return backendMessage!
   }
   if (status === 401) {
-    return '登录已过期，请重新登录 / Session expired. Please sign in again.'
+    return translate('api.sessionExpired')
   }
   if (status === 403) {
     if (backendMessage?.toLowerCase().includes('store')) {
-      return '你没有权限访问这家门店 / You do not have access to this store.'
+      return translate('api.storeDenied')
     }
-    return '没有权限访问 / Access denied.'
+    return translate('api.denied')
   }
   if (status >= 500) {
-    return '系统错误，请稍后重试或联系管理员 / System error. Please try again or contact support.'
+    return translate('api.systemError')
   }
   if (isSafeBackendMessage(backendMessage)) {
     return backendMessage!
   }
-  return `请求失败 (${status}) / Request failed (${status})`
+  return translate('api.requestFailed', { status })
 }
 
-export function getApiUserMessage(error: unknown, fallback = '请求失败，请稍后重试 / Request failed. Please try again.') {
+export function getApiUserMessage(error: unknown, fallback = translate('common.error')) {
   if (error instanceof ApiRequestError) {
+    const receiptMessage = receiptUserMessage(error.code) ?? receiptUserMessage(error.message)
+    if (receiptMessage) return receiptMessage
     if (error.code === 'FEATURE_DISABLED') {
-      return '此功能当前未启用 / This feature is currently unavailable.'
+      return translate('api.unavailable')
     }
     if (error.code?.includes('STAGING_RUNTIME_REQUIRED') || error.code?.includes('RUNTIME_REQUIRED')) {
-      return '此操作不适用于当前运行环境 / This operation is unavailable in this runtime.'
+      return translate('api.runtimeUnavailable')
     }
     if (error.code === 'BUSINESS_STORE_CREATE_ORGANIZATION_DENIED') {
-      return '你不是该 Organization 的有效 Owner / Active Owner membership is required for this Organization.'
+      return translate('api.ownerMembershipRequired')
     }
     if (error.code === 'BUSINESS_STORE_CREATE_AUTHORIZATION_DENIED') {
-      return '只有 Organization Owner 可以创建门店 / Only an Organization Owner can create a Store.'
+      return translate('api.onlyOwnerCreate')
     }
     return error.userMessage
   }
@@ -121,13 +133,13 @@ export function getApiUserMessage(error: unknown, fallback = '请求失败，请
 
 function networkFailureMessage() {
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
-    return '当前设备离线，请检查网络后重试 / Device is offline. Please check the network and try again.'
+    return translate('api.offline')
   }
-  return '网络请求失败，请检查连接后重试 / Network request failed. Please check the connection and try again.'
+  return translate('api.networkFailed')
 }
 
 function timeoutMessage() {
-  return '网络请求超时，请重新连接或稍后重试 / Network request timed out. Please reconnect or try again.'
+  return translate('api.timeout')
 }
 
 function isAbortLikeError(error: unknown) {

@@ -74,4 +74,11 @@ describe('ordering customization requirements', () => {
     expect(hasRequiredCustomization(multiSizeDrink)).toBe(true)
     expect(isQuickAddItem(multiSizeDrink)).toBe(false)
   })
+
+  it('does not bypass an explicit selection minimum even when the required flag is false', () => {
+    const bounded = item({ optionGroups: [{ group_instance_code: 'choose-two', name: 'Choose two', kind: 'CUSTOM', selection_mode: 'MULTIPLE', required: false, min_select: 2, max_select: 2, is_active: true, sort_order: 0, default_option_ids: [], options: [] }] })
+    expect(hasRequiredCustomization(bounded)).toBe(true)
+    expect(isQuickAddItem(bounded)).toBe(false)
+    expect(isQuickAddItem(item({ optionGroups: [] }))).toBe(true)
+  })
 })

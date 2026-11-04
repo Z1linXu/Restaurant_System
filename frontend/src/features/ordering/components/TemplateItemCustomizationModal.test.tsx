@@ -6,6 +6,8 @@ import { buildDefaultDraft } from '../../../hooks/useOrderSessions'
 import { calculateDraftLineSubtotal } from '../../../utils/orderPricing'
 import type { TemplateOptionGroup } from '../../../services/templatePlatformService'
 import type { ItemCustomizationDraft, MenuItem } from '../../../types/ordering'
+import { appI18n } from '../../../i18n/engine'
+import { LanguageSelector } from '../../../components/LanguageSelector'
 
 vi.mock('../../../hooks/useIpadLandscape', () => ({ useIpadLandscape: () => false }))
 vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
@@ -23,10 +25,60 @@ function Harness({ item }: { item: MenuItem }) {
   lastDraft = draft
   return <ItemCustomizationModal item={item} draft={draft} mode="add" subtotal={calculateDraftLineSubtotal(item, draft)} onChange={setDraft} onClose={() => undefined} onSubmit={() => undefined} />
 }
-beforeEach(() => { vi.stubGlobal('document', { body: { style: { overflow: '', touchAction: '' } } }) })
+beforeEach(async () => { await appI18n.changeLanguage('en'); vi.stubGlobal('document', { body: { style: { overflow: '', touchAction: '' } } }) })
 afterEach(() => { act(() => view?.unmount()); view = undefined; vi.unstubAllGlobals(); vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true) })
 
 describe('dynamic groups reuse mature customization controls', () => {
+  it('enforces the confirmed four-choose-two group, and lets a selected choice be removed at the limit', async () => {
+    const group: TemplateOptionGroup = { ...sauce, name: 'Two sides', selection_mode: 'MULTIPLE', min_select: 2, max_select: 2,
+      options: [1, 2, 3, 4].map((id) => ({ ...sauce.options[0], id, name_en: `Choice ${id}`, name_zh: `合成选项${id}`, price_delta: id })) }
+    const item = { ...dish, optionGroups: [group] }
+    await act(async () => { view = create(<Harness item={item} />) })
+    expect(button('Add to Order').props.disabled).toBe(true)
+    await act(async () => button('Choice 1').props.onClick())
+    expect(button('Add to Order').props.disabled).toBe(true)
+    await act(async () => button('Choice 2').props.onClick())
+    expect(button('Add to Order').props.disabled).toBe(false)
+    expect(button('Choice 3').props.disabled).toBe(true)
+    expect(button('Choice 1').props.disabled).toBe(false)
+    await act(async () => button('Choice 1').props.onClick())
+    expect(button('Add to Order').props.disabled).toBe(true)
+    expect(button('Choice 3').props.disabled).toBe(false)
+    await act(async () => button('Choice 3').props.onClick())
+    expect(lastDraft.groupSelections).toEqual({ sauce: { '1': 0, '2': 1, '3': 1 } })
+    expect(calculateDraftLineSubtotal(item, lastDraft)).toBe(15)
+  })
+
+  it('keeps paid add-on quantities while min/max counts distinct choices', async () => {
+    const group: TemplateOptionGroup = { ...sauce, kind: 'ADD_ON', selection_mode: 'MULTIPLE', min_select: 1, max_select: 1 }
+    const item = { ...dish, optionGroups: [group] }
+    await act(async () => { view = create(<Harness item={item} />) })
+    expect(button('Add to Order').props.disabled).toBe(true)
+    const increments = () => view!.root.findAllByType('button').filter((node) => text(node) === '+')
+    // Display sorting puts Pepper first and Garlic second. Two Garlic portions are one distinct choice.
+    await act(async () => increments()[1].props.onClick())
+    await act(async () => increments()[1].props.onClick())
+    expect(lastDraft.groupSelections).toEqual({ sauce: { '11': 2 } })
+    expect(calculateDraftLineSubtotal(item, lastDraft)).toBe(12)
+    expect(button('Add to Order').props.disabled).toBe(false)
+    expect(increments()[0].props.disabled).toBe(true)
+    expect(increments()[1].props.disabled).toBe(false)
+  })
+
+  it('switches the actual customization UI to French without losing its selected option or changing the amount', async () => {
+    const item = { ...dish, nameFr: 'Plat synthétique', optionGroups: [{ ...sauce, name_translations: { 'fr-CA': 'Sauce' }, options: sauce.options.map((option) => ({ ...option, name_fr: option.id === 11 ? 'Ail' : 'Poivre' })) }] }
+    await act(async () => { view = create(<><LanguageSelector /><Harness item={item} /></>) })
+    await act(async () => button('Garlic').props.onClick())
+    const before = JSON.stringify(lastDraft)
+    const amount = calculateDraftLineSubtotal(item, lastDraft)
+    await act(async () => view!.root.findByType('select').props.onChange({ target: { value: 'fr-CA' } }))
+    expect(JSON.stringify(view!.toJSON())).toContain('Plat synthétique')
+    expect(button('Ail')).toBeDefined()
+    expect(button('Ajouter à la commande').props.disabled).toBe(false)
+    expect(JSON.stringify(lastDraft)).toBe(before)
+    expect(calculateDraftLineSubtotal(item, lastDraft)).toBe(amount)
+  })
+
   it('sorts choices, requires selection, and replaces a single selection with the correct ordinary price', async () => {
     await act(async () => { view = create(<Harness item={dish} />) })
     expect(button('Add to Order').props.disabled).toBe(true)

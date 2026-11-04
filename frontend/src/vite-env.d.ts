@@ -1,6 +1,7 @@
 /// <reference types="vite/client" />
 
 declare const __APP_BUILD_VERSION__: string
+declare const __APP_DEPLOYMENT_NAMESPACE__: string
 
 interface RestaurantBundledAppConfig {
   mode: 'BUNDLED_ASSETS'

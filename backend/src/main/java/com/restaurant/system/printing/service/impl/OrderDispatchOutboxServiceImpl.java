@@ -22,7 +22,11 @@ public class OrderDispatchOutboxServiceImpl implements OrderDispatchOutboxServic
         this.storeRepository = storeRepository;
     }
 
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    private com.restaurant.system.delivery.ReceiptContextService receiptContexts;
+
     @Override
+    @org.springframework.transaction.annotation.Transactional
     public void enqueue(String moduleCode, Long storeId, Long orderId, Long orderUpdateBatchId) {
         String sourceKey = sourceKey(moduleCode, orderId, orderUpdateBatchId);
         if (repository.findBySourceKey(sourceKey).isPresent()) {
@@ -31,7 +35,8 @@ public class OrderDispatchOutboxServiceImpl implements OrderDispatchOutboxServic
         Store store = storeRepository.findById(storeId)
             .orElseThrow(() -> new BusinessException("Store not found: " + storeId));
         LocalDateTime now = LocalDateTime.now();
-        repository.insertIfAbsent(
+        var receiptContext = receiptContexts == null ? null : receiptContexts.freeze(store,moduleCode,orderId,orderUpdateBatchId);
+        int inserted = repository.insertIfAbsent(
             store.organization_id,
             storeId,
             orderId,
@@ -42,6 +47,11 @@ public class OrderDispatchOutboxServiceImpl implements OrderDispatchOutboxServic
             now,
             com.restaurant.system.printing.security.PrintOriginContext.deviceFor(storeId, store.organization_id)
         );
+        if (inserted == 1 && receiptContext != null) {
+            var event = repository.findBySourceKey(sourceKey).orElseThrow();
+            event.routingContext = receiptContexts.serialize(receiptContext);
+            repository.save(event);
+        }
     }
 
     static String sourceKey(String moduleCode, Long orderId, Long orderUpdateBatchId) {

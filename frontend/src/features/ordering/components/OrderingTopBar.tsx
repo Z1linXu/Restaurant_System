@@ -1,5 +1,7 @@
+import { LanguageSelector } from '../../../components/LanguageSelector'
 import { Input } from '../../../components/ui/Input'
 import { formatSplitSlotLabel } from '../../../utils/tableDisplay'
+import { useLocale } from '../../../i18n/useLocale'
 
 interface OrderingTopBarProps {
   tableLabel: string
@@ -30,6 +32,7 @@ export function OrderingTopBar({
   onSearchChange,
   compact = false,
 }: OrderingTopBarProps) {
+  const { t } = useLocale()
   const displayTableLabel = orderType === 'dine_in' ? tableDisplayName ?? formatSplitSlotLabel(tableLabel) : tableLabel
   const displaySlotLabel = orderType === 'dine_in' ? slotDisplayName ?? formatSplitSlotLabel(slotLabel) : slotLabel
 
@@ -41,12 +44,12 @@ export function OrderingTopBar({
           onClick={onBack}
           className={`inline-flex items-center justify-center rounded-[18px] bg-[rgba(26,28,25,0.04)] font-semibold text-[var(--on-surface)] ${compact ? 'min-h-11 px-4 text-[0.95rem]' : 'min-h-14 px-5 text-base'}`}
         >
-          Back
+          {t('common.back')}
         </button>
 
         <div className={`rounded-[22px] bg-[rgba(26,28,25,0.04)] ${compact ? 'px-4 py-2.5' : 'px-5 py-4'}`}>
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
-            {orderType === 'pickup' ? 'Takeout / 外带' : 'Dine-in / 堂食'}
+            {orderType === 'pickup' ? t('order.takeout') : t('order.dineIn')}
           </p>
           <p className={`mt-1 font-display font-extrabold tracking-[-0.04em] text-[var(--on-surface)] ${compact ? 'text-[1.45rem]' : 'text-[2rem]'}`}>
             {displayTableLabel} / {displaySlotLabel}
@@ -67,7 +70,7 @@ export function OrderingTopBar({
                   onClick={onEditPickupLabel}
                   className="rounded-full bg-[rgba(97,0,0,0.08)] px-2.5 py-1 text-[0.76rem] font-semibold text-[var(--primary)] transition hover:bg-[rgba(97,0,0,0.12)]"
                 >
-                  Edit info
+                  {t('order.editInfo')}
                 </button>
               ) : null}
             </div>
@@ -77,12 +80,13 @@ export function OrderingTopBar({
 
       <div className={`w-full ${compact ? 'max-w-[18rem]' : 'max-w-[23rem]'}`}>
         <Input
-          label="Search menu / 搜索菜单"
-          placeholder="Search menu... / 搜索菜单..."
+          label={t('menu.search')}
+          placeholder={t('menu.searchPlaceholder')}
           value={searchValue}
           onChange={(event) => onSearchChange(event.target.value)}
         />
       </div>
+      {!compact ? <LanguageSelector /> : null}
     </div>
   )
 }

@@ -81,6 +81,7 @@ public class MenuCatalogHashService {
             append(target, category.code);
             append(target, category.name_zh);
             append(target, category.name_en);
+            if (category.name_fr != null) { append(target, "name_fr"); append(target, category.name_fr); }
             append(target, category.sort_order);
             append(target, category.is_active);
             List<MenuCatalogResponse.ItemResponse> items = category.items == null ? List.of() : category.items;
@@ -91,6 +92,7 @@ public class MenuCatalogHashService {
                 append(target, item.station_id);
                 append(target, item.name_zh);
                 append(target, item.name_en);
+            if (item.name_fr != null) { append(target, "name_fr"); append(target, item.name_fr); }
                 append(target, item.sku);
                 append(target, item.item_type);
                 append(target, item.base_price);
@@ -99,6 +101,11 @@ public class MenuCatalogHashService {
                 append(target, item.sort_order);
                 append(target, item.default_combo_egg_component_code);
                 appendOptions(target, item.options);
+                if (item.option_groups != null) for (var group : item.option_groups) {
+                    if (group.name_translations != null) new java.util.TreeMap<>(group.name_translations).forEach((locale, label) -> {append(target, locale); append(target, label);});
+                    if (group.min_select != null) {append(target, "min_select"); append(target, group.min_select);}
+                    if (group.max_select != null) {append(target, "max_select"); append(target, group.max_select);}
+                }
             }
         }
     }
@@ -115,6 +122,7 @@ public class MenuCatalogHashService {
             append(target, option.sort_order);
             append(target, option.name_zh);
             append(target, option.name_en);
+            if (option.name_fr != null) { append(target, "name_fr"); append(target, option.name_fr); }
             append(target, option.price_delta);
             append(target, option.is_active);
             appendOptions(target, option.side_item_remove_options);

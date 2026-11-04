@@ -1,6 +1,18 @@
 import { apiRequest } from './apiClient'
 import { manualReprint } from './manualReprintService'
 
+export interface ReceiptPresentationSettings {
+  enabled: boolean
+  default_language: 'zh-CN' | 'en' | 'fr-CA'
+  kitchen_language?: 'zh-CN' | 'en' | 'fr-CA' | null
+  frontdesk_language?: 'zh-CN' | 'en' | 'fr-CA' | null
+  kitchen_station_codes: string[]
+  revision: number
+}
+
+export const fetchReceiptPresentation = (storeId: number) => apiRequest<ReceiptPresentationSettings>(`/api/v1/stores/${storeId}/receipt-presentation`)
+export const saveReceiptPresentation = (storeId: number, settings: ReceiptPresentationSettings) => apiRequest<ReceiptPresentationSettings>(`/api/v1/stores/${storeId}/receipt-presentation`, { method: 'PUT', body: JSON.stringify(settings) })
+
 export interface PrinterConfigRecord {
   id?: number
   store_id: number

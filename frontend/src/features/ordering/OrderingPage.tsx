@@ -1,3 +1,4 @@
+import { translate } from '../../i18n/engine'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Card } from '../../components/ui/Card'
 import { useIpadLandscape } from '../../hooks/useIpadLandscape'
@@ -21,6 +22,9 @@ import { useAuth } from '../auth/useAuth'
 import { useCurrentStore } from '../store/useStoreContext'
 import { isQuickAddItem } from './orderingCustomizationRules'
 import { DiningTableOrderGate } from './DiningTableOrderGate'
+import { useLocale } from '../../i18n/useLocale'
+import { searchableText } from '../../i18n/locale'
+import { canShowRefill } from './refillVisibility'
 
 interface OrderingPageProps {
   catalog: {
@@ -60,13 +64,13 @@ interface CustomizationState {
 function connectionWarning(state: ConnectionState) {
   switch (state) {
     case 'BROWSER_OFFLINE':
-      return '当前设备离线，点餐内容会保存在本机；服务器确认前尚未进入厨房。'
+      return translate('network.offline')
     case 'BACKEND_UNREACHABLE':
-      return '网络不稳定，暂时无法连接餐厅服务器；点餐内容会保存在本机。'
+      return translate('network.unreachable')
     case 'AUTH_REQUIRED':
-      return '登录状态已失效，请重新登录后继续。'
+      return translate('network.authRequired')
     case 'ONLINE_DEGRADED':
-      return '网络不稳定，点餐内容会保存在本机；请留意订单提交状态。'
+      return translate('network.unreachable')
     default:
       return null
   }
@@ -106,8 +110,9 @@ function OrderingWorkspace({
   onDraftCancelled,
   onOrderSubmitted,
 }: OrderingPageProps) {
+  const { t, label } = useLocale()
   const { user } = useAuth()
-  const { organizationId } = useCurrentStore()
+  const { organizationId, presentation } = useCurrentStore()
   const {
     categories,
     items,
@@ -211,7 +216,7 @@ function OrderingWorkspace({
     const revision = catalog.catalog?.menuRevision ?? null
     const previous = previousMenuRevisionRef.current
     if (revision != null && previous != null && revision !== previous && catalogSource === 'NETWORK') {
-      setMenuUpdateNotice('菜单已更新，新添加菜品将使用最新菜单；当前草稿中的菜品保持原价格和选项。')
+      setMenuUpdateNotice(translate('menu.updatedDraft'))
       setMenuNoticeCollapsed(false)
     }
     if (revision != null) previousMenuRevisionRef.current = revision
@@ -243,29 +248,29 @@ function OrderingWorkspace({
   }
 
   const menuRefreshStatusLabel = catalogRefreshStatus === 'CHECKING'
-    ? '正在检查菜单更新…'
+    ? translate('menu.checking')
     : catalogRefreshStatus === 'UPDATED'
-      ? '菜单刷新成功，新添加菜品将使用最新菜单。'
+      ? translate('menu.updated')
       : catalogRefreshStatus === 'CURRENT'
-        ? '菜单已是最新版本。'
+        ? translate('menu.current')
         : catalogRefreshStatus === 'AUTH_REQUIRED'
-          ? '菜单刷新需要重新登录。'
+          ? translate('menu.authRefresh')
           : catalogRefreshStatus === 'BACKEND_UNREACHABLE'
-            ? '后端暂时不可达，继续使用本机缓存菜单。'
+            ? t('menu.failedRefresh')
             : catalogRefreshStatus === 'FAILED'
-              ? '菜单刷新失败，继续使用本机缓存菜单。'
+              ? translate('menu.failedRefresh')
               : null
 
   const draftSubmissionLockMessage = draftSubmissionLocked
     ? localSubmitState === 'SUBMITTING'
-      ? '订单正在提交到后端，暂时不能继续点菜。'
+      ? translate('order.lockSubmitting')
       : localSubmitState === 'QUEUED'
-        ? '订单已进入待提交队列。如需修改，请先在订单栏选择“返回修改”。'
+        ? translate('order.lockQueued')
         : localSubmitState === 'FAILED_RETRYABLE'
-          ? '订单等待自动重试。如需修改，请先返回修改。'
+          ? translate('order.lockRetry')
           : localSubmitState === 'CONFLICT' || localSubmitState === 'FAILED_VALIDATION'
-            ? '订单需要处理同步冲突或菜单校验问题，请先在订单栏处理。'
-            : '订单正在同步，暂时不能继续点菜。'
+            ? translate('order.lockReview')
+            : translate('order.lockSync')
     : null
 
   useEffect(() => {
@@ -295,11 +300,12 @@ function OrderingWorkspace({
   const filteredItems = useMemo(
     () =>
       items.filter((item) => {
-        const matchesCategory = item.categoryId === activeCategoryId
-        const haystack = `${item.nameEn} ${item.nameZh} ${item.descriptionEn} ${item.descriptionZh}`.toLowerCase()
-        return matchesCategory && haystack.includes(menuSearch.toLowerCase())
+        const search = searchableText(menuSearch)
+        const matchesCategory = search.length > 0 || item.categoryId === activeCategoryId
+        const haystack = searchableText(item.nameEn, item.nameZh, item.nameFr, item.descriptionEn, item.descriptionZh)
+        return matchesCategory && haystack.includes(search) && canShowRefill(item, orderType, session?.items)
       }),
-    [activeCategoryId, items, menuSearch],
+    [activeCategoryId, items, menuSearch, orderType, session?.items],
   )
 
   const handleSelectMenuItem = (item: MenuItem) => {
@@ -396,7 +402,7 @@ function OrderingWorkspace({
   }
 
   const handleCancelOrder = async () => {
-    if (!window.confirm('确定要取消并删除本机草稿吗？')) {
+    if (!window.confirm(t('order.cancelDraftConfirm'))) {
       return
     }
     await cancelOrder()
@@ -404,7 +410,7 @@ function OrderingWorkspace({
   }
 
   const handleReturnQueuedOrderToDraft = async () => {
-    if (!window.confirm('返回修改后，必须重新检查菜单、价格和菜品状态。确定继续吗？')) return
+    if (!window.confirm(t('order.returnConfirm'))) return
     await returnQueuedOrderToDraft()
   }
 
@@ -479,15 +485,15 @@ function OrderingWorkspace({
           menuNoticeCollapsed && !catalogUpdateError ? (
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-[rgba(92,106,69,0.28)] bg-[rgba(92,106,69,0.1)] px-4 py-2.5 text-[0.86rem] font-bold text-[rgb(59,73,40)]">
               <span>
-                正在使用缓存菜单
-                {catalogLastUpdatedAt ? ` · 最后更新 ${new Date(catalogLastUpdatedAt).toLocaleString()}` : ''}
+                {t('menu.cached')}
+                {catalogLastUpdatedAt ? ` · ${t('menu.lastUpdated', { time: new Date(catalogLastUpdatedAt).toLocaleString() })}` : ''}
               </span>
               <div className="flex flex-wrap gap-2">
                 <button type="button" onClick={() => setMenuNoticeCollapsed(false)} className="rounded-full bg-white/70 px-3 py-1.5 text-xs font-black">
-                  展开
+                  {t('common.expand')}
                 </button>
                 <button type="button" onClick={() => refreshCatalog()} disabled={catalogUpdating} className="rounded-full bg-white/70 px-3 py-1.5 text-xs font-black disabled:opacity-50">
-                  {catalogUpdating ? '刷新中…' : '刷新菜单'}
+                  {catalogUpdating ? t('common.loading') : translate('menu.refresh')}
                 </button>
               </div>
             </div>
@@ -495,18 +501,18 @@ function OrderingWorkspace({
             <div className={`rounded-[20px] border px-5 py-3 text-[0.95rem] font-bold ${cacheStale ? 'border-[rgba(151,34,34,0.3)] bg-[rgba(151,34,34,0.1)] text-[rgb(116,22,22)]' : 'border-[rgba(92,106,69,0.28)] bg-[rgba(92,106,69,0.1)] text-[rgb(59,73,40)]'}`}>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <span>
-                  当前使用本机缓存菜单
-                  {catalogLastUpdatedAt ? `，最后更新：${new Date(catalogLastUpdatedAt).toLocaleString()}` : ''}
-                  {catalogUpdating ? '；正在后台检查更新…' : ''}
-                  {cacheStale ? '。当前菜单数据较旧，价格和售罄状态可能已变化。' : ''}
+                  {t('menu.cached')}
+                  {catalogLastUpdatedAt ? ` · ${t('menu.lastUpdated', { time: new Date(catalogLastUpdatedAt).toLocaleString() })}` : ''}
+                  {catalogUpdating ? ` · ${t('menu.checking')}` : ''}
+                  {cacheStale ? ` · ${t('menu.old')}` : ''}
                 </span>
                 <div className="flex flex-wrap gap-2">
                   <button type="button" onClick={() => refreshCatalog()} disabled={catalogUpdating} className="rounded-full bg-white/70 px-3 py-1.5 text-xs font-black disabled:opacity-50">
-                    {catalogUpdating ? '刷新中…' : '刷新菜单'}
+                    {catalogUpdating ? t('common.loading') : translate('menu.refresh')}
                   </button>
                   {!catalogUpdateError ? (
                     <button type="button" onClick={dismissMenuNotice} className="rounded-full bg-white/70 px-3 py-1.5 text-xs font-black">
-                      收起提示
+                      {t('common.collapse')}
                     </button>
                   ) : null}
                 </div>
@@ -519,20 +525,20 @@ function OrderingWorkspace({
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-[20px] border border-[rgba(151,34,34,0.22)] bg-[rgba(151,34,34,0.08)] px-5 py-3 text-[0.95rem] font-bold text-[rgb(116,22,22)]">
             <span>{catalogUpdateError}</span>
             <button type="button" onClick={() => refreshCatalog()} disabled={catalogUpdating} className="rounded-full bg-white/70 px-3 py-1.5 text-xs font-black disabled:opacity-50">
-              {catalogUpdating ? '刷新中…' : '重试刷新'}
+              {catalogUpdating ? t('common.loading') : t('menu.refresh')}
             </button>
           </div>
         ) : null}
         {menuUpdateNotice ? (
           menuNoticeCollapsed ? (
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-[rgba(92,106,69,0.28)] bg-[rgba(92,106,69,0.1)] px-4 py-2.5 text-[0.86rem] font-bold text-[rgb(59,73,40)]">
-              <span>菜单已更新 · 新添加菜品使用最新菜单</span>
+              <span>{t('menu.updated')}</span>
               <div className="flex flex-wrap gap-2">
                 <button type="button" onClick={() => setMenuNoticeCollapsed(false)} className="rounded-full bg-white/70 px-3 py-1.5 text-xs font-black">
-                  展开
+                  {t('common.expand')}
                 </button>
                 <button type="button" onClick={() => refreshCatalog()} disabled={catalogUpdating} className="rounded-full bg-white/70 px-3 py-1.5 text-xs font-black disabled:opacity-50">
-                  {catalogUpdating ? '刷新中…' : '刷新菜单'}
+                  {catalogUpdating ? t('common.loading') : translate('menu.refresh')}
                 </button>
               </div>
             </div>
@@ -542,10 +548,10 @@ function OrderingWorkspace({
                 <span>{menuUpdateNotice}</span>
                 <div className="flex flex-wrap gap-2">
                   <button type="button" onClick={() => refreshCatalog()} disabled={catalogUpdating} className="rounded-full bg-white/70 px-3 py-1.5 text-xs font-black disabled:opacity-50">
-                    {catalogUpdating ? '刷新中…' : '刷新菜单'}
+                    {catalogUpdating ? t('common.loading') : translate('menu.refresh')}
                   </button>
                   <button type="button" onClick={dismissMenuNotice} className="rounded-full bg-white/70 px-3 py-1.5 text-xs font-black">
-                    收起提示
+                    {t('common.collapse')}
                   </button>
                 </div>
               </div>
@@ -556,7 +562,7 @@ function OrderingWorkspace({
         {menuRefreshStatusLabel ? (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-[16px] bg-[rgba(26,28,25,0.05)] px-4 py-2.5 text-[0.84rem] font-semibold text-[var(--muted)]">
             <span>{menuRefreshStatusLabel}</span>
-            {catalogRefreshStatus === 'AUTH_REQUIRED' ? <span className="font-black text-[var(--primary)]">请重新登录</span> : null}
+            {catalogRefreshStatus === 'AUTH_REQUIRED' ? <span className="font-black text-[var(--primary)]">{t('network.authRequired')}</span> : null}
           </div>
         ) : null}
 
@@ -580,6 +586,7 @@ function OrderingWorkspace({
             {catalogError ?? draftError ?? persistenceError}
           </div>
         ) : null}
+        {presentation?.notice ? <p className="rounded-2xl bg-[var(--surface-container-low)] px-4 py-3 text-sm text-[var(--on-surface)]">{label({ translations: presentation.notice })}</p> : null}
 
         {draftSubmissionLockMessage ? (
           <div className="rounded-[20px] border border-[rgba(151,34,34,0.22)] bg-[rgba(151,34,34,0.08)] px-5 py-3 text-[0.95rem] font-bold text-[rgb(116,22,22)]">
@@ -589,28 +596,27 @@ function OrderingWorkspace({
 
         {lastLocalSavedAt ? (
           <div className="text-right text-xs font-semibold text-[var(--muted)]">
-            本机草稿已保存：{new Date(lastLocalSavedAt).toLocaleTimeString()}
+            {t('order.localSaved')}: {new Date(lastLocalSavedAt).toLocaleTimeString()}
           </div>
         ) : null}
 
-        <div className={`ordering-workspace-grid grid items-start ${isIpadLandscape ? 'grid-cols-[14rem_minmax(0,1fr)_24rem] gap-3' : 'gap-6 xl:grid-cols-[18rem_minmax(0,1fr)_31rem]'}`}>
+        <div className={`ordering-workspace-grid grid items-start ${isIpadLandscape ? 'grid-cols-[12rem_minmax(0,1fr)_22rem] gap-3' : 'gap-6 xl:grid-cols-[15rem_minmax(0,1fr)_27rem]'}`}>
           <Card tone="well" className={`ordering-sidebar-scroll ${isIpadLandscape ? 'rounded-[24px] p-3.5' : 'rounded-[32px] p-5'}`}>
-            <CategoryNav categories={categories} activeCategoryId={activeCategoryId} onSelect={setActiveCategoryId} compact={isIpadLandscape} />
+            <CategoryNav categories={categories} activeCategoryId={activeCategoryId} onSelect={(categoryId) => { setActiveCategoryId(categoryId); setMenuSearch('') }} compact={isIpadLandscape} />
           </Card>
 
           <Card tone="base" className={`flex flex-col overflow-hidden ${isIpadLandscape ? 'rounded-[24px] p-4' : 'rounded-[32px] p-6'}`}>
             <div className={`shrink-0 ${isIpadLandscape ? 'mb-3 flex items-center justify-between gap-3' : 'mb-5 flex items-center justify-between gap-4'}`}>
               <div>
                 <h1 className={`font-display font-extrabold tracking-[-0.05em] text-[var(--on-surface)] ${isIpadLandscape ? 'text-[2rem]' : 'text-[2.6rem]'}`}>
-                  菜单
+                  {t('nav.menu')}
                 </h1>
                 <p className={`${isIpadLandscape ? 'text-[0.95rem]' : 'text-[1.15rem]'} font-medium text-[var(--muted)]`}>
-                  {catalogLoading ? '正在加载菜单...' : draftLoading ? '正在加载订单...' : '点击菜品选择规格并加入订单。'}
+                  {catalogLoading || draftLoading ? t('common.loading') : t('menu.choose')}
                 </p>
               </div>
               <div className={`rounded-[20px] bg-[rgba(26,28,25,0.04)] font-semibold text-[var(--muted)] ${isIpadLandscape ? 'px-3 py-2 text-[0.8rem]' : 'px-4 py-3 text-sm'}`}>
-                {categories.find((category) => category.id === activeCategoryId)?.labelEn} /{' '}
-                {categories.find((category) => category.id === activeCategoryId)?.labelZh}
+                {menuSearch.trim() ? t('menu.results') : label({ en: categories.find((category) => category.id === activeCategoryId)?.labelEn, zh: categories.find((category) => category.id === activeCategoryId)?.labelZh, fr: categories.find((category) => category.id === activeCategoryId)?.labelFr })}
               </div>
             </div>
 
@@ -680,7 +686,7 @@ function OrderingWorkspace({
           ) : (
             <div className={`flex min-h-[34rem] items-center justify-center bg-[rgba(255,255,255,0.82)] shadow-[0_18px_42px_rgba(26,28,25,0.06)] ${isIpadLandscape ? 'rounded-[24px] p-4' : 'rounded-[32px] p-5'}`}>
               <div className={`text-center text-[var(--muted)] ${isIpadLandscape ? 'text-[0.95rem]' : 'text-[1.05rem]'}`}>
-                {draftLoading ? '正在加载订单...' : '无法打开当前订单。'}
+                {draftLoading ? t('common.loading') : t('order.openFailed')}
               </div>
             </div>
           )}
@@ -705,8 +711,8 @@ function OrderingWorkspace({
         open={takeoutDialogOpen}
         initialValue={effectivePickupLabel ?? ''}
         allowEmpty
-        confirmLabel="保存"
-        helperText="可填写顾客姓名或电话；不填则继续使用系统生成的外卖编号。"
+        confirmLabel={t('common.save')}
+        helperText={t('order.pickupHint')}
         onClose={() => setTakeoutDialogOpen(false)}
         onConfirm={(value) => void handleUpdatePickupLabel(value)}
       />

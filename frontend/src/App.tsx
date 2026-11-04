@@ -10,6 +10,8 @@ import { buildStorePath, chooseDefaultStore, defaultWorkspacePathForRole, mapLeg
 import { fetchWorkspaces } from './services/storeWorkspaceService'
 import { navigateTo } from './features/frontdesk/navigation'
 import { useAuth } from './features/auth/useAuth'
+import { StorePresentationBoundary } from './features/store/StorePresentationBoundary'
+import { useLocale } from './i18n/useLocale'
 
 const UberInboxPage = lazy(() => import('./features/uber-eats/UberInboxPage'))
 const UberMappingPage = lazy(() => import('./features/uber-eats/UberMappingPage'))
@@ -45,12 +47,13 @@ const PASS_ROLES: AppRole[] = ['OWNER', 'ADMIN', 'MANAGER', 'PASS']
 const ALL_ROLES: AppRole[] = ['OWNER', 'ADMIN', 'MANAGER', 'FRONTDESK', 'HOT_KITCHEN', 'NOODLE_VIEW', 'PASS']
 
 function AppShell({ children }: { children: React.ReactNode }) {
+  const { t } = useLocale()
   return (
     <Suspense
       fallback={
         <div className="min-h-screen bg-[var(--surface)] px-6 py-6 text-[var(--on-surface)]">
           <div className="mx-auto max-w-[1200px] rounded-[24px] bg-[rgba(255,255,255,0.8)] px-6 py-5 shadow-[0_14px_32px_rgba(26,28,25,0.05)]">
-            <div className="text-[0.9rem] font-medium text-[var(--muted)]">Loading page...</div>
+            <div className="text-[0.9rem] font-medium text-[var(--muted)]">{t('common.loading')}</div>
           </div>
         </div>
       }
@@ -88,7 +91,7 @@ function storePage(
   return guard(
     <StoreContextProvider key={storeId} storeId={storeId}>
       <RequireStoreAccess>
-        {content}
+        <StorePresentationBoundary>{content}</StorePresentationBoundary>
       </RequireStoreAccess>
     </StoreContextProvider>,
     allowedRoles,

@@ -9,6 +9,9 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+import tarfile
+import stat
+from deployment_targets import DEFAULT_TARGET, ALLO_TARGET, target_config, rendered_files, validate_inventory
 from unittest.mock import patch
 
 HERE = Path(__file__).resolve().parent
@@ -228,7 +231,8 @@ class ExistingResourceTest(unittest.TestCase):
             if args[:3] == ['docker', 'network', 'inspect']: return [docs[args[3]]]
             return [container('backend' if args[2] == 'test_internal-member' else ingress_member)]
         with patch.object(remote, 'run', side_effect=lambda args: ('\n'.join(docs).encode() if args[:3] == ['docker', 'network', 'ls'] else b'')), \
-             patch.object(remote, 'jsonrun', side_effect=inspect) as calls:
+             patch.object(remote, 'jsonrun', side_effect=inspect) as calls, \
+             patch.object(remote, 'container_documents', side_effect=lambda ids: [container('backend' if ids[0] == 'test_internal-member' else ingress_member)]):
             remote.verify_existing_resources()
             self.assertEqual(2, sum(call.args[0][:3] == ['docker', 'network', 'inspect'] for call in calls.call_args_list))
 
@@ -515,6 +519,266 @@ class CertbotHookTest(unittest.TestCase):
         for flag in ('--pre-hook', '--post-hook', '--deploy-hook'): self.assertEqual('', args[args.index(flag) + 1])
         self.assertEqual(remote.DOMAIN, args[args.index('--cert-name') + 1])
         self.assertNotIn('--nginx', args); self.assertNotIn('--standalone', args)
+
+
+class FixedTargetTest(unittest.TestCase):
+    def test_template_defaults_and_rendered_topology_unchanged(self):
+        self.assertEqual('/srv/restaurant-pos/test', str(target_config()['root']))
+        files = rendered_files(HERE)
+        for name in ('compose.yml', 'relay.conf', 'nginx.conf', 'Dockerfile.backend', 'Dockerfile.frontend'):
+            self.assertEqual((HERE/name).read_bytes(), files[name])
+
+    def test_unknown_target_rejected(self):
+        for name in ('production', '../../test', 'restaurant-pos-staging', 'arbitrary'):
+            with self.subTest(name=name), self.assertRaises(ValueError): target_config(name)
+
+    def test_allo_protects_production_and_staging_without_retired_template(self):
+        with remote.target_context(ALLO_TARGET):
+            self.assertEqual(remote.BASE_PROTECTED, remote.PROTECTED)
+            self.assertEqual(8, len(remote.PROTECTED))
+            self.assertFalse(any(name.startswith(DEFAULT_TARGET + '-') for name in remote.PROTECTED))
+        self.assertEqual(DEFAULT_TARGET, remote.ACTIVE_TARGET)
+
+    def test_structural_inspect_never_reads_env_or_logs(self):
+        with patch.object(remote, 'run', return_value=b'{}\n') as command:
+            remote.container_documents(['example'])
+        fmt = command.call_args.args[0][3]
+        self.assertIn('--format', command.call_args.args[0])
+        self.assertNotIn('.Config.Env', fmt); self.assertNotIn('Health.Log', fmt)
+        self.assertNotIn('Cmd', fmt); self.assertIn('.Config.Labels', fmt)
+
+    def test_private_runtime_secrets_are_independent_and_reentry_stable(self):
+        images=json.loads((HERE/'images.json').read_text())
+        with tempfile.TemporaryDirectory() as tmp:
+            folder=Path(tmp).resolve(); values=[]
+            for target in (DEFAULT_TARGET,ALLO_TARGET):
+                location=folder/target;location.mkdir()
+                with remote.target_context(target),patch.object(remote,'ROOT',location):
+                    first=remote.runtime_env(SHA,images);before=first.read_bytes()
+                    remote.runtime_env(SHA,images)
+                    self.assertEqual(before,first.read_bytes());self.assertEqual(0o600,stat.S_IMODE(first.stat().st_mode))
+                    values.append(dict(line.split('=',1) for line in before.decode().splitlines()))
+            self.assertNotEqual(values[0]['TEST_JWT_SECRET'],values[1]['TEST_JWT_SECRET'])
+            self.assertNotEqual(values[0]['TEST_DB_PASSWORD'],values[1]['TEST_DB_PASSWORD'])
+            self.assertNotIn('TEMPLATE_TEST_OWNER_PASSWORD',values[1]);self.assertIn('ALLO_TEST_OWNER_PASSWORD',values[1])
+
+    def test_allo_inventory_refuses_unreviewed_env_file(self):
+        names=set(rendered_files(HERE,ALLO_TARGET))|{'app.jar','code-sha.txt','checks.json','merchant/menu.source.json','dist/index.html'}
+        validate_inventory(names,ALLO_TARGET)
+        with self.assertRaises(ValueError):validate_inventory(names|{'runtime.env'},ALLO_TARGET)
+        with self.assertRaises(ValueError):validate_inventory(names-{'merchant/menu.source.json'},ALLO_TARGET)
+
+    def test_allo_cannot_consume_template_manifest_identity(self):
+        with remote.target_context(ALLO_TARGET):
+            with self.assertRaises(ValueError): remote.require_target_identity({'deployment_target':DEFAULT_TARGET})
+            with self.assertRaises(ValueError): remote.require_target_identity({})
+            remote.require_target_identity({'deployment_target':ALLO_TARGET})
+
+
+class AlloComposeTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.temp = tempfile.TemporaryDirectory(); cls.folder = Path(cls.temp.name).resolve()
+        for name, raw in rendered_files(HERE, ALLO_TARGET).items(): (cls.folder/name).write_bytes(raw)
+        (cls.folder/'merchant').mkdir(); (cls.folder/'merchant/menu.source.json').write_text('{}')
+        images = json.loads((HERE/'images.json').read_text())
+        env = {k:os.environ[k] for k in ('PATH','HOME') if k in os.environ}
+        env.update(TEST_IMAGE_SHA=SHA, TEST_DB_IMAGE=images['postgres'], TEST_NGINX_IMAGE=images['nginx'])
+        for key in ('TEST_DB_PASSWORD','TEST_JWT_SECRET','ALLO_TEST_OWNER_PASSWORD','ALLO_TEST_MANAGER_PASSWORD'): env[key]='0'*64
+        result = subprocess.run(['docker','compose','--project-name',ALLO_TARGET,'--env-file','/dev/null','--file',str(cls.folder/'compose.yml'),'config','--format','json'],env=env,capture_output=True,text=True)
+        if result.returncode: raise RuntimeError('Allo local Compose parse failed; output withheld')
+        cls.model=json.loads(result.stdout)
+
+    @classmethod
+    def tearDownClass(cls): cls.temp.cleanup()
+
+    def validate(self, model=None):
+        with remote.target_context(ALLO_TARGET): remote.validate_compose(model or self.model,SHA,self.folder)
+
+    def reject(self, mutate):
+        model=copy.deepcopy(self.model);mutate(model)
+        with self.assertRaises(ValueError): self.validate(model)
+
+    def test_actual_allo_compose_and_backend_menu_readonly(self):
+        self.validate()
+        backend=self.model['services']['backend']
+        self.assertEqual('allo-test',backend['environment']['SPRING_PROFILES_ACTIVE'])
+        self.assertEqual('/run/merchant/menu.source.json',backend['volumes'][0]['target'])
+        self.assertTrue(backend['volumes'][0]['read_only'])
+        self.assertNotIn('TEMPLATE_TEST_OWNER_PASSWORD',backend['environment'])
+        self.assertIn('ALLO_TEST_OWNER_PASSWORD',backend['environment'])
+        self.assertEqual('28080',str(self.model['services']['frontend']['ports'][0]['published']))
+        self.assertIn('172.18.0.1:28480', (self.folder/'relay.conf').read_text())
+        self.assertIn('127.0.0.1:28080', (self.folder/'relay.conf').read_text())
+        self.assertEqual((HERE/'relay.conf').read_bytes(), (self.folder/'relay.conf').read_bytes())
+
+    def test_template_database_rejected(self): self.reject(lambda m:m['services']['db']['environment'].update(POSTGRES_DB='restaurant_template_test'))
+    def test_template_user_rejected(self): self.reject(lambda m:m['services']['backend']['environment'].update(SPRING_DATASOURCE_USERNAME='template_test'))
+    def test_template_profile_rejected(self): self.reject(lambda m:m['services']['backend']['environment'].update(SPRING_PROFILES_ACTIVE='template-test'))
+    def test_template_volume_rejected(self): self.reject(lambda m:m['volumes']['test_postgres'].update(name=DEFAULT_TARGET+'_postgres'))
+    def test_foreign_network_rejected(self): self.reject(lambda m:m['networks']['test_internal'].update(name=DEFAULT_TARGET+'_internal'))
+    def test_parallel_test_frontend_port_rejected(self): self.reject(lambda m:m['services']['frontend']['ports'][0].update(published='28180'))
+    def test_menu_writable_rejected(self): self.reject(lambda m:m['services']['backend']['volumes'][0].update(read_only=False))
+    def test_menu_from_other_release_rejected(self): self.reject(lambda m:m['services']['backend']['volumes'][0].update(source='/srv/restaurant-pos/test/private/menu.json'))
+    def test_additional_backend_mount_rejected(self): self.reject(lambda m:m['services']['backend']['volumes'].append(copy.deepcopy(m['services']['backend']['volumes'][0])))
+    def test_backend_egress_rejected(self): self.reject(lambda m:m['services']['backend']['networks'].update(test_ingress={}))
+    def test_old_template_container_cannot_be_adopted(self):
+        original=container('db')
+        with remote.target_context(ALLO_TARGET), self.assertRaises(ValueError): remote.require_project_container(original,'db')
+    def test_template_network_cannot_be_adopted(self):
+        doc={'Name':DEFAULT_TARGET+'_internal','Driver':'bridge','Scope':'local','Internal':True,'Labels':{'com.docker.compose.project':DEFAULT_TARGET,'com.docker.compose.network':'test_internal'}}
+        with remote.target_context(ALLO_TARGET), self.assertRaises(ValueError): remote.validate_network_document(doc)
+
+
+class MenuArtifactTest(unittest.TestCase):
+    def setUp(self):
+        self.temp=tempfile.TemporaryDirectory();self.folder=Path(self.temp.name).resolve()
+        self.menu=self.folder/'menu.json';self.menu.write_text('{"synthetic_test":true}');self.menu.chmod(0o600)
+    def tearDown(self): self.temp.cleanup()
+    def test_private_json_only(self): self.assertEqual(self.menu.read_bytes(),release.read_merchant_menu(self.menu,ALLO_TARGET))
+    def test_template_target_cannot_import_customer_menu(self):
+        with self.assertRaises(ValueError): release.read_merchant_menu(self.menu,DEFAULT_TARGET)
+    def test_world_readable_source_refused(self):
+        self.menu.chmod(0o644)
+        with self.assertRaises(ValueError): release.read_merchant_menu(self.menu,ALLO_TARGET)
+    def test_source_symlink_refused(self):
+        alias=self.folder/'alias.json';alias.symlink_to(self.menu)
+        with self.assertRaises(ValueError): release.read_merchant_menu(alias,ALLO_TARGET)
+    def test_invalid_json_refused(self):
+        self.menu.write_text('invalid')
+        with self.assertRaises(ValueError): release.read_merchant_menu(self.menu,ALLO_TARGET)
+    def test_allo_receipt_binds_menu_and_namespace(self):
+        good={'code_sha':SHA,'checks':{k:'PASS' for k in release.CHECKS},'independent_review':'ACCEPT','commands':['synthetic unit proof'],'jar_sha256':'jar','dist_sha256':'dist','environment':'ISOLATED_SYNTHETIC_MOCK','deployment_target':ALLO_TARGET,'merchant_menu_sha256':'menu','client_namespace':ALLO_TARGET}
+        release.receipt_ok(good,SHA,'jar','dist',ALLO_TARGET,'menu')
+        for key,value in [('deployment_target',DEFAULT_TARGET),('merchant_menu_sha256','other'),('client_namespace',SHA)]:
+            bad=copy.deepcopy(good);bad[key]=value
+            with self.subTest(key=key),self.assertRaises(ValueError): release.receipt_ok(bad,SHA,'jar','dist',ALLO_TARGET,'menu')
+
+    def pack(self):
+        repo=self.folder/'repo';(repo/'backend/target').mkdir(parents=True);(repo/'frontend/dist').mkdir(parents=True);(repo/'backend/src/main/resources/db/migration').mkdir(parents=True)
+        jar=b'synthetic tested jar';(repo/'backend/target/app.jar').write_bytes(jar)
+        (repo/'frontend/dist/index.html').write_text(SHA+' '+ALLO_TARGET)
+        (repo/'backend/src/main/resources/db/migration/V1__synthetic.sql').write_text('-- fixture')
+        files=release.dist_files(repo/'frontend/dist')
+        receipt={'code_sha':SHA,'checks':{k:'PASS' for k in release.CHECKS},'independent_review':'ACCEPT','commands':['synthetic packaging test only'],'jar_sha256':release.digest(jar),'dist_sha256':release.tree_digest(files),'environment':'ISOLATED_SYNTHETIC_MOCK','deployment_target':ALLO_TARGET,'merchant_menu_sha256':release.digest(self.menu.read_bytes()),'client_namespace':ALLO_TARGET}
+        proof=self.folder/'receipt.json';proof.write_text(json.dumps(receipt))
+        bundle=self.folder/'bundle.tar.gz'
+        with patch.object(release,'REPO',repo),patch.object(release.subprocess,'check_output',side_effect=lambda args,**kw:SHA if args[1]=='rev-parse' else b''),contextlib.redirect_stdout(io.StringIO()):
+            release.pack(proof,bundle,ALLO_TARGET,self.menu)
+        return bundle
+
+    def test_pack_carries_exact_menu_and_fixed_target(self):
+        bundle=self.pack()
+        self.assertEqual(0o600,stat.S_IMODE(bundle.stat().st_mode))
+        with tarfile.open(bundle,'r:gz') as archive:
+            manifest=json.load(archive.extractfile('manifest.json'))
+            self.assertEqual(ALLO_TARGET,manifest['deployment_target'])
+            self.assertEqual(self.menu.read_bytes(),archive.extractfile('merchant/menu.source.json').read())
+            self.assertIn(b'allo-test',archive.extractfile('compose.yml').read())
+            self.assertNotIn('runtime.env',archive.getnames())
+            self.assertIn('deployment_targets.py',archive.getnames())
+        with patch.object(release.subprocess,'run') as ssh:
+            with self.assertRaises(ValueError): release.upload(bundle,SHA,DEFAULT_TARGET)
+            ssh.assert_not_called()
+
+    def test_remote_verifier_rejects_changed_menu(self):
+        bundle=self.pack();root=self.folder/'remote';destination=root/'releases'/SHA;destination.mkdir(parents=True)
+        with tarfile.open(bundle,'r:gz') as archive:
+            for member in archive.getmembers():
+                path=destination/member.name;path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(archive.extractfile(member).read())
+        with remote.target_context(ALLO_TARGET),patch.object(remote,'ROOT',root):
+            remote.verify_release(destination,SHA)
+            (destination/'merchant/menu.source.json').write_text('{}')
+            with self.assertRaises(ValueError):remote.verify_release(destination,SHA)
+
+
+class AlloReplacementBoundaryTest(unittest.TestCase):
+    def test_every_edge_and_certificate_cli_action_refused_before_release_or_runtime_reads(self):
+        for action in ('edge-http','edge-https','edge-rollback','edge-switch','edge-restore','issue-cert'):
+            with self.subTest(action=action), remote.target_context(ALLO_TARGET), \
+                 patch('sys.argv',['remote.py',action,'--target',ALLO_TARGET,'--sha',SHA]), \
+                 patch.object(remote,'verify_release') as verify, patch.object(remote,'run') as command:
+                with self.assertRaisesRegex(ValueError,'shared edge mutation is forbidden'):remote.main()
+                verify.assert_not_called();command.assert_not_called()
+
+    def test_direct_edge_and_certificate_calls_cannot_bypass_cli_guard(self):
+        actions=(lambda:remote.apply_edge(True,'f'*64),lambda:remote.managed_slot_candidate(b'original'),
+                 lambda:remote.managed_slot_candidate(b'original',restore=True),lambda:remote.issue_cert())
+        with remote.target_context(ALLO_TARGET), patch.object(remote,'run') as command, \
+             patch.object(remote,'private_write') as write, patch.object(remote,'locked_edge_source') as locked:
+            for action in actions:
+                with self.assertRaises(ValueError):action()
+            command.assert_not_called();write.assert_not_called();locked.assert_not_called()
+
+    def test_template_retirement_guard_refuses_even_stopped_named_container(self):
+        for service in ('db','backend','frontend','relay'):
+            raw=(DEFAULT_TARGET+'-'+service+'-1\n').encode()
+            with self.subTest(service=service), remote.target_context(ALLO_TARGET), patch.object(remote,'run',return_value=raw) as command:
+                with self.assertRaisesRegex(ValueError,'retired before Allo'):remote.verify_template_retired()
+                self.assertEqual(['docker','ps','-a','--format','{{.Names}}'],command.call_args.args[0])
+
+    def test_retired_template_allows_existing_allo_or_other_environment_names(self):
+        raw=('cloud-backend-1\nrestaurant-pos-staging-db-1\n'+ALLO_TARGET+'-frontend-1\n').encode()
+        with remote.target_context(ALLO_TARGET), patch.object(remote,'run',return_value=raw):remote.verify_template_retired()
+        with remote.target_context(DEFAULT_TARGET), patch.object(remote,'run') as command:
+            remote.verify_template_retired();command.assert_not_called()
+
+    def test_deploy_checks_retirement_before_any_resource_or_secret_action(self):
+        with remote.target_context(ALLO_TARGET), patch.object(remote,'run',return_value=(DEFAULT_TARGET+'-db-1\n').encode()), \
+             patch.object(remote,'protected_snapshot') as snapshot, patch.object(remote,'runtime_env') as secrets:
+            with self.assertRaisesRegex(ValueError,'retired before Allo'):remote.deploy(Path('/unused'),SHA,{})
+            snapshot.assert_not_called();secrets.assert_not_called()
+
+    def test_old_template_listener_on_reused_port_is_not_adopted(self):
+        old=container('relay')
+        row={'port':28480,'ip':'172.18.0.1','pids':[7]}
+        with remote.target_context(ALLO_TARGET):
+            with self.assertRaisesRegex(ValueError,'unknown listener'):
+                remote.validate_port_owners([row],{}, {})
+            with self.assertRaisesRegex(ValueError,'non-Test container'):
+                remote.validate_port_owners([row],{'relay':old},{7:{'cgroup':'/docker/test-container-id','args':[]}})
+
+    def test_protected_snapshot_retains_stopped_staging_and_detects_state_changes(self):
+        rows=[]
+        for name in remote.BASE_PROTECTED:
+            rows.append(['/'+name,'id-'+name,'image-'+name,'original-start',0,not name.startswith('restaurant-pos-staging-'),False,'healthy' if name=='cloud-db-1' else None])
+        def encoded(values):return ('\n'.join('|'.join(json.dumps(v) for v in row) for row in values)+'\n').encode()
+        with remote.target_context(ALLO_TARGET), patch.object(remote,'run',return_value=encoded(rows)) as command:
+            before=remote.protected_snapshot()
+            fmt=command.call_args.args[0][3]
+            self.assertIn('.State.Running',fmt);self.assertIn('.State.Restarting',fmt);self.assertIn('.State.Health.Status',fmt)
+            self.assertNotIn('.Config.Env',fmt);self.assertNotIn('Health.Log',fmt)
+        self.assertFalse(before['/restaurant-pos-staging-backend-1']['running'])
+        for field,value in ((5,False),(6,True),(7,'unhealthy')):
+            changed=copy.deepcopy(rows);changed[0][field]=value
+            with self.subTest(field=field),remote.target_context(ALLO_TARGET),patch.object(remote,'run',return_value=encoded(changed)):
+                self.assertNotEqual(before,remote.protected_snapshot())
+
+    def test_protected_stop_without_recreation_fails_deployment(self):
+        before={'/cloud-backend-1':{'id':'same','image':'same','started':'same','restarts':0,'running':True,'restarting':False,'health':'healthy'}}
+        after=copy.deepcopy(before);after['/cloud-backend-1']['running']=False
+        with tempfile.TemporaryDirectory() as folder,remote.target_context(ALLO_TARGET),contextlib.ExitStack() as stack:
+            release_folder=Path(folder).resolve();(release_folder/'relay.conf').write_text('synthetic');(release_folder/'merchant').mkdir();(release_folder/'merchant/menu.source.json').write_text('{}')
+            for name in ('verify_template_retired','verify_existing_resources','verify_port_owners','validate_compose'):
+                stack.enter_context(patch.object(remote,name))
+            stack.enter_context(patch.object(remote,'protected_snapshot',side_effect=[before,after]))
+            stack.enter_context(patch.object(remote,'admission',return_value={}))
+            stack.enter_context(patch.object(remote,'runtime_env',return_value=release_folder/'private.env'))
+            stack.enter_context(patch.object(remote,'compose',return_value=b'{}'))
+            stack.enter_context(patch.object(remote,'run',return_value=b''))
+            response=stack.enter_context(patch.object(remote.urllib.request,'urlopen')).return_value.__enter__.return_value
+            response.status=200;response.read.return_value=b'{"data":{"status":"UP"}}'
+            verified=stack.enter_context(patch.object(remote,'verify_runtime'))
+            evidence=stack.enter_context(patch.object(remote,'evidence'))
+            with self.assertRaisesRegex(RuntimeError,'Protected environment identity changed'):
+                remote.deploy(release_folder,SHA,{'jre':'synthetic-jre','nginx':'synthetic-nginx','postgres':'synthetic-postgres'})
+            verified.assert_not_called();evidence.assert_not_called()
+
+    def test_first_start_ram_admission_is_not_lowered_for_replacement(self):
+        with remote.target_context(ALLO_TARGET),patch.object(remote.Path,'read_text',return_value='MemAvailable: '+str(1099*1024)+' kB\n'), \
+             patch.object(remote.shutil,'disk_usage',return_value=type('Disk',(),{'free':7*1024**3})()),patch.object(remote,'container_documents') as inspected:
+            with self.assertRaisesRegex(ValueError,'1100MiB'):remote.admission()
+            inspected.assert_not_called()
 
 
 if __name__ == '__main__': unittest.main()

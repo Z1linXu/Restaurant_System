@@ -36,6 +36,12 @@ public class MenuItem {
     @Column(name = "name_en")
     public String name_en;
 
+    @Column(name = "name_fr")
+    public String name_fr;
+
+    @Column(name = "refill_category_code")
+    public String refill_category_code;
+
     @Column(name = "sku")
     public String sku;
 

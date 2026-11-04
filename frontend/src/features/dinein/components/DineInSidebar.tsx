@@ -1,3 +1,4 @@
+import { useLocale } from '../../../i18n/useLocale'
 import { navigateTo } from '../../frontdesk/navigation'
 import { useAuth } from '../../auth/useAuth'
 import { StoreSwitcher } from '../../store/StoreSwitcher'
@@ -30,6 +31,8 @@ export function DineInSidebar({
   onToggleCollapse,
   compact = false,
 }: DineInSidebarProps) {
+  const { t } = useLocale()
+  const navLabel = (id: string) => id === 'orders' ? t('nav.orders') : id === 'menu' ? t('nav.menu') : id === 'dashboard' ? t('nav.dashboard') : 'Uber Eats'
   const { isFrontdesk } = useAuth()
   const currentStore = useOptionalCurrentStore()
   const moduleConfiguration = currentStore?.moduleConfiguration ?? null
@@ -53,7 +56,7 @@ export function DineInSidebar({
                 <p className={`font-display font-bold tracking-[-0.04em] text-[var(--on-surface)] ${compact ? 'text-[1.15rem]' : 'text-[1.5rem]'}`}>
                   {currentStore?.storeName ?? 'Frontdesk'}
                 </p>
-                <p className={`${compact ? 'text-[0.78rem]' : 'text-sm'} text-[var(--muted)]`}>Shift: Morning</p>
+                <p className={`${compact ? 'text-[0.78rem]' : 'text-sm'} text-[var(--muted)]`}>{t('order.dineIn')}</p>
               </div>
             </div>
           ) : (
@@ -66,7 +69,7 @@ export function DineInSidebar({
             type="button"
             onClick={onToggleCollapse}
             className={`flex items-center justify-center rounded-2xl bg-[rgba(255,255,255,0.7)] text-xl text-[var(--on-surface)] shadow-[0_10px_22px_rgba(26,28,25,0.05)] transition hover:bg-white ${compact ? 'h-9 w-9 text-base' : 'h-11 w-11'}`}
-            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-label={collapsed ? t('nav.expand') : t('nav.collapse')}
           >
             {collapsed ? '»' : '«'}
           </button>
@@ -106,10 +109,10 @@ export function DineInSidebar({
                     ? 'bg-[var(--surface-container-lowest)] text-[var(--primary)] shadow-[0_12px_28px_rgba(26,28,25,0.06)]'
                     : 'text-[rgba(26,28,25,0.72)] hover:bg-[rgba(255,255,255,0.45)]'
                 }`}
-                title={collapsed ? item.label : undefined}
+                title={collapsed ? navLabel(item.id) : undefined}
               >
                 <span className={`${compact ? 'text-[1.45rem]' : 'text-[1.8rem]'} leading-none`}>{item.icon}</span>
-                {!collapsed ? <span className={`${compact ? 'text-[0.92rem]' : 'text-[1rem]'} font-medium`}>{item.label}</span> : null}
+                {!collapsed ? <span className={`${compact ? 'text-[0.92rem]' : 'text-[1rem]'} font-medium`}>{navLabel(item.id)}</span> : null}
               </button>
             )
           })}

@@ -1,10 +1,13 @@
 import { act, create } from 'react-test-renderer'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ComboConfigurationPanel } from './ComboConfigurationPanel'
+import { appI18n } from '../../i18n/engine'
 import { fetchStoreComboConfiguration, updateStoreComboConfiguration, type StoreComboConfigurationRecord } from '../../services/ownerMenuOptionService'
 
 vi.mock('../../services/ownerMenuOptionService', () => ({ fetchStoreComboConfiguration: vi.fn(), updateStoreComboConfiguration: vi.fn() }))
 vi.mock('./ComboEggOverridesPanel', () => ({ ComboEggOverridesPanel: () => null }))
+
+beforeEach(async () => { await appI18n.changeLanguage('en') })
 
 describe('Store Default Egg control', () => {
   it('saves a Store default through existing group configuration, retaining unrelated component mapping', async () => {
@@ -28,7 +31,16 @@ describe('Store Default Egg control', () => {
     expect(select.props.value).toBe('combo_tea_egg')
     expect(select.props.disabled).toBe(false)
     await act(async () => select.props.onChange({ target: { value: 'combo_fried_egg' } }))
-    await act(async () => renderer!.root.findAllByType('button').find((button) => button.children.join('') === 'Save')!.props.onClick())
+    await act(async () => { await appI18n.changeLanguage('fr-CA') })
+    expect(renderer!.root.findByProps({ 'aria-label': 'Œuf par défaut du restaurant' }).props.value).toBe('combo_fried_egg')
+    expect(JSON.stringify(renderer!.toJSON())).toContain('Configuration des combos')
+    expect(JSON.stringify(renderer!.toJSON())).toContain('combo_fried_egg')
+    expect(updateStoreComboConfiguration).not.toHaveBeenCalled()
+    await act(async () => { await appI18n.changeLanguage('zh-CN') })
+    expect(renderer!.root.findByProps({ 'aria-label': '门店默认蛋' }).props.value).toBe('combo_fried_egg')
+    expect(JSON.stringify(renderer!.toJSON())).toContain('套餐配置')
+    expect(fetchStoreComboConfiguration).toHaveBeenCalledTimes(1)
+    await act(async () => renderer!.root.findAllByType('button').find((button) => button.children.join('') === '保存')!.props.onClick())
     const payload = vi.mocked(updateStoreComboConfiguration).mock.calls[0][0]
     expect(payload.groups?.[0].default_component_code).toBe('combo_fried_egg')
     expect(payload.groups?.[0].components.map((component) => component.is_default)).toEqual([false, true])

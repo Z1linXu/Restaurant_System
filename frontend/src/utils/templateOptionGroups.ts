@@ -10,6 +10,7 @@ export function newTemplateGroup(kind: TemplateOptionGroup['kind'] = 'CUSTOM'): 
 
 export function copyTemplateGroup(source: TemplateOptionGroup): TemplateOptionGroup {
   return { ...source, group_instance_code: crypto.randomUUID(), source_library_code: source.group_instance_code, default_option_ids: [],
+    name_translations: source.name_translations ? { ...source.name_translations } : undefined,
     options: source.options.map((option) => ({ ...option, id: undefined, parent_option_id: null,
       is_default: Boolean(option.is_default || (option.id != null && source.default_option_ids.includes(option.id))) })) }
 }

@@ -415,6 +415,7 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         target.code = menuCategory.code;
         target.name_zh = menuCategory.name_zh;
         target.name_en = menuCategory.name_en;
+        if (menuCategory.name_fr != null) target.name_fr = menuCategory.name_fr.trim();
         target.sort_order = menuCategory.sort_order;
         target.is_active = menuCategory.is_active == null ? true : menuCategory.is_active;
         stamp(target, menuCategory.id == null);
@@ -467,6 +468,7 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         target.sku = menuItem.sku;
         target.name_zh = menuItem.name_zh;
         target.name_en = menuItem.name_en;
+        if (menuItem.name_fr != null) target.name_fr = menuItem.name_fr.trim();
         target.item_type = menuItem.item_type;
         target.base_price = menuItem.base_price;
         target.cost_per_item = menuItem.cost_per_item;
@@ -568,6 +570,7 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
         target.sort_order = menuItemOption.sort_order;
         target.name_zh = menuItemOption.name_zh;
         target.name_en = menuItemOption.name_en;
+        if (menuItemOption.name_fr != null) target.name_fr = menuItemOption.name_fr.trim();
         target.price_delta = menuItemOption.price_delta;
         target.is_active = menuItemOption.is_active == null ? true : menuItemOption.is_active;
         stamp(target, menuItemOption.id == null);

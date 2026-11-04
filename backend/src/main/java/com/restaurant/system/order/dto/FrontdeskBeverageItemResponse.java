@@ -13,6 +13,7 @@ public class FrontdeskBeverageItemResponse {
     public Long order_item_id;
     public String item_name_snapshot_zh;
     public String item_name_snapshot_en;
+    public String item_name_snapshot_fr;
     public Integer quantity;
     public String special_instructions_snapshot;
     public String beverage_status;

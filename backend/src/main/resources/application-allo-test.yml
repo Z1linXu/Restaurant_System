@@ -1,0 +1,84 @@
+{
+  "spring": {
+    "datasource": {
+      "url": "${SPRING_DATASOURCE_URL}",
+      "username": "${SPRING_DATASOURCE_USERNAME}",
+      "password": "${SPRING_DATASOURCE_PASSWORD}",
+      "driver-class-name": "org.postgresql.Driver",
+      "hikari": {
+        "maximum-pool-size": 4,
+        "minimum-idle": 1
+      }
+    },
+    "jpa": {
+      "hibernate": {
+        "ddl-auto": "validate"
+      },
+      "show-sql": false
+    },
+    "flyway": {
+      "enabled": true,
+      "locations": "classpath:db/migration",
+      "validate-on-migrate": true
+    }
+  },
+  "server": {
+    "port": 8080
+  },
+  "mybatis-plus": {
+    "configuration": {
+      "log-impl": "org.apache.ibatis.logging.nologging.NoLoggingImpl"
+    }
+  },
+  "app": {
+    "environment": "test",
+    "template": {
+      "enabled": true,
+      "mock-only": true,
+      "test-bootstrap": {
+        "enabled": false
+      }
+    },
+    "seed": {
+      "runtime-enabled": false,
+      "force-overwrite": false,
+      "safe-metadata-enabled": false,
+      "default-users-enabled": false,
+      "demo-data-enabled": false,
+      "membership-supplement-enabled": false,
+      "production-bootstrap-enabled": false
+    },
+    "auth": {
+      "jwt-secret": "${APP_AUTH_JWT_SECRET}",
+      "x-user-id-fallback-enabled": false
+    },
+    "dev-tools": {
+      "role-switcher-enabled": false
+    },
+    "daily-close": {
+      "enabled": false
+    },
+    "printing": {
+      "allowed-modes": [
+        "MOCK",
+        "DISABLED"
+      ],
+      "endpoint-configuration-enabled": false
+    },
+    "features": {
+      "core-pos": true,
+      "printing": true,
+      "kds": false,
+      "admin": true,
+      "analytics": true,
+      "platform": false,
+      "developer-tools": false
+    },
+    "delivery": {
+      "allo-bootstrap-enabled": true,
+      "menu-file": "${ALLO_MENU_FILE:/run/merchant/menu.source.json}"
+    }
+  },
+  "UBER_EATS_ENABLED": false,
+  "UBER_EATS_WORKER_ENABLED": false
+}

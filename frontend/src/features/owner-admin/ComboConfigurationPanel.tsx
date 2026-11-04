@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
+import { translate } from '../../i18n/engine'
+import { useLocale } from '../../i18n/useLocale'
 import {
   fetchStoreComboConfiguration,
   updateStoreComboConfiguration,
@@ -66,6 +68,7 @@ function groupCode(group: StoreComboConfigurationGroupRecord) {
 }
 
 export function ComboConfigurationPanel({ storeId, menuItems = [], onSaved }: ComboConfigurationPanelProps) {
+  const { t } = useLocale()
   const [configuration, setConfiguration] = useState<StoreComboConfigurationRecord | null>(null)
   const [draft, setDraft] = useState<StoreComboConfigurationRecord | null>(null)
   const [loading, setLoading] = useState(true)
@@ -84,7 +87,7 @@ export function ComboConfigurationPanel({ storeId, menuItems = [], onSaved }: Co
         setDraft(cloneConfiguration(nextConfiguration))
       } catch (loadError) {
         if (!cancelled) {
-          setError(loadError instanceof Error ? loadError.message : 'Failed to load Combo Configuration')
+          setError(loadError instanceof Error ? loadError.message : translate('management.combo.loadFailed'))
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -263,9 +266,9 @@ export function ComboConfigurationPanel({ storeId, menuItems = [], onSaved }: Co
       })
       setConfiguration(saved)
       setDraft(cloneConfiguration(saved))
-      onSaved?.('Combo Configuration saved / 套餐配置已保存')
+      onSaved?.(t('management.combo.saved'))
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Failed to save Combo Configuration')
+      setError(saveError instanceof Error ? saveError.message : t('management.combo.saveFailed'))
     } finally {
       setSaving(false)
     }
@@ -275,9 +278,9 @@ export function ComboConfigurationPanel({ storeId, menuItems = [], onSaved }: Co
     <section className="rounded-[26px] bg-[rgba(255,255,255,0.84)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="text-[1.1rem] font-bold text-[var(--on-surface)]">Combo Configuration / 套餐配置</div>
+          <div className="text-[1.1rem] font-bold text-[var(--on-surface)]">{t('management.combo.title')}</div>
           <div className="mt-1 text-[0.85rem] text-[var(--muted)]">
-            Store-level combo groups and components. Combo price still comes from Pricing Rules.
+            {t('management.combo.description')}
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -287,7 +290,7 @@ export function ComboConfigurationPanel({ storeId, menuItems = [], onSaved }: Co
             disabled={loading || saving || !draft}
             className="rounded-[14px] border border-[rgba(97,0,0,0.18)] bg-white px-3 py-2 text-[0.82rem] font-semibold text-[var(--primary)] disabled:opacity-60"
           >
-            + New Group
+            {t('management.combo.newGroup')}
           </button>
           <button
             type="button"
@@ -295,7 +298,7 @@ export function ComboConfigurationPanel({ storeId, menuItems = [], onSaved }: Co
             disabled={loading || saving || !dirty || !draft}
             className="rounded-[14px] bg-[var(--primary)] px-3 py-2 text-[0.82rem] font-semibold text-white disabled:opacity-60"
           >
-            {saving ? 'Saving...' : 'Save'}
+            {saving ? t('common.saving') : t('common.save')}
           </button>
         </div>
       </div>
@@ -308,16 +311,16 @@ export function ComboConfigurationPanel({ storeId, menuItems = [], onSaved }: Co
 
       {loading || !draft ? (
         <div className="mt-4 rounded-[16px] bg-[rgba(26,28,25,0.04)] px-3 py-3 text-[0.84rem] text-[var(--muted)]">
-          Loading Combo Configuration...
+          {t('management.combo.loading')}
         </div>
       ) : (
         <div className="mt-4 grid gap-3">
           {eggGroup ? (
             <div className="rounded-[20px] bg-[rgba(26,28,25,0.035)] p-4">
               <label className="grid gap-2 font-semibold">
-                Store Default Egg / 门店默认蛋
+                {t('management.combo.defaultEgg')}
                 <select
-                  aria-label="Store Default Egg"
+                  aria-label={t('management.combo.defaultEgg')}
                   value={eggGroup.default_component_code ?? ''}
                   disabled={saving || eggGroup.enabled === false}
                   onChange={(event) => patchGroup(eggGroupIndex, {
@@ -328,45 +331,45 @@ export function ComboConfigurationPanel({ storeId, menuItems = [], onSaved }: Co
                   })}
                   className="min-h-11 rounded-[12px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2"
                 >
-                  <option value="">Choose egg / 选择蛋</option>
+                  <option value="">{t('management.combo.chooseEgg')}</option>
                   {eggGroup.components.filter((component) => component.enabled && component.component_code).map((component) => (
                     <option key={component.component_code} value={component.component_code}>{component.name_zh} / {component.name_en}</option>
                   ))}
                 </select>
               </label>
-              <p className="mt-2 text-sm text-[var(--muted)]">Applies to Combo items unless an item has an override. Customers can still choose another egg. / 套餐菜品默认使用此蛋；可为个别菜品设置例外，点单时仍可更改。</p>
+              <p className="mt-2 text-sm text-[var(--muted)]">{t('management.combo.defaultEggHint')}</p>
             </div>
           ) : null}
           {configuration ? (
             <ComboEggOverridesPanel key={storeId} storeId={storeId} configuration={configuration} onChanged={(next) => {
               setConfiguration(next)
               setDraft((current) => current ? { ...current, item_overrides: next.item_overrides } : current)
-              onSaved?.('Item egg default saved / 菜品默认蛋已保存')
+              onSaved?.(t('management.combo.itemEggSaved'))
             }} />
           ) : null}
           {draft.groups.map((group, groupIndex) => (
             <div key={`${group.group_id ?? 'new'}:${group.group_code ?? groupIndex}`} className="rounded-[20px] bg-[rgba(26,28,25,0.035)] px-4 py-4">
               <div className={comboConfigurationLayoutClasses.groupRow}>
                 <label className={comboConfigurationLayoutClasses.controlField}>
-                  <span className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Name ZH</span>
+                  <span className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">{t('management.chineseName')}</span>
                   <input
                     value={group.name_zh}
                     onChange={(event) => patchGroup(groupIndex, { name_zh: event.target.value })}
-                    placeholder="Group Chinese name"
+                    placeholder={t('management.combo.groupChineseName')}
                     className="rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-[0.88rem] outline-none"
                   />
                 </label>
                 <label className={comboConfigurationLayoutClasses.controlField}>
-                  <span className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Name EN</span>
+                  <span className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">{t('management.englishName')}</span>
                   <input
                     value={group.name_en}
                     onChange={(event) => patchGroup(groupIndex, { name_en: event.target.value })}
-                    placeholder="Group English name"
+                    placeholder={t('management.combo.groupEnglishName')}
                     className="rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-[0.88rem] outline-none"
                   />
                 </label>
                 <label className={comboConfigurationLayoutClasses.controlField}>
-                  <span className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Selection</span>
+                  <span className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">{t('management.combo.selection')}</span>
                   <select
                     value={group.selection_rule ?? 'EXACTLY_ONE'}
                     onChange={(event) => patchGroup(groupIndex, {
@@ -375,38 +378,38 @@ export function ComboConfigurationPanel({ storeId, menuItems = [], onSaved }: Co
                     })}
                     className="rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-[0.88rem] outline-none"
                   >
-                    <option value="EXACTLY_ONE">Choose exactly one</option>
-                    <option value="OPTIONAL_ONE">Optional choose one</option>
+                    <option value="EXACTLY_ONE">{t('management.combo.exactlyOne')}</option>
+                    <option value="OPTIONAL_ONE">{t('management.combo.optionalOne')}</option>
                   </select>
                 </label>
                 <label className={comboConfigurationLayoutClasses.displayOrderField}>
-                    <span className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Display Order / 排序</span>
+                    <span className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">{t('management.combo.displayOrder')}</span>
                     <input
                       type="number"
                       value={group.display_order ?? 0}
                       onChange={(event) => patchGroup(groupIndex, { display_order: Number(event.target.value) })}
                       className="rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-[0.88rem] outline-none"
-                      aria-label="Group display order"
+                      aria-label={t('management.combo.groupDisplayOrder')}
                     />
                 </label>
-                <div className={comboConfigurationLayoutClasses.reorderControls} aria-label="Group reorder controls">
+                <div className={comboConfigurationLayoutClasses.reorderControls} aria-label={t('management.combo.groupReorder')}>
                   <button
                     type="button"
                     onClick={() => moveGroup(groupIndex, -1)}
                     disabled={groupIndex === 0}
                     className="min-h-10 rounded-[12px] bg-white px-3 py-2 text-[0.78rem] font-semibold text-[var(--on-surface)] disabled:opacity-40"
-                    aria-label="Move group up"
+                    aria-label={t('management.combo.groupUp')}
                   >
-                    ↑ Up
+                    {t('management.combo.up')}
                   </button>
                   <button
                     type="button"
                     onClick={() => moveGroup(groupIndex, 1)}
                     disabled={groupIndex === draft.groups.length - 1}
                     className="min-h-10 rounded-[12px] bg-white px-3 py-2 text-[0.78rem] font-semibold text-[var(--on-surface)] disabled:opacity-40"
-                    aria-label="Move group down"
+                    aria-label={t('management.combo.groupDown')}
                   >
-                    ↓ Down
+                    {t('management.combo.down')}
                   </button>
                 </div>
                 <button
@@ -414,27 +417,27 @@ export function ComboConfigurationPanel({ storeId, menuItems = [], onSaved }: Co
                   onClick={() => patchGroup(groupIndex, { enabled: !(group.enabled ?? true) })}
                   className="min-h-10 rounded-[12px] bg-white px-3 py-2 text-[0.78rem] font-semibold text-[var(--on-surface)] xl:self-end"
                 >
-                  {group.enabled ?? true ? 'Enabled' : 'Disabled'}
+                  {group.enabled ?? true ? t('common.enabled') : t('common.disabled')}
                 </button>
                 <button
                   type="button"
                   onClick={() => addComponent(groupIndex)}
                   className="min-h-10 rounded-[12px] bg-white px-3 py-2 text-[0.78rem] font-semibold text-[var(--primary)] xl:self-end"
                 >
-                  + Add Item
+                  {t('management.combo.addItem')}
                 </button>
                 <button
                   type="button"
                   onClick={() => removeGroup(groupIndex)}
                   className="min-h-10 rounded-[12px] bg-[rgba(97,0,0,0.08)] px-3 py-2 text-[0.78rem] font-semibold text-[var(--primary)] xl:self-end"
                 >
-                  Delete
+                  {t('management.combo.delete')}
                 </button>
               </div>
 
               <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                 <div className="text-[0.75rem] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
-                  {groupCode(group) || 'Code generated after save'}
+                  {groupCode(group) || t('management.combo.generatedCode')}
                 </div>
               </div>
 
@@ -445,55 +448,55 @@ export function ComboConfigurationPanel({ storeId, menuItems = [], onSaved }: Co
                     className={comboConfigurationLayoutClasses.componentRow}
                   >
                     <label className={comboConfigurationLayoutClasses.controlField}>
-                      <span className="text-[0.66rem] font-semibold uppercase tracking-[0.1em] text-[var(--muted)]">Name ZH</span>
+                      <span className="text-[0.66rem] font-semibold uppercase tracking-[0.1em] text-[var(--muted)]">{t('management.chineseName')}</span>
                       <input
                         value={component.name_zh}
                         onChange={(event) => patchComponent(groupIndex, componentIndex, { name_zh: event.target.value })}
-                        placeholder="Item Chinese name"
+                        placeholder={t('management.combo.itemChineseName')}
                         className="rounded-[12px] border border-[rgba(26,28,25,0.08)] px-3 py-2 text-[0.84rem] outline-none"
                       />
                     </label>
                     <label className={comboConfigurationLayoutClasses.controlField}>
-                      <span className="text-[0.66rem] font-semibold uppercase tracking-[0.1em] text-[var(--muted)]">Name EN</span>
+                      <span className="text-[0.66rem] font-semibold uppercase tracking-[0.1em] text-[var(--muted)]">{t('management.englishName')}</span>
                       <input
                         value={component.name_en}
                         onChange={(event) => patchComponent(groupIndex, componentIndex, { name_en: event.target.value })}
-                        placeholder="Item English name"
+                        placeholder={t('management.combo.itemEnglishName')}
                         className="rounded-[12px] border border-[rgba(26,28,25,0.08)] px-3 py-2 text-[0.84rem] outline-none"
                       />
                     </label>
                     <label className={comboConfigurationLayoutClasses.displayOrderField}>
-                      <span className="text-[0.66rem] font-semibold uppercase tracking-[0.1em] text-[var(--muted)]">Display Order / 排序</span>
+                      <span className="text-[0.66rem] font-semibold uppercase tracking-[0.1em] text-[var(--muted)]">{t('management.combo.displayOrder')}</span>
                       <input
                         type="number"
                         value={component.display_order ?? 0}
                         onChange={(event) => patchComponent(groupIndex, componentIndex, { display_order: Number(event.target.value) })}
                         className="rounded-[12px] border border-[rgba(26,28,25,0.08)] px-3 py-2 text-[0.84rem] outline-none"
-                        aria-label="Component display order"
+                        aria-label={t('management.combo.componentDisplayOrder')}
                       />
                     </label>
-                    <div className={comboConfigurationLayoutClasses.reorderControls} aria-label="Component reorder controls">
+                    <div className={comboConfigurationLayoutClasses.reorderControls} aria-label={t('management.combo.componentReorder')}>
                       <button
                         type="button"
                         onClick={() => moveComponent(groupIndex, componentIndex, -1)}
                         disabled={componentIndex === 0}
                         className="min-h-10 rounded-[10px] bg-[rgba(26,28,25,0.05)] px-2.5 py-2 text-[0.76rem] font-semibold text-[var(--on-surface)] disabled:opacity-40"
-                        aria-label="Move component up"
+                        aria-label={t('management.combo.componentUp')}
                       >
-                        ↑ Up
+                        {t('management.combo.up')}
                       </button>
                       <button
                         type="button"
                         onClick={() => moveComponent(groupIndex, componentIndex, 1)}
                         disabled={componentIndex === group.components.length - 1}
                         className="min-h-10 rounded-[10px] bg-[rgba(26,28,25,0.05)] px-2.5 py-2 text-[0.76rem] font-semibold text-[var(--on-surface)] disabled:opacity-40"
-                        aria-label="Move component down"
+                        aria-label={t('management.combo.componentDown')}
                       >
-                        ↓ Down
+                        {t('management.combo.down')}
                       </button>
                     </div>
                     <label className={comboConfigurationLayoutClasses.mappingField}>
-                      <span className="text-[0.66rem] font-semibold uppercase tracking-[0.1em] text-[var(--muted)]">Mapping</span>
+                      <span className="text-[0.66rem] font-semibold uppercase tracking-[0.1em] text-[var(--muted)]">{t('management.combo.mapping')}</span>
                       <select
                         value={component.business_behavior ?? 'NO_KITCHEN_TASK'}
                         onChange={(event) => patchComponent(groupIndex, componentIndex, {
@@ -502,13 +505,13 @@ export function ComboConfigurationPanel({ storeId, menuItems = [], onSaved }: Co
                         })}
                         className="rounded-[12px] border border-[rgba(26,28,25,0.08)] px-3 py-2 text-[0.84rem] outline-none"
                       >
-                        <option value="NO_KITCHEN_TASK">No kitchen task</option>
-                        <option value="LINKED_MENU_ITEM">Link menu item</option>
-                        <option value="LEGACY_COMBO_SIDE_TASK">Legacy side task</option>
+                        <option value="NO_KITCHEN_TASK">{t('management.combo.noTask')}</option>
+                        <option value="LINKED_MENU_ITEM">{t('management.combo.linkItem')}</option>
+                        <option value="LEGACY_COMBO_SIDE_TASK">{t('management.combo.legacyTask')}</option>
                       </select>
                     </label>
                     <label className={comboConfigurationLayoutClasses.linkedItemField}>
-                      <span className="text-[0.66rem] font-semibold uppercase tracking-[0.1em] text-[var(--muted)]">Linked menu item</span>
+                      <span className="text-[0.66rem] font-semibold uppercase tracking-[0.1em] text-[var(--muted)]">{t('management.combo.linkedItem')}</span>
                       <select
                         value={component.linked_menu_item_id ?? ''}
                         onChange={(event) => patchComponent(groupIndex, componentIndex, {
@@ -517,7 +520,7 @@ export function ComboConfigurationPanel({ storeId, menuItems = [], onSaved }: Co
                         disabled={(component.business_behavior ?? 'NO_KITCHEN_TASK') !== 'LINKED_MENU_ITEM'}
                         className="rounded-[12px] border border-[rgba(26,28,25,0.08)] px-3 py-2 text-[0.84rem] outline-none disabled:opacity-50"
                       >
-                        <option value="">No linked item</option>
+                        <option value="">{t('management.combo.noLinkedItem')}</option>
                         {activeMenuItems.map((item) => (
                           <option key={item.id} value={item.id}>
                             {item.name_zh} / {item.name_en || item.sku}
@@ -530,14 +533,14 @@ export function ComboConfigurationPanel({ storeId, menuItems = [], onSaved }: Co
                       onClick={() => patchComponent(groupIndex, componentIndex, { enabled: !component.enabled })}
                       className="min-h-10 rounded-[12px] bg-[rgba(26,28,25,0.05)] px-3 py-2 text-[0.78rem] font-semibold text-[var(--on-surface)] xl:self-end"
                     >
-                      {component.enabled ? 'On' : 'Off'}
+                      {component.enabled ? t('common.enabled') : t('common.disabled')}
                     </button>
                     <button
                       type="button"
                       onClick={() => removeComponent(groupIndex, componentIndex)}
                       className="min-h-10 rounded-[12px] bg-[rgba(97,0,0,0.08)] px-3 py-2 text-[0.78rem] font-semibold text-[var(--primary)] xl:self-end"
                     >
-                      Delete
+                      {t('management.combo.delete')}
                     </button>
                     {groupCode(group) !== 'COMBO_EGG' ? <label className={comboConfigurationLayoutClasses.defaultRow}>
                       <input
@@ -548,7 +551,7 @@ export function ComboConfigurationPanel({ storeId, menuItems = [], onSaved }: Co
                           is_default: index === componentIndex,
                         })) })}
                       />
-                      Default component {component.component_code ? `· ${component.component_code}` : '· generated after save'}
+                      {t('management.combo.defaultComponent')} · {component.component_code || t('management.combo.generatedAfterSave')}
                     </label> : null}
                   </div>
                 ))}

@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import { useLocale } from '../../i18n/useLocale'
+import { translate } from '../../i18n/engine'
 import {
   fetchOwnerMenuItemOptions,
   fetchStoreComboConfiguration,
@@ -23,6 +25,7 @@ const fieldClass = 'rounded-[12px] border border-[rgba(26,28,25,0.12)] bg-white 
 const buttonClass = 'rounded-[12px] bg-white px-3 py-2 text-[0.82rem] font-semibold text-[var(--primary)] disabled:opacity-50'
 
 export function ComboEggOverridesPanel({ storeId, configuration, onChanged }: ComboEggOverridesPanelProps) {
+  const { t } = useLocale()
   const [candidates, setCandidates] = useState<MenuItemAdminRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -54,7 +57,7 @@ export function ComboEggOverridesPanel({ storeId, configuration, onChanged }: Co
           }))
         if (scope.active) setCandidates(eligible.filter((item): item is MenuItemAdminRecord => item !== null))
       } catch (error) {
-        if (scope.active) setLoadError(error instanceof Error ? error.message : 'Unable to load eligible items / 无法加载可选菜品')
+        if (scope.active) setLoadError(error instanceof Error ? error.message : translate('management.eggOverrides.loadFailed'))
       } finally {
         if (scope.active) setLoading(false)
       }
@@ -88,11 +91,11 @@ export function ComboEggOverridesPanel({ storeId, configuration, onChanged }: Co
       if (!scope.active) return
       const next = await fetchStoreComboConfiguration(storeId)
       if (!scope.active) return
-      if (next.store_id !== storeId) throw new Error('Unable to load saved defaults / 无法加载已保存的默认设置')
+      if (next.store_id !== storeId) throw new Error(translate('management.eggOverrides.reloadFailed'))
       onChanged(next)
       setDraft(null)
     } catch (error) {
-      if (scope.active) setSaveError(error instanceof Error ? error.message : 'Unable to save item default / 无法保存菜品默认蛋')
+      if (scope.active) setSaveError(error instanceof Error ? error.message : translate('management.eggOverrides.saveFailed'))
     } finally {
       scope.saving = false
       if (scope.active) setSaving(false)
@@ -100,13 +103,12 @@ export function ComboEggOverridesPanel({ storeId, configuration, onChanged }: Co
   }
 
   return (
-    <section className="mt-5 rounded-[20px] bg-[rgba(26,28,25,0.035)] p-4" aria-label="Item egg overrides">
+    <section className="mt-5 rounded-[20px] bg-[rgba(26,28,25,0.035)] p-4" aria-label={t('management.eggOverrides.section')}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="font-bold text-[var(--on-surface)]">Item Overrides / 菜品例外</h3>
+          <h3 className="font-bold text-[var(--on-surface)]">{t('management.eggOverrides.title')}</h3>
           <p className="mt-1 text-[0.82rem] text-[var(--muted)]">
-            All items use the Store Default Egg unless listed here. Removing an exception restores the Store default.
-            <br />未列出的菜品使用门店默认蛋；移除例外后恢复门店默认。
+            {t('management.eggOverrides.description')}
           </p>
         </div>
         <button
@@ -117,7 +119,7 @@ export function ComboEggOverridesPanel({ storeId, configuration, onChanged }: Co
             setSaveError(null)
             setDraft({ itemId: '', componentCode: eggChoices[0]?.component_code ?? '', editing: false })
           }}
-        >Add Exception / 添加例外</button>
+        >{t('management.eggOverrides.add')}</button>
       </div>
 
       {loadError || saveError ? (
@@ -141,22 +143,22 @@ export function ComboEggOverridesPanel({ storeId, configuration, onChanged }: Co
                 </div>
                 <div className="flex gap-2">
                   <button type="button" className={buttonClass} disabled={saving || !!draft || !eggChoices.length}
-                    aria-label={`Edit egg default for ${item.name_en || item.name_zh}`}
+                    aria-label={t('management.eggOverrides.editLabel', { name: item.name_en || item.name_zh })}
                     onClick={() => {
                       setSaveError(null)
                       setDraft({ itemId: String(item.item_id), componentCode: item.default_combo_egg_component_code!, editing: true })
-                    }}>Edit / 编辑</button>
+                    }}>{t('common.edit')}</button>
                   <button type="button" className={buttonClass} disabled={saving || !!draft}
-                    aria-label={`Remove egg default for ${item.name_en || item.name_zh}`}
-                    onClick={() => void saveOverride(item.item_id, null)}>Remove / 移除</button>
+                    aria-label={t('management.eggOverrides.removeLabel', { name: item.name_en || item.name_zh })}
+                    onClick={() => void saveOverride(item.item_id, null)}>{t('management.eggOverrides.remove')}</button>
                 </div>
               </li>
             )
           })}
         </ul>
-      ) : <p className="mt-3 text-[0.83rem] text-[var(--muted)]">No item exceptions / 暂无菜品例外</p>}
+      ) : <p className="mt-3 text-[0.83rem] text-[var(--muted)]">{t('management.eggOverrides.empty')}</p>}
 
-      {loading ? <p className="mt-3 text-[0.82rem] text-[var(--muted)]">Loading eligible items… / 正在加载可选菜品…</p> : null}
+      {loading ? <p className="mt-3 text-[0.82rem] text-[var(--muted)]">{t('management.eggOverrides.loading')}</p> : null}
 
       {draft ? (
         <form className="mt-4 flex flex-wrap items-end gap-3" onSubmit={(event) => {
@@ -164,23 +166,23 @@ export function ComboEggOverridesPanel({ storeId, configuration, onChanged }: Co
           if (validItem && validChoice) void saveOverride(Number(draft.itemId), draft.componentCode)
         }}>
           <label className="flex min-w-[180px] flex-col gap-1 text-[0.8rem]">
-            Item / 菜品
-            <select aria-label="Override item" value={draft.itemId} disabled={saving || draft.editing}
+            {t('management.eggOverrides.item')}
+            <select aria-label={t('management.eggOverrides.itemLabel')} value={draft.itemId} disabled={saving || draft.editing}
               className={fieldClass} onChange={(event) => setDraft({ ...draft, itemId: event.target.value })}>
               {draft.editing && editedItem ? (
                 <option value={editedItem.item_id}>{editedItem.name_zh} / {editedItem.name_en}</option>
               ) : <>
-                <option value="">Select item / 选择菜品</option>
+                <option value="">{t('management.eggOverrides.selectItem')}</option>
                 {availableItems.map((item) => <option key={item.id} value={item.id}>{item.name_zh} / {item.name_en}</option>)}
               </>}
             </select>
           </label>
           <label className="flex min-w-[180px] flex-col gap-1 text-[0.8rem]">
-            Default Egg / 默认蛋
-            <select aria-label="Item default egg" className={fieldClass} value={draft.componentCode} disabled={saving}
+            {t('management.eggOverrides.defaultEgg')}
+            <select aria-label={t('management.eggOverrides.defaultEggLabel')} className={fieldClass} value={draft.componentCode} disabled={saving}
               onChange={(event) => setDraft({ ...draft, componentCode: event.target.value })}>
               {!validChoice ? <option value={draft.componentCode} disabled>
-                {currentEgg ? `${currentEgg.name_zh} / ${currentEgg.name_en}` : draft.componentCode} (Unavailable / 不可用)
+                {currentEgg ? `${currentEgg.name_zh} / ${currentEgg.name_en}` : draft.componentCode} ({t('management.eggOverrides.unavailable')})
               </option> : null}
               {eggChoices.map((component) => <option key={component.component_code} value={component.component_code}>
                 {component.name_zh} / {component.name_en}
@@ -188,8 +190,8 @@ export function ComboEggOverridesPanel({ storeId, configuration, onChanged }: Co
             </select>
           </label>
           <button type="submit" className="rounded-[12px] bg-[var(--primary)] px-3 py-2 text-[0.82rem] font-semibold text-white disabled:opacity-50"
-            disabled={saving || !validItem || !validChoice}>{saving ? 'Saving… / 保存中…' : 'Save Exception / 保存例外'}</button>
-          <button type="button" className={buttonClass} disabled={saving} onClick={() => setDraft(null)}>Cancel / 取消</button>
+            disabled={saving || !validItem || !validChoice}>{saving ? t('common.saving') : t('management.eggOverrides.save')}</button>
+          <button type="button" className={buttonClass} disabled={saving} onClick={() => setDraft(null)}>{t('common.cancel')}</button>
         </form>
       ) : null}
     </section>

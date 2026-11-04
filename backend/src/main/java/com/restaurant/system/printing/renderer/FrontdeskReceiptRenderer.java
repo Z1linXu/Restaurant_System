@@ -6,6 +6,8 @@ import com.restaurant.system.order.entity.OrderItem;
 import com.restaurant.system.order.entity.OrderItemOption;
 import com.restaurant.system.printing.PrintModuleCode;
 import com.restaurant.system.printing.dto.PrintRenderRequest;
+import com.restaurant.system.printing.dto.ReceiptPresentation;
+import com.restaurant.system.common.exception.BusinessException;
 import com.restaurant.system.printing.rules.PrintingDisplayRuleContext;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -46,32 +48,47 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
     @Override
     public String render(PrintRenderRequest request) {
         Order order = request.order;
+        ReceiptPresentation presentation = request.receipt_context;
+        if (presentation != null) presentation.requireValid();
         PrintingDisplayRuleContext printingRules = request.printing_rules;
         Map<Long, List<OrderItemOption>> optionsByItemId = (request.order_item_options == null ? List.<OrderItemOption>of() : request.order_item_options).stream()
             .collect(Collectors.groupingBy(option -> option.order_item_id));
         boolean updateTicket = Boolean.TRUE.equals(request.is_update_ticket);
         List<OrderItem> allItems = request.order_items == null ? List.of() : request.order_items.stream()
+            .filter(item -> presentation == null || presentation.includesItem(item.id))
             .filter(item -> !"cancelled".equals(item.status))
             .sorted(Comparator.comparing(item -> item.id))
             .toList();
 
-        BigDecimal subtotal = updateTicket ? calculateItemsSubtotal(allItems) : safeMoney(order.subtotal_amount);
-        BigDecimal tax = updateTicket ? TaxCalculator.calculateTax(subtotal) : safeMoney(order.total_amount).subtract(subtotal).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal total = updateTicket ? TaxCalculator.calculateTotal(subtotal) : safeMoney(order.total_amount);
+        if (presentation != null && !updateTicket && (presentation.subtotal == null || presentation.total == null)) {
+            throw new BusinessException("RECEIPT_FROZEN_TOTALS_REQUIRED");
+        }
+        BigDecimal subtotal = updateTicket ? calculateItemsSubtotal(allItems)
+            : safeMoney(presentation == null ? order.subtotal_amount : presentation.subtotal);
+        BigDecimal total = updateTicket ? TaxCalculator.calculateTotal(subtotal)
+            : safeMoney(presentation == null ? order.total_amount : presentation.total);
+        BigDecimal tax = updateTicket ? TaxCalculator.calculateTax(subtotal)
+            : total.subtract(subtotal).setScale(2, RoundingMode.HALF_UP);
 
         StringBuilder builder = new StringBuilder();
         if (PrintTableDisplayFormatter.isDineIn(order)) {
-            builder.append(PrintTableDisplayFormatter.formatDineInHeader(order, updateTicket)).append("\n");
+            builder.append(presentation == null ? PrintTableDisplayFormatter.formatDineInHeader(order, updateTicket)
+                : presentedDineInHeader(order, updateTicket, presentation)).append("\n");
         } else {
             ExternalOrderReceiptHeader.append(builder, request.order);
-            if (!ExternalOrderReceiptHeader.isPresent(order)) appendLargeLine(builder, resolveLargeDisplayLabel(order));
+            if (!ExternalOrderReceiptHeader.isPresent(order)) appendLargeLine(builder, presentation == null
+                ? resolveLargeDisplayLabel(order) : presentedDisplayLabel(order, presentation));
             if (updateTicket) {
-                appendLargeLine(builder, "UPDATED");
-                appendSizedLine(builder, "Added items only");
+                appendLargeLine(builder, presentation == null ? "UPDATED" : presentation.label("updated"));
+                appendSizedLine(builder, presentation == null ? "Added items only" : presentation.label("added_only"));
             }
         }
+        if (presentation != null && presentation.restaurant_name != null && !presentation.restaurant_name.isBlank()) {
+            appendSizedLine(builder, presentation.restaurant_name);
+        }
         if ("pickup".equalsIgnoreCase(order.order_type) || "takeout".equalsIgnoreCase(order.order_type)) {
-            appendSizedLine(builder, "Order Type: Takeout");
+            appendSizedLine(builder, presentation == null ? "Order Type: Takeout"
+                : presentation.label("order_type") + ": " + presentation.label("takeout"));
         }
         appendSizedLine(builder, "--------------------------------");
 
@@ -88,6 +105,19 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
             List<OrderItemOption> options = optionsByItemId.getOrDefault(item.id, List.of());
             int displayCount = Math.max(1, item.quantity == null ? 1 : item.quantity);
             for (int copy = 0; copy < displayCount; copy += 1) {
+                if (presentation != null) {
+                    appendSizedLine(builder, "1 x " + presentation.itemName(item));
+                    for (OrderItemOption option : options) {
+                        if (option.quantity != null && option.quantity <= 0) continue;
+                        appendSizedLine(builder, presentation.optionName(option) + " x" + (option.quantity == null ? 1 : option.quantity));
+                    }
+                    if (item.notes != null && !item.notes.isBlank()) {
+                        appendSizedLine(builder, presentation.label("notes") + ": " + item.notes);
+                    }
+                    appendSizedLine(builder, formatSingleItemMoney(item, copy));
+                    builder.append("\n");
+                    continue;
+                }
                 appendSizedLine(builder, buildItemLine(item, options, 1, printingRules));
                 String noodleType = resolveNoodleTypeLabel(options);
                 if (noodleType != null) {
@@ -124,19 +154,33 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
         }
 
         appendSizedLine(builder, "--------------------------------");
-        appendSizedLine(builder, "Subtotal: " + formatMoney(subtotal));
-        appendSizedLine(builder, "Tax (" + TaxCalculator.TAX_RATE_LABEL + "): " + formatMoney(tax));
-        appendSizedLine(builder, "Total: " + formatMoney(total));
+        appendSizedLine(builder, (presentation == null ? "Subtotal" : presentation.label("subtotal")) + ": " + formatMoney(subtotal));
+        appendSizedLine(builder, (presentation == null ? "Tax" : presentation.label("tax")) + " (" + TaxCalculator.TAX_RATE_LABEL + "): " + formatMoney(tax));
+        appendSizedLine(builder, (presentation == null ? "Total" : presentation.label("total")) + ": " + formatMoney(total));
         appendSizedLine(builder, "--------------------------------");
         if (order.submitted_at != null) {
-            appendSizedLine(builder, "Submitted: " + order.submitted_at.format(TIME_FORMATTER));
+            appendSizedLine(builder, (presentation == null ? "Submitted" : presentation.label("submitted")) + ": " + order.submitted_at.format(TIME_FORMATTER));
         } else if (request.happened_at != null) {
-            appendSizedLine(builder, "Printed: " + request.happened_at.format(TIME_FORMATTER));
+            appendSizedLine(builder, (presentation == null ? "Printed" : presentation.label("printed")) + ": " + request.happened_at.format(TIME_FORMATTER));
         } else if (order.created_at != null) {
-            appendSizedLine(builder, "Created: " + order.created_at.format(TIME_FORMATTER));
+            appendSizedLine(builder, (presentation == null ? "Created" : presentation.label("created")) + ": " + order.created_at.format(TIME_FORMATTER));
         }
         builder.append("\n");
         return builder.toString();
+    }
+
+    private String presentedDineInHeader(Order order, boolean update, ReceiptPresentation presentation) {
+        String label = firstPresent(order.table_display_name, PrintTableDisplayFormatter.formatSplitTableLabel(order.table_no));
+        if (label == null) label = presentation.label("walk_in");
+        return PrintMarkup.withTopFeed(PrintMarkup.large(label) + (update ? " (" + presentation.label("updated") + ")" : ""));
+    }
+
+    private String presentedDisplayLabel(Order order, ReceiptPresentation presentation) {
+        if (order.table_no != null && !order.table_no.isBlank()) {
+            return presentation.label("table") + ": " + PrintTableDisplayFormatter.formatSplitTableLabel(order.table_no);
+        }
+        if (order.pickup_no != null && !order.pickup_no.isBlank()) return presentation.label("pickup") + ": " + order.pickup_no;
+        return presentation.label("table") + ": " + presentation.label("walk_in");
     }
 
     private void appendSizedLine(StringBuilder builder, String value) {

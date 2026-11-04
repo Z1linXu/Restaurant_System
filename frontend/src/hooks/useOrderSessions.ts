@@ -21,7 +21,7 @@ function getChoiceLabel(options: ChoiceOption[] | undefined, optionId: string | 
   }
 
   const option = options.find((item) => item.id === optionId)
-  return option ? { en: option.labelEn, zh: option.labelZh } : null
+  return option ? { en: option.labelEn, zh: option.labelZh, ...(option.labelFr ? { fr: option.labelFr } : {}) } : null
 }
 
 function getSelectedOptions(options: ChoiceOption[] | undefined, optionIds: string[]) {
@@ -31,7 +31,7 @@ function getSelectedOptions(options: ChoiceOption[] | undefined, optionIds: stri
 
   return options
     .filter((option) => optionIds.includes(option.id))
-    .map((option) => ({ en: option.labelEn, zh: option.labelZh }))
+    .map((option) => ({ en: option.labelEn, zh: option.labelZh, ...(option.labelFr ? { fr: option.labelFr } : {}) }))
 }
 
 function getSelectedAddOns(options: ChoiceOption[] | undefined, addOnQuantities: Record<string, number>) {
@@ -46,6 +46,7 @@ function getSelectedAddOns(options: ChoiceOption[] | undefined, addOnQuantities:
       return {
         en: quantity > 1 ? `${option.labelEn} x${quantity}` : option.labelEn,
         zh: quantity > 1 ? `${option.labelZh} x${quantity}` : option.labelZh,
+        ...(option.labelFr ? { fr: quantity > 1 ? `${option.labelFr} x${quantity}` : option.labelFr } : {}),
       }
     })
 }
@@ -117,7 +118,7 @@ function buildSummaryTags(menuItem: MenuItem, draft: ItemCustomizationDraft) {
   for (const group of activeTemplateGroups(menuItem)) {
     for (const option of group.options) {
       const quantity = draft.groupSelections?.[group.group_instance_code]?.[String(option.id)] ?? 0
-      if (quantity > 0) summaryTags.push({ en: `${option.name_en}${quantity > 1 ? ` x${quantity}` : ''}`, zh: `${option.name_zh}${quantity > 1 ? ` x${quantity}` : ''}` })
+      if (quantity > 0) summaryTags.push({ en: `${option.name_en}${quantity > 1 ? ` x${quantity}` : ''}`, zh: `${option.name_zh}${quantity > 1 ? ` x${quantity}` : ''}`, ...(option.name_fr ? { fr: `${option.name_fr}${quantity > 1 ? ` x${quantity}` : ''}` } : {}) })
     }
   }
   const customization = menuItem.customization
@@ -183,6 +184,7 @@ function buildLineItem(menuItem: MenuItem, draft: ItemCustomizationDraft, itemId
     menuItemId: menuItem.id,
     nameEn: menuItem.nameEn,
     nameZh: menuItem.nameZh,
+    ...(menuItem.nameFr ? { nameFr: menuItem.nameFr } : {}),
     quantity: draft.quantity,
     unitPrice,
     lineSubtotal: unitPrice * draft.quantity,

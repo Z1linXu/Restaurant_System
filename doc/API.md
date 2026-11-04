@@ -2255,3 +2255,19 @@ Routing groups: group_code,name,enabled,sort_order,category_ids,item_ids,combo_c
 Test-only `GET /api/v1/stores/{storeId}/template/runtime-safety` requires scoped Owner/Manager capabilities and returns actual allowed printing modes, endpoint-configuration flag, environment/profile and nonsecret build SHA. No credentials or transport endpoint are returned. Managed order/preview payloads preserve the complete existing option snapshot. Stable virtual Combo components require exact code/group; the adapter rejects unsupported task behavior and non-COLD linked legacy sides.
 
 `GET /api/v1/admin/platform/overview?store_id=...` retains its requested-Store capability/module check. Non-ADMIN response organization/store arrays are now limited by existing accessible scopes; restaurant templates require accessible explicit organization ownership and an accessible source Store if present. ADMIN retains the global view. This is a security response fix (P6-SEC-OVERVIEW-001), not a new role or sharing model.
+
+## Store-owned presentation (single-restaurant delivery)
+
+`GET|PUT /api/v1/stores/{storeId}/presentation` requires Manager/Owner and `ADMIN_MENU_MANAGE` for that Store. GET returns only public branding/display fields, never receipts, credentials or endpoints. PUT patches the closed set `display_name`, `logo_url` (empty or `/merchant/logo.png`), `primary_color` (`#RRGGBB`), `default_locale` (`zh-CN|en|fr-CA`), `reporting_style` (`GENERIC|LEGACY`), `kitchen_configuration` (`STATION|TEMPLATE_GROUPS`), localized `notice`, `address`, `phone`. Saving display config preserves receipt config.
+
+`GET|PUT /api/v1/stores/{storeId}/receipt-presentation` requires Manager/Owner and `ADMIN_PRINTING_MANAGE` for that Store. Example **implemented request contract**, using a synthetic station already owned by the target Store:
+
+```json
+{"enabled":true,"default_language":"en","kitchen_language":"zh-CN","frontdesk_language":"fr-CA","kitchen_station_codes":["BACK_KITCHEN"],"revision":0}
+```
+
+Station codes must be distinct active stations of the same Store. `revision` is server-owned and increments on save. Null target overrides inherit the default. Absent legacy configuration reads as disabled; GET never enables it. In this delivery only the explicitly enabled Allô MOCK Store consumes this renderer context. Saving affects subsequent order/batch events; it does not rewrite existing Jobs. Original-copy reprints require their frozen artifact. No physical print is triggered by config save.
+
+Catalog/category/item/option DTOs optionally expose `name_fr`; order item/option and frontdesk beverage DTOs optionally expose `item_name_snapshot_fr` / `option_name_snapshot_fr`. Historical display uses order snapshots. Template group `name_translations` accepts the same three locales; optional `min_select`/`max_select` are distinct selected counts, with per-selection quantity1 for explicitly bounded non-ADD_ON groups. Omission on update preserves existing bounds; explicit JSON null removes them. Existing per-option canonical price authority is unchanged.
+
+`refill_category_code` is server-owned catalog metadata consumed by ordering visibility and validated again at submit/Update. Client labels, notes, prices or category guesses cannot grant refill eligibility. Errors such as `REFILL_*`, `TEMPLATE_*`, `RECEIPT_STATION_NOT_ASSIGNED`, `RECEIPT_ORIGINAL_ARTIFACT_*` preserve their canonical diagnostic identity; a committed order and failed print Job remain separate outcomes. There is no public merchant bulk-import API in this delivery; the importer is invoked by the closed isolated Test bootstrap.

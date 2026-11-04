@@ -1,3 +1,4 @@
+import { useLocale } from '../../i18n/useLocale'
 import { useEffect, useMemo, useState } from 'react'
 import {
   fetchOwnerDashboard,
@@ -154,7 +155,9 @@ function ItemPerformanceList({
 }
 
 export function OwnerAdminDashboardPage() {
-  const { storeId, storeName, storeCode, organizationId } = useCurrentStore()
+  const { t } = useLocale()
+  const { storeId, storeName, storeCode, organizationId, presentation } = useCurrentStore()
+  const generic = presentation?.reporting_style === 'GENERIC'
   const { isOfflineRestricted, user } = useAuth()
   const [workspaceStores, setWorkspaceStores] = useState<WorkspaceStore[]>([])
   const [dashboard, setDashboard] = useState<OwnerDashboardResponse | null>(null)
@@ -285,7 +288,7 @@ export function OwnerAdminDashboardPage() {
       <div className="flex flex-wrap items-center justify-between gap-4 rounded-[28px] bg-[rgba(255,255,255,0.84)] px-5 py-4 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
               <div>
                 <div className="text-[1.7rem] font-black tracking-[-0.05em] text-[var(--on-surface)]">
-                  Restaurant Performance Dashboard
+                  {t('analytics.dashboard')}
                 </div>
                 <div className="mt-1 text-[0.9rem] text-[var(--muted)]">
                   Production analytics for owners and store managers.
@@ -294,7 +297,7 @@ export function OwnerAdminDashboardPage() {
 
               <div className="flex flex-wrap items-center gap-3">
                 <div className="rounded-[16px] bg-[rgba(26,28,25,0.04)] px-3 py-2.5">
-                  <div className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">Store Scope</div>
+                  <div className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">{t('printing.scope')}</div>
                   <select
                     value={selectedStoreId}
                     onChange={(event) => setSelectedStoreId(event.target.value)}
@@ -309,7 +312,7 @@ export function OwnerAdminDashboardPage() {
                 </div>
 
                 <div className="rounded-[16px] bg-[rgba(26,28,25,0.04)] px-3 py-2.5">
-                  <div className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">Date Range</div>
+                  <div className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">{t('analytics.dateRange')}</div>
                   <div className="mt-1 inline-flex rounded-full bg-[rgba(26,28,25,0.05)] p-1">
                     {RANGE_OPTIONS.map((option) => (
                       <button
@@ -322,7 +325,7 @@ export function OwnerAdminDashboardPage() {
                             : 'text-[var(--muted)]'
                         }`}
                       >
-                        {option.label}
+                        {t(option.value === 'today' ? 'analytics.today' : option.value === 'week' ? 'analytics.week' : 'analytics.month')}
                       </button>
                     ))}
                   </div>
@@ -336,8 +339,8 @@ export function OwnerAdminDashboardPage() {
                     className="h-4 w-4 accent-[var(--primary)]"
                   />
                   <div>
-                    <div className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">Compare</div>
-                    <div className="mt-1 text-[0.9rem] font-semibold text-[var(--on-surface)]">Previous period</div>
+                    <div className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">{t('analytics.compare')}</div>
+                    <div className="mt-1 text-[0.9rem] font-semibold text-[var(--on-surface)]">{t('analytics.previous')}</div>
                   </div>
                 </label>
 
@@ -352,7 +355,7 @@ export function OwnerAdminDashboardPage() {
 
       {loading ? (
               <div className="rounded-[26px] bg-[rgba(255,255,255,0.82)] px-5 py-6 text-[0.95rem] text-[var(--muted)] shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
-                Loading owner console shell...
+                {t('common.loading')}
               </div>
             ) : error ? (
               <div className="rounded-[24px] bg-[rgba(97,0,0,0.08)] px-5 py-4 text-[0.95rem] font-semibold text-[var(--primary)]">
@@ -360,16 +363,16 @@ export function OwnerAdminDashboardPage() {
               </div>
             ) : dashboardLoading || !dashboard ? (
               <div className="rounded-[26px] bg-[rgba(255,255,255,0.82)] px-5 py-6 text-[0.95rem] text-[var(--muted)] shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
-                Loading analytics dashboard...
+                {t('common.loading')}
               </div>
             ) : (
               <>
-                {dashboard.channel_sales ? <ChannelSalesKpis summary={dashboard.channel_sales} /> : (
+                {dashboard.channel_sales ? <><p className="text-sm text-[var(--muted)]">{t('analytics.basis')}</p><ChannelSalesKpis summary={dashboard.channel_sales} /></> : (
                 <div className="grid gap-4 md:grid-cols-3">
-                  <MetricCard label="Sales" value={formatCurrency(dashboard.kpis.sales.value)} change={dashboard.kpis.sales.change_pct} />
-                  <MetricCard label="Orders" value={dashboard.kpis.orders.value.toFixed(0)} change={dashboard.kpis.orders.change_pct} />
+                  <MetricCard label={t('analytics.sales')} value={formatCurrency(dashboard.kpis.sales.value)} change={dashboard.kpis.sales.change_pct} />
+                  <MetricCard label={t('analytics.orders')} value={dashboard.kpis.orders.value.toFixed(0)} change={dashboard.kpis.orders.change_pct} />
                   <MetricCard
-                    label="Average Order Value"
+                    label={t('analytics.aov')}
                     value={formatCurrency(dashboard.kpis.average_order_value.value)}
                     change={dashboard.kpis.average_order_value.change_pct}
                   />
@@ -381,7 +384,7 @@ export function OwnerAdminDashboardPage() {
                   <div className="min-w-0 rounded-[26px] bg-[rgba(255,255,255,0.82)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
                     <div className="flex items-center justify-between gap-3">
                       <div>
-                        <div className="text-[1.1rem] font-bold text-[var(--on-surface)]">Sales Trend</div>
+                        <div className="text-[1.1rem] font-bold text-[var(--on-surface)]">{t('analytics.trend')}</div>
                         <div className="mt-1 text-[0.85rem] text-[var(--muted)]">
                           {currentStoreLabel} · {dashboard.trend.granularity}
                         </div>
@@ -394,11 +397,11 @@ export function OwnerAdminDashboardPage() {
                   </div>
 
                   <div className="space-y-4">
-                    {dashboard.channel_sales ? <ChannelRevenueMix summary={dashboard.channel_sales} range={selectedRange} /> : <RevenueMixPanel rows={dashboard.revenue_mix ?? []} sales={dashboard.kpis.sales.value} range={selectedRange} />}
+                    {!generic && (dashboard.channel_sales ? <ChannelRevenueMix summary={dashboard.channel_sales} range={selectedRange} /> : <RevenueMixPanel rows={dashboard.revenue_mix ?? []} sales={dashboard.kpis.sales.value} range={selectedRange} />)}
 
                     <div className="min-w-0 rounded-[26px] bg-[rgba(255,255,255,0.82)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
-                      <div className="text-[1.1rem] font-bold text-[var(--on-surface)]">Alerts & Insights · In-store</div>
-                      <div className="mt-1 text-[0.85rem] text-[var(--muted)]">In-store sales and item trends, plus current Store inventory alerts.</div>
+                      <div className="text-[1.1rem] font-bold text-[var(--on-surface)]">{t('analytics.insights')}</div>
+                      <div className="mt-1 text-[0.85rem] text-[var(--muted)]">{t('analytics.insightsHint')}</div>
                       <div className="mt-4 space-y-3">
                         {dashboard.insights.map((insight) => (
                           <div key={`${insight.type}-${insight.title}`} className={`rounded-[18px] border px-4 py-3 ${getSeverityTone(insight.severity)}`}>
@@ -413,25 +416,25 @@ export function OwnerAdminDashboardPage() {
 
                 <div className="grid gap-4 xl:grid-cols-[0.9fr_0.9fr_1.2fr]">
                   <ItemPerformanceList
-                    title="Top Selling Items · In-store"
-                    description="Best performers by quantity and revenue."
+                    title={t('analytics.topInStore')}
+                    description={t('analytics.topInStoreHint')}
                     items={topItems}
                     emptyMessage="No item sales in the selected period yet."
                   />
 
                   <ItemPerformanceList
-                    title="Worst Items · In-store"
-                    description="Lowest revenue items in the selected period."
+                    title={t('analytics.worstInStore')}
+                    description={t('analytics.worstInStoreHint')}
                     items={worstItems}
-                    emptyMessage="No completed sales to rank yet."
+                    emptyMessage={t('analytics.noCompleted')}
                   />
 
-                  {dashboard.channel_sales ? <ChannelNoodleSales rows={dashboard.channel_sales.noodle_sales} range={selectedRange} /> : <NoodleSalesPanel rows={dashboard.noodle_sales ?? []} range={selectedRange} />}
+                  {!generic && (dashboard.channel_sales ? <ChannelNoodleSales rows={dashboard.channel_sales.noodle_sales} range={selectedRange} /> : <NoodleSalesPanel rows={dashboard.noodle_sales ?? []} range={selectedRange} />)}
                 </div>
 
                 <div className="min-w-0 rounded-[26px] bg-[rgba(255,255,255,0.82)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
-                  <div className="text-[1.1rem] font-bold text-[var(--on-surface)]">In-store Sales by Store</div>
-                  <div className="mt-1 text-[0.85rem] text-[var(--muted)]">Organization-wide comparison with trend indicators.</div>
+                  <div className="text-[1.1rem] font-bold text-[var(--on-surface)]">{t('analytics.storeSales')}</div>
+                  <div className="mt-1 text-[0.85rem] text-[var(--muted)]">{t('analytics.storeSalesHint')}</div>
                   <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                     {storeComparison.length ? (
                       storeComparison.map((store) => (
@@ -454,7 +457,7 @@ export function OwnerAdminDashboardPage() {
                       ))
                     ) : (
                       <div className="rounded-[18px] bg-[rgba(26,28,25,0.04)] px-4 py-5 text-[0.88rem] text-[var(--muted)]">
-                        No store comparison rows available for this scope yet.
+                        {t('analytics.noStoreRows')}
                       </div>
                     )}
                   </div>

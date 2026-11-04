@@ -59,6 +59,9 @@ public class OrderItem {
     @Column(name = "item_name_snapshot_en")
     public String item_name_snapshot_en;
 
+    @Column(name = "item_name_snapshot_fr")
+    public String item_name_snapshot_fr;
+
     @Column(name = "quantity")
     public Integer quantity;
 

@@ -10,6 +10,7 @@ export interface TemplateOption {
   sort_order: number | null
   name_zh: string
   name_en: string
+  name_fr?: string | null
   price_delta: number
   is_active: boolean
   is_default?: boolean
@@ -18,9 +19,12 @@ export interface TemplateOption {
 export interface TemplateOptionGroup {
   group_instance_code: string
   name: string
+  name_translations?: Partial<Record<'zh-CN' | 'en' | 'fr-CA', string>>
   kind: 'SPICY_LEVEL' | 'ADD_ON' | 'REMOVE' | 'SIZE' | 'CUSTOM' | 'COMBO'
   selection_mode: 'SINGLE' | 'MULTIPLE'
   required: boolean
+  min_select?: number | null
+  max_select?: number | null
   sort_order: number
   is_active: boolean
   source_library_code?: string

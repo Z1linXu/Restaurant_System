@@ -31,6 +31,9 @@ public class MenuCategory {
     @Column(name = "name_en")
     public String name_en;
 
+    @Column(name = "name_fr")
+    public String name_fr;
+
     @Column(name = "sort_order")
     public Integer sort_order;
 

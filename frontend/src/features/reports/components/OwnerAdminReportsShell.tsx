@@ -1,3 +1,4 @@
+import { useLocale } from '../../../i18n/useLocale'
 import type { ReactNode } from 'react'
 import { navigateTo } from '../../frontdesk/navigation'
 import { reportsNavItems, type ReportsSection } from './reportsNavigation'
@@ -19,6 +20,7 @@ export function OwnerAdminReportsShell({
   topBar,
   children,
 }: OwnerAdminReportsShellProps) {
+  const { t } = useLocale()
   const currentStore = useOptionalCurrentStore()
   return (
     <div className="space-y-5">
@@ -44,7 +46,7 @@ export function OwnerAdminReportsShell({
                     : 'bg-[rgba(26,28,25,0.05)] text-[var(--on-surface)] hover:bg-[rgba(97,0,0,0.08)] hover:text-[var(--primary)]'
                 }`}
               >
-                {item.label}
+                {t(item.id === 'sales' ? 'analytics.salesReport' : item.id === 'items' ? 'analytics.itemReport' : item.id === 'profit' ? 'analytics.profitReport' : 'analytics.storeReport')}
               </button>
             )
           })}

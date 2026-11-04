@@ -22,6 +22,8 @@ import { ItemPrintingRuleAliasPanel } from './PrintingDisplayRulesPanel'
 import { TemplateOptionGroupsPanel } from './TemplateOptionGroupsPanel'
 import { useAuth } from '../auth/useAuth'
 import { useCurrentStore } from '../store/useStoreContext'
+import { useLocale } from '../../i18n/useLocale'
+import { searchableText } from '../../i18n/locale'
 import {
   applyCategoryItemOrder,
   enterMenuItemReorderMode,
@@ -39,6 +41,7 @@ interface MenuItemEditorState {
   station_id: number
   name_zh: string
   name_en: string
+  name_fr?: string | null
   sku: string
   item_type: string
   base_price: number
@@ -89,6 +92,7 @@ function buildDraft(overview: PlatformAdminOverview, storeId: number): MenuItemE
     station_id: asNumber(defaultStation?.id, 0),
     name_zh: '',
     name_en: '',
+    name_fr: '',
     sku: '',
     item_type: 'menu_item',
     base_price: 0,
@@ -107,6 +111,7 @@ function toEditorState(record: Record<string, unknown> | MenuItemAdminRecord, fa
     station_id: asNumber(record.station_id, 0),
     name_zh: asString(record.name_zh),
     name_en: asString(record.name_en),
+    name_fr: asString(record.name_fr),
     sku: asString(record.sku),
     item_type: asString(record.item_type, 'menu_item'),
     base_price: asNumber(record.base_price, 0),
@@ -123,12 +128,14 @@ function sameSavedValues(expected: MenuItemEditorState, actual: MenuItemEditorSt
     normalizeMoney(expected.cost_per_item) === normalizeMoney(actual.cost_per_item) &&
     expected.is_active === actual.is_active &&
     expected.is_sold_out === actual.is_sold_out &&
+    asString(expected.name_fr) === asString(actual.name_fr) &&
     expected.category_id === actual.category_id &&
     expected.station_id === actual.station_id
   )
 }
 
 export function MenuManagementPage() {
+  const { t, label } = useLocale()
   const { storeId } = useCurrentStore()
   const { isFrontdesk, isOwner, isManager } = useAuth()
   const canManageTemplate = Boolean(isOwner || isManager)
@@ -226,9 +233,9 @@ export function MenuManagementPage() {
         .filter((category) => Number(category.store_id) === Number(selectedStoreId))
         .map((category) => ({
           id: asNumber(category.id),
-          label: `${asString(category.name_zh)} / ${asString(category.name_en)}`,
+          label: label({ zh: asString(category.name_zh), en: asString(category.name_en), fr: asString(category.name_fr) }),
         })),
-    [overview, selectedStoreId],
+    [overview, selectedStoreId, label],
   )
 
   const stations = useMemo(
@@ -253,7 +260,7 @@ export function MenuManagementPage() {
   )
 
   const filteredMenuItems = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase()
+    const query = searchableText(searchTerm)
 
     return menuItems.filter((item) => {
       if (item.store_id !== Number(selectedStoreId)) return false
@@ -282,8 +289,8 @@ export function MenuManagementPage() {
         return true
       }
 
-      return [item.name_zh, item.name_en, item.sku]
-        .map((value) => value.toLowerCase())
+      return [item.name_zh, item.name_en, item.name_fr, item.sku]
+        .map((value) => searchableText(value))
         .some((value) => value.includes(query))
     })
   }, [categoryFilter, menuItems, searchTerm, selectedStoreId, stationFilter, statusFilter])
@@ -567,15 +574,15 @@ export function MenuManagementPage() {
             <div className="rounded-[28px] bg-[rgba(255,255,255,0.84)] px-5 py-4 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <div className="text-[1.7rem] font-black tracking-[-0.05em] text-[var(--on-surface)]">Menu Management</div>
+                  <div className="text-[1.7rem] font-black tracking-[-0.05em] text-[var(--on-surface)]">{t('nav.menuManagement')}</div>
                   <div className="mt-1 text-[0.9rem] text-[var(--muted)]">
-                    Maintain menu items, selling prices, and cost data used by profit analytics.
+                    {t('menu.manageHint')}
                   </div>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
                   <div className="rounded-[16px] bg-[rgba(26,28,25,0.04)] px-3 py-2.5">
-                    <div className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">Store</div>
+                    <div className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">{t('printing.scope')}</div>
                     <select
                       value={selectedStoreId}
                       onChange={(event) => setSelectedStoreId(event.target.value)}
@@ -594,7 +601,7 @@ export function MenuManagementPage() {
                     onClick={openCreate}
                     className="rounded-[18px] bg-[var(--primary)] px-4 py-3 text-[0.92rem] font-semibold text-white shadow-[0_14px_24px_rgba(97,0,0,0.16)]"
                   >
-                    New Menu Item
+                    {t('menu.newItem')}
                   </button>
                 </div>
               </div>
@@ -644,14 +651,14 @@ export function MenuManagementPage() {
 
             <div className="flex flex-wrap gap-2 rounded-[22px] bg-[rgba(255,255,255,0.72)] p-2 shadow-[0_12px_24px_rgba(26,28,25,0.04)]">
               {[
-                ['menu_items', 'Menu Items'],
-                ...(canManageTemplate ? [['option_groups', 'Option Group Library / 组选项库']] : []),
-                ['addons', 'Add-ons'],
-                ['categories', 'Categories'],
-                ['stations', 'Stations'],
-                ['combo', 'Combo Configuration'],
-                ['pricing', 'Pricing Rules'],
-                ['printing_display_rules', 'Printing Display Rules'],
+                ['menu_items', t('menu.items')],
+                ...(canManageTemplate ? [['option_groups', t('menu.library')]] : []),
+                ['addons', t('menu.addons')],
+                ['categories', t('menu.categories')],
+                ['stations', t('menu.stations')],
+                ['combo', t('menu.combo')],
+                ['pricing', t('menu.pricing')],
+                ['printing_display_rules', t('menu.displayRules')],
               ].map(([key, label]) => (
                 <button
                   key={key}
@@ -693,7 +700,7 @@ export function MenuManagementPage() {
                 <div className="flex gap-2" aria-label="Modifier catalog sections">
                   {(['addons', 'removes'] as const).map((section) => <button key={section} type="button" aria-pressed={modifierSection === section}
                     className={`min-h-11 rounded-[14px] px-4 py-2 font-semibold ${modifierSection === section ? 'bg-[var(--primary)] text-white' : 'bg-white'}`}
-                    onClick={() => setModifierSection(section)}>{section === 'addons' ? 'Add-ons' : 'Removes'}</button>)}
+                    onClick={() => setModifierSection(section)}>{section === 'addons' ? t('menu.addons') : t('menu.removes')}</button>)}
                 </div>
                 {modifierSection === 'addons' ? <AddonCatalogPanel key={selectedStoreId} storeId={Number(selectedStoreId)} onSaved={(message) => setToast({ kind: 'success', message })} />
                   : <RemoveCatalogPanel storeId={Number(selectedStoreId)} categories={categories} onChanged={refreshMenuManagement} onSaved={(message) => setToast({ kind: 'success', message })} />}
@@ -728,7 +735,7 @@ export function MenuManagementPage() {
                 <div className="flex flex-wrap items-end justify-between gap-3">
                   <div>
                     <div className="text-[1.1rem] font-bold text-[var(--on-surface)]">Menu Items</div>
-                    <div className="mt-1 text-[0.85rem] text-[var(--muted)]">Edit price, cost, availability, category, and station assignments.</div>
+                    <div className="mt-1 text-[0.85rem] text-[var(--muted)]">{t('menu.editHint')}</div>
                   </div>
                 </div>
 
@@ -737,7 +744,7 @@ export function MenuManagementPage() {
                     value={searchTerm}
                     onChange={(event) => setSearchTerm(event.target.value)}
                     disabled={reorderMode}
-                    placeholder="Search name or SKU"
+                    placeholder={t('menu.searchAdmin')}
                     className="rounded-[16px] border border-[rgba(26,28,25,0.08)] bg-white px-4 py-3 text-[0.92rem] outline-none disabled:cursor-not-allowed disabled:opacity-55"
                   />
 
@@ -747,7 +754,7 @@ export function MenuManagementPage() {
                     disabled={reorderMode}
                     className="rounded-[16px] border border-[rgba(26,28,25,0.08)] bg-white px-4 py-3 text-[0.92rem] outline-none disabled:cursor-not-allowed disabled:opacity-55"
                   >
-                    <option value="all">All Categories</option>
+                    <option value="all">{t('menu.allCategories')}</option>
                     {categories.map((category) => (
                       <option key={category.id} value={String(category.id)}>
                         {category.label}
@@ -761,7 +768,7 @@ export function MenuManagementPage() {
                     disabled={reorderMode}
                     className="rounded-[16px] border border-[rgba(26,28,25,0.08)] bg-white px-4 py-3 text-[0.92rem] outline-none disabled:cursor-not-allowed disabled:opacity-55"
                   >
-                    <option value="all">All Stations</option>
+                    <option value="all">{t('menu.allStations')}</option>
                     {stations.map((station) => (
                       <option key={station.id} value={String(station.id)}>
                         {station.label}
@@ -775,11 +782,11 @@ export function MenuManagementPage() {
                     disabled={reorderMode}
                     className="rounded-[16px] border border-[rgba(26,28,25,0.08)] bg-white px-4 py-3 text-[0.92rem] outline-none disabled:cursor-not-allowed disabled:opacity-55"
                   >
-                    <option value="all">All Status</option>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
+                    <option value="all">{t('menu.allStatuses')}</option>
+                    <option value="active">{t('menu.active')}</option>
+                    <option value="inactive">{t('menu.inactive')}</option>
                     <option value="sold_out">Sold Out</option>
-                    <option value="available">Available</option>
+                    <option value="available">{t('menu.available')}</option>
                   </select>
                 </div>
 
@@ -790,10 +797,10 @@ export function MenuManagementPage() {
                 }`}>
                   <div>
                     {reorderMode
-                      ? `正在排序「${selectedCategoryLabel}」。使用上移/下移按钮调整完整分类顺序，每次移动都会立即保存。`
+                      ? t('menu.sortingHint', { name: selectedCategoryLabel ?? '' })
                       : categoryFilter === 'all'
-                        ? '请先选择一个具体分类，再开始调整菜品顺序。'
-                        : `已选择「${selectedCategoryLabel}」。开始排序后会暂时清空搜索、站点和状态筛选。`}
+                        ? t('menu.chooseCategorySort')
+                        : t('menu.sortReadyHint', { name: selectedCategoryLabel ?? '' })}
                   </div>
                   {reorderMode ? (
                     <button
@@ -802,7 +809,7 @@ export function MenuManagementPage() {
                       disabled={reordering}
                       className="min-h-11 rounded-[14px] border border-[rgba(97,0,0,0.24)] bg-white px-4 font-semibold text-[var(--primary)] shadow-sm transition hover:bg-[rgba(97,0,0,0.05)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      退出排序
+                      {t('menu.stopReorder')}
                     </button>
                   ) : (
                     <button
@@ -812,7 +819,7 @@ export function MenuManagementPage() {
                       title={categoryFilter === 'all' ? '请先选择一个具体分类' : '显示该分类全部菜品并开始排序'}
                       className="min-h-11 rounded-[14px] bg-[var(--primary)] px-4 font-semibold text-white shadow-sm transition hover:brightness-110 active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)] disabled:cursor-not-allowed disabled:bg-[rgba(26,28,25,0.12)] disabled:text-[var(--muted)] disabled:shadow-none"
                     >
-                      开始排序
+                      {t('menu.startReorder')}
                     </button>
                   )}
                 </div>
@@ -826,13 +833,13 @@ export function MenuManagementPage() {
                     <table className="min-w-full text-left text-[0.9rem]">
                       <thead className="bg-[rgba(246,243,236,0.94)] text-[0.76rem] uppercase tracking-[0.14em] text-[var(--muted)]">
                         <tr>
-                          <th className="px-4 py-3">Item</th>
-                          <th className="px-4 py-3">Category</th>
-                          <th className="px-4 py-3">Station</th>
-                          <th className="px-4 py-3">Price</th>
-                          <th className="px-4 py-3">Cost</th>
-                          <th className="px-4 py-3">Status</th>
-                          <th className="px-4 py-3">顺序</th>
+                          <th className="px-4 py-3">{t('analytics.item')}</th>
+                          <th className="px-4 py-3">{t('menu.categories')}</th>
+                          <th className="px-4 py-3">{t('menu.stations')}</th>
+                          <th className="px-4 py-3">{t('common.price')}</th>
+                          <th className="px-4 py-3">{t('menu.costLabel')}</th>
+                          <th className="px-4 py-3">{t('printing.state')}</th>
+                          <th className="px-4 py-3">{t('menu.order')}</th>
                           <th className="px-4 py-3"></th>
                         </tr>
                       </thead>
@@ -840,7 +847,7 @@ export function MenuManagementPage() {
                         {filteredMenuItems.map((item) => (
                           <tr key={item.id ?? item.sku ?? item.name_zh} className="border-t border-[rgba(26,28,25,0.06)]">
                             <td className="px-4 py-3">
-                              <div className="font-semibold text-[var(--on-surface)]">{item.name_zh}</div>
+                              <div className="font-semibold text-[var(--on-surface)]">{label({ en: item.name_en, zh: item.name_zh, fr: item.name_fr })}</div>
                               <div className="text-[0.78rem] text-[var(--muted)]">{item.name_en || '—'} {item.sku ? `· ${item.sku}` : ''}</div>
                             </td>
                             <td className="px-4 py-3 text-[var(--muted)]">{categoryNameById.get(item.category_id) ?? 'Unassigned'}</td>
@@ -858,7 +865,7 @@ export function MenuManagementPage() {
                                       : 'bg-[rgba(26,28,25,0.08)] text-[var(--muted)]'
                                   }`}
                                 >
-                                  {item.is_active ? 'Active' : 'Inactive'}
+                                  {item.is_active ? t('menu.active') : t('menu.inactive')}
                                 </button>
                                 <button
                                   type="button"
@@ -869,7 +876,7 @@ export function MenuManagementPage() {
                                       : 'bg-[rgba(64,124,73,0.12)] text-[rgb(48,96,56)]'
                                   }`}
                                 >
-                                  {item.is_sold_out ? 'Sold Out' : 'Available'}
+                                  {item.is_sold_out ? 'Sold Out' : t('menu.available')}
                                 </button>
                               </div>
                             </td>
@@ -920,14 +927,14 @@ export function MenuManagementPage() {
                                   onClick={() => openOptions(item)}
                                   className="rounded-full bg-[rgba(97,0,0,0.08)] px-3 py-1.5 text-[0.82rem] font-semibold text-[var(--primary)]"
                                 >
-                                  Options
+                                  {t('options.title')}
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => openEdit(item)}
                                   className="rounded-full bg-[rgba(26,28,25,0.05)] px-3 py-1.5 text-[0.82rem] font-semibold text-[var(--on-surface)]"
                                 >
-                                  Edit
+                                  {t('common.edit')}
                                 </button>
                               </div>
                             </td>
@@ -938,23 +945,23 @@ export function MenuManagementPage() {
                   </div>
                 ) : menuItems.length ? (
                   <div className="mt-5 rounded-[18px] bg-[rgba(26,28,25,0.04)] px-4 py-5 text-[0.9rem] text-[var(--muted)]">
-                    No items match the current search and filters.
+                    {t('menu.noMatches')}
                   </div>
                 ) : (
                   <div className="mt-5 rounded-[18px] bg-[rgba(26,28,25,0.04)] px-4 py-5 text-[0.9rem] text-[var(--muted)]">
-                    No menu items found for this store.
+                    {t('menu.none')}
                   </div>
                 )}
               </div>
 
               <div className="rounded-[26px] bg-[rgba(255,255,255,0.84)] p-5 shadow-[0_18px_34px_rgba(26,28,25,0.05)]">
-                <div className="text-[1.1rem] font-bold text-[var(--on-surface)]">{editor?.id ? 'Edit Menu Item' : 'Create Menu Item'}</div>
-                <div className="mt-1 text-[0.85rem] text-[var(--muted)]">Changes save directly to `menu_items` after backend verification.</div>
+                <div className="text-[1.1rem] font-bold text-[var(--on-surface)]">{editor?.id ? t('common.edit') : t('menu.newItem')}</div>
+                <div className="mt-1 text-[0.85rem] text-[var(--muted)]">{t('menu.saveHint')}</div>
 
                 {editor ? (
                   <div className="mt-5 space-y-4">
                     <label className="block">
-                      <div className="text-[0.8rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Chinese Name</div>
+                      <div className="text-[0.8rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">{t('common.chinese')}</div>
                       <input
                         value={editor.name_zh}
                         onChange={(event) => setEditor({ ...editor, name_zh: event.target.value })}
@@ -963,12 +970,17 @@ export function MenuManagementPage() {
                     </label>
 
                     <label className="block">
-                      <div className="text-[0.8rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">English Name</div>
+                      <div className="text-[0.8rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">{t('common.english')}</div>
                       <input
                         value={editor.name_en}
                         onChange={(event) => setEditor({ ...editor, name_en: event.target.value })}
                         className="mt-1 w-full rounded-[16px] border border-[rgba(26,28,25,0.08)] bg-white px-4 py-3 text-[0.92rem] outline-none"
                       />
+                    </label>
+
+                    <label className="block">
+                      <div className="text-[0.8rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">{t('common.french')}</div>
+                      <input value={editor.name_fr ?? ''} onChange={(event) => setEditor({ ...editor, name_fr: event.target.value })} className="mt-1 w-full rounded-[16px] border border-[rgba(26,28,25,0.08)] bg-white px-4 py-3 text-[0.92rem] outline-none" />
                     </label>
 
                     <label className="block">
@@ -996,7 +1008,7 @@ export function MenuManagementPage() {
 
                     <div className="grid gap-4 sm:grid-cols-2">
                       <label className="block">
-                        <div className="text-[0.8rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Category</div>
+                        <div className="text-[0.8rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">{t('menu.categories')}</div>
                         <select
                           value={String(editor.category_id)}
                           onChange={(event) => setEditor({ ...editor, category_id: Number(event.target.value) })}
@@ -1011,7 +1023,7 @@ export function MenuManagementPage() {
                       </label>
 
                       <label className="block">
-                        <div className="text-[0.8rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Station</div>
+                        <div className="text-[0.8rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">{t('menu.stations')}</div>
                         <select
                           value={String(editor.station_id)}
                           onChange={(event) => setEditor({ ...editor, station_id: Number(event.target.value) })}
@@ -1028,7 +1040,7 @@ export function MenuManagementPage() {
 
                     <div className="grid gap-4 sm:grid-cols-2">
                       <label className="block">
-                        <div className="text-[0.8rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Base Price</div>
+                        <div className="text-[0.8rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">{t('menu.basePrice')}</div>
                         <input
                           type="number"
                           step="0.01"
@@ -1039,7 +1051,7 @@ export function MenuManagementPage() {
                       </label>
 
                       <label className="block">
-                        <div className="text-[0.8rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Cost Per Item</div>
+                        <div className="text-[0.8rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">{t('menu.cost')}</div>
                         <input
                           type="number"
                           step="0.01"
@@ -1059,8 +1071,8 @@ export function MenuManagementPage() {
                           className="h-4 w-4 accent-[var(--primary)]"
                         />
                         <div>
-                          <div className="text-[0.9rem] font-semibold text-[var(--on-surface)]">Active</div>
-                          <div className="text-[0.78rem] text-[var(--muted)]">Visible to the restaurant.</div>
+                          <div className="text-[0.9rem] font-semibold text-[var(--on-surface)]">{t('menu.active')}</div>
+                          <div className="text-[0.78rem] text-[var(--muted)]">{t('menu.visibleHint')}</div>
                         </div>
                       </label>
 
@@ -1073,7 +1085,7 @@ export function MenuManagementPage() {
                         />
                         <div>
                           <div className="text-[0.9rem] font-semibold text-[var(--on-surface)]">Sold Out</div>
-                          <div className="text-[0.78rem] text-[var(--muted)]">Hide from ordering temporarily.</div>
+                          <div className="text-[0.78rem] text-[var(--muted)]">{t('menu.soldOutHint')}</div>
                         </div>
                       </label>
                     </div>
@@ -1121,22 +1133,22 @@ export function MenuManagementPage() {
                         disabled={saving}
                         className="rounded-[16px] bg-[var(--primary)] px-4 py-3 text-[0.9rem] font-semibold text-white shadow-[0_14px_24px_rgba(97,0,0,0.16)] disabled:opacity-60"
                       >
-                        {saving ? 'Saving...' : 'Save Item'}
+                        {saving ? t('common.saving') : t('menu.saveItem')}
                       </button>
                     </div>
                   </div>
                 ) : (
                   <div className="mt-5 rounded-[18px] bg-[rgba(26,28,25,0.04)] px-4 py-5 text-[0.9rem] text-[var(--muted)]">
-                    Select a menu item to edit, or create a new one.
+                    {t('menu.selectHint')}
                   </div>
                 )}
               </div>
 
               {optionsItem?.id && optionsItem.store_id === Number(selectedStoreId) ? (
                 canManageTemplate ? <div className="space-y-4">
-                  <TemplateOptionGroupsPanel key={`groups:${selectedStoreId}:${optionsItem.id}`} storeId={Number(selectedStoreId)} itemId={optionsItem.id} itemName={optionsItem.name_zh || optionsItem.name_en} />
-                  <details className="rounded-2xl bg-white p-4"><summary className="cursor-pointer font-semibold">Existing item controls / 原有选项控件</summary>
-                    <MenuOptionsPanel key={`${selectedStoreId}:${optionsItem.id}`} storeId={Number(selectedStoreId)} itemId={optionsItem.id} itemName={optionsItem.name_zh || optionsItem.name_en} />
+                  <TemplateOptionGroupsPanel key={`groups:${selectedStoreId}:${optionsItem.id}`} storeId={Number(selectedStoreId)} itemId={optionsItem.id} itemName={label({ en: optionsItem.name_en, zh: optionsItem.name_zh, fr: optionsItem.name_fr })} />
+                  <details className="rounded-2xl bg-white p-4"><summary className="cursor-pointer font-semibold">{t('menu.legacyOptions')}</summary>
+                    <MenuOptionsPanel key={`${selectedStoreId}:${optionsItem.id}`} storeId={Number(selectedStoreId)} itemId={optionsItem.id} itemName={label({ en: optionsItem.name_en, zh: optionsItem.name_zh, fr: optionsItem.name_fr })} />
                   </details>
                 </div> :
                 <MenuOptionsPanel

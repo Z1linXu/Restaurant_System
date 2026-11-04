@@ -14,6 +14,9 @@ import {
   type AndroidPadPrintWorkerStatus,
 } from '../../../types/androidPadBridge'
 import type { AuthUser } from '../../../services/authService'
+import { LanguageSelector } from '../../../components/LanguageSelector'
+import { RestaurantBrand } from '../../../components/RestaurantBrand'
+import { useLocale } from '../../../i18n/useLocale'
 
 interface FrontdeskTopNavProps {
   activeItem?: 'menu' | 'orders' | 'pickup' | 'stations' | 'dashboard' | null
@@ -32,6 +35,7 @@ const navItems = [
 }>
 
 export function FrontdeskTopNav({ activeItem = null }: FrontdeskTopNavProps) {
+  const { t } = useLocale()
   const currentStore = useOptionalCurrentStore()
   const { user, signOut, permissions, features } = useAuth()
   const moduleConfiguration = currentStore?.moduleConfiguration ?? null
@@ -215,12 +219,13 @@ export function FrontdeskTopNav({ activeItem = null }: FrontdeskTopNavProps) {
           ) : null}
         </div>
         <div>
-          <p className="font-display text-[1.2rem] font-extrabold tracking-[-0.04em] text-[var(--primary)]">蘭</p>
+          <RestaurantBrand compact />
           <p className="text-[0.72rem] text-[var(--muted)]">{currentStore?.storeName ?? 'Frontdesk Workstation'}</p>
         </div>
       </div>
 
       <nav className="flex items-center gap-2">
+        <LanguageSelector />
         <StoreSwitcher compact />
         {navItems.filter((item) => (
           isStoreModuleEnabled(moduleConfiguration, item.moduleKey)
@@ -255,7 +260,7 @@ export function FrontdeskTopNav({ activeItem = null }: FrontdeskTopNavProps) {
               }}
             >
               <span className="text-[1.05rem] leading-none">{item.icon}</span>
-              <span>{item.label}</span>
+                <span>{t(`nav.${item.id}`)}</span>
             </button>
           )
         })}

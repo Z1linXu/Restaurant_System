@@ -2,9 +2,11 @@ import type { TemplateOptionGroup } from '../services/templatePlatformService'
 import type { ChoiceOption, ItemCustomizationDraft, MenuItem } from '../types/ordering'
 import type { TemplateOption } from '../services/templatePlatformService'
 import { modifierIngredient } from './modifierSelection'
+import { appI18n, translate } from '../i18n/engine'
+import { businessLabel, supportedLocale } from '../i18n/locale'
 
 export function templateChoiceOption(option: TemplateOption): ChoiceOption {
-  return { id: String(option.id), labelEn: option.name_en, labelZh: option.name_zh,
+  return { id: String(option.id), labelEn: option.name_en, labelZh: option.name_zh, labelFr: option.name_fr,
     priceDelta: Number(option.price_delta), optionType: option.option_type,
     optionCode: option.option_code, optionGroup: option.option_group,
     parentOptionId: option.parent_option_id == null ? null : String(option.parent_option_id), sortOrder: option.sort_order }
@@ -27,9 +29,15 @@ export function templateSelectionError(item: MenuItem, draft: ItemCustomizationD
   if (item.optionGroups == null) return null
   for (const group of activeTemplateGroups(item)) {
     const selected = Object.entries(draft.groupSelections?.[group.group_instance_code] ?? {}).filter(([, qty]) => qty > 0)
-    if (group.required && selected.length === 0) return `请选择 ${group.name} / Choose ${group.name}`
-    if (group.selection_mode === 'SINGLE' && (selected.length > 1 || selected.some(([, qty]) => qty !== 1))) return `${group.name} 只能选择一项 / Select one option`
-    if (selected.some(([id, qty]) => !Number.isSafeInteger(qty) || qty < 1 || !group.options.some((option) => option.is_active && String(option.id) === id))) return `${group.name} 选项已变更，请重新选择 / Options changed`
+    const name = businessLabel({ name: group.name, translations: group.name_translations }, supportedLocale(appI18n.resolvedLanguage) ?? 'en')
+    if (group.required && selected.length === 0) return translate('options.chooseRequired', { name })
+    if (group.selection_mode === 'SINGLE' && (selected.length > 1 || selected.some(([, qty]) => qty !== 1))) return translate('options.chooseSingle', { name })
+    const minimum = group.min_select ?? (group.required ? 1 : 0)
+    const maximum = group.max_select ?? (group.selection_mode === 'SINGLE' ? 1 : null)
+    if (selected.length < minimum) return translate('options.atLeast', { count: minimum })
+    if (maximum != null && selected.length > maximum) return translate('options.atMost', { count: maximum })
+    if (group.kind !== 'ADD_ON' && (group.min_select != null || group.max_select != null) && selected.some(([, qty]) => qty !== 1)) return translate('options.quantityOne', { name })
+    if (selected.some(([id, qty]) => !Number.isSafeInteger(qty) || qty < 1 || !group.options.some((option) => option.is_active && String(option.id) === id))) return translate('options.changed', { name })
   }
   return null
 }
