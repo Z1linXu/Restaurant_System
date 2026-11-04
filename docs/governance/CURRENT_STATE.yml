@@ -395,16 +395,17 @@ uber_analytics_pending_repair:
   staging_test: REMAIN_PAUSED_NO_DEPLOY
 
 uber_analytics_order_total_repair:
-  evidence: ../UBER_ANALYTICS_ORDER_TOTAL_20261103.md
-  candidate_sha: 74dfc1fd235af31fc7345c43f770d9991960da70
+  evidence: ../UBER_ANALYTICS_ORDER_TOTAL_PRODUCTION_20261104.md
+  preparation_evidence: ../UBER_ANALYTICS_ORDER_TOTAL_20261103.md
+  application_sha: 74dfc1fd235af31fc7345c43f770d9991960da70
   production_deployed: true
   production_data_changed: SIX_V3_JOURNAL_INSERTS_ONLY
   release_attempt: COMPLETE_OWNER_ACCEPTED_NEW_BASELINE107
   prior_stopped_gate_evidence: ../UBER_ANALYTICS_ORDER_TOTAL_PRODUCTION_GATE_20261103.md
   production_evidence: ../UBER_ANALYTICS_ORDER_TOTAL_PRODUCTION_20261104.md
-  live_baseline_orders: TOTAL107_POS61_UBER46
-  live_baseline_pos_minor_cad: 270704
-  live_baseline_known_total_minor_cad: 411010
+  verified_orders: TOTAL107_POS61_UBER46
+  verified_pos_minor_cad: 270704
+  pre_release_known_total_minor_cad: 411010
   discrepancy_cause: EXISTING_2330_DAILY_CLOSE_ONE_POS_ORDER_6779_CENTS
   verified_total_minor_cad: 442551
   verified_total_aov_cad: 41.36
@@ -412,15 +413,12 @@ uber_analytics_order_total_repair:
   migration: V39.2_APPLIED_CHECK_ONLY_CHECKSUM_684147509
   rule: MERCHANT_POST_PROMO_ORDER_TOTAL_V3
   preview_sha256: 8c96d7b6a8fc3fa2bbaf1339c4ff3275224299a1fa9700f8c5ee0b08c6c41360
-  candidate_minor_cad: 31541
-  owner_forecast_minor_cad: 26741
-  forecast_discrepancy_minor_cad: 4800_SOURCE_UNKNOWN_NO_AMOUNT_ADJUSTMENT
-  projected_uber_minor_cad: 171847
-  projected_total_minor_cad: 435772
-  projected_pos_minor_cad: 263925_UNCHANGED
-  projected_unknown_order_totals: 0
-  projected_item_pending_orders: 6
-  projected_item_pending_root_rows: 18
+  applied_v3_records: 6
+  applied_minor_cad: 31541
+  verified_uber_minor_cad: 171847
+  verified_unknown_order_totals: 0
+  verified_item_pending_orders: 6
+  verified_item_pending_root_rows: 18
   original_v1_and_old_v2: PRESERVED
   agent6: ACCEPT_NO_P0_P1_P2
   local_backend: FULL1254_ERRORS0_FAILURES0_CONDITIONAL_SKIPS117_FOCUSED31_PASS
