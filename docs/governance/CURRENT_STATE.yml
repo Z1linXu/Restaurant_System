@@ -1,5 +1,5 @@
 schema_version: 1
-updated_at: 2026-11-03
+updated_at: 2026-11-04
 
 repository:
   ref: origin/main
@@ -10,7 +10,7 @@ repository:
 phase:
   current: PHASE_6
   package: FIRST_RESTAURANT_ALLO_NOUILLES_TEST
-  status: LOCAL_ACCEPTED_TEST_REPLACEMENT_PREPARATION
+  status: TEST_DELIVERED_AWAITING_OWNER_ACCEPTANCE
   next_phase_authorized: false
   authorization: OWNER_LATEST_ALLO_RESUME_PERMANENT_OLD_TEMPLATE_TEST_RETIREMENT_AND_SAME_PORT_DEPLOYMENT
   implementation_base_sha: b6cab1b29c330c3020a009942973e083793d228c
@@ -32,21 +32,29 @@ test:
   old_template_retirement_authorized: true
   old_template_database_backup: OWNER_EXPLICITLY_WAIVED
   retirement_requires: EXACT_IDS_PROJECT_LABELS_STOPPED_EXCLUSIVE_REFERENCES_AND_EXISTING_OPS_LOCKS
-  app_deployed_sha: UNKNOWN_FRESH_ALLO_NOT_DEPLOYED
+  app_deployed_sha: a19b5d64eab36bfc770927b1b1bb4bfe8876d15d
+  operations_sha: 9803ada1184c7d9a310a507cdd2c0f242b82da6d
+  flyway: V41_ALL_41_SUCCESS
+  retirement: PASS_FOUR_STOPPED_CONTAINERS_DEDICATED_DB_VOLUME_TWO_NETWORKS_RUNTIME_ENV
+  acceptance: PASS_PUBLIC_HTTP27_EXTRA8_TRILINGUAL_MATRIX19_ENTRY9_REPEAT_BOOTSTRAP
+  final_observation_utc: 2026-11-04T05:51:41Z
   owner_acceptance: NOT_RUN
   print_transport: MOCK_ONLY_NO_ENDPOINTS
   public_websocket: MUST_REMAIN_DENIED_F31_NOT_CLOSED
-  further_mutation_authorized: ALLO_TEST_AND_VERIFIED_OLD_TEMPLATE_RESOURCES_ONLY
-  production_release_dependency: WAIT_FOR_OTHER_74DFC1F_PRODUCTION_RELEASE_COMPLETE_AND_STABLE
+  further_mutation_authorized: NONE_PENDING_OWNER_TEST_ACCEPTANCE
+  production_release_dependency: OTHER_74DFC1F_RELEASE_COMPLETED_AND_STABLE_BEFORE_TEST_MUTATION
   evidence: ../delivery/allo-nouilles/DELIVERY_TRACKER.md
 
-# The following Production/Staging entries retain their original dated evidence.
-# Phase6 does not re-certify their source SHA or authorize changes to them.
+# Production/Staging runtime identity/state below was observed read-only on 2026-11-04.
+# Other historical acceptance/business facts retain their original dated evidence;
+# this task did not query either protected database or recertify those old facts.
 
 staging:
-  deployed_sha: f838e48de1f20689253716bd1910b952fcbc00d3
-  deployed_sha_semantics: SAME_VERIFIED_BACKEND_FRONTEND_PAIR
-  frontend_deployed_sha: f838e48de1f20689253716bd1910b952fcbc00d3
+  observed_runtime_state: NGINX_BACKEND_INGRESS_DB_STOPPED_EXISTING_SANDBOX_WEBHOOK_UNCHANGED_RUNNING
+  observed_at: 2026-11-04T05:51:41Z
+  deployed_sha: a14cc4ce87ecaea17b31d86aa55aae76f1a79294
+  deployed_sha_semantics: STOPPED_BACKEND_FRONTEND_IMAGE_LABELS_ONLY_NOT_CURRENT_ACCEPTANCE
+  frontend_deployed_sha: a14cc4ce87ecaea17b31d86aa55aae76f1a79294
   policy_config_sha: d2316234b2936fd89a926aa24a7b6343008834e6
   flyway: V39
   acceptance: SPLIT_LABEL_48_PLUS_24_LEGACY_6_TAKEOUT_SINGLE_16MM_PAD_TCP_PUBLIC_ASSETS_PASS
@@ -63,8 +71,12 @@ staging:
   uber_worker_enabled: false
 
 production:
-  deployed_sha: f838e48de1f20689253716bd1910b952fcbc00d3
-  frontend_deployed_sha: f838e48de1f20689253716bd1910b952fcbc00d3
+  observed_at: 2026-11-04T05:51:41Z
+  observed_health: HTTPS_HTTP200_UP_DB_HEALTHY
+  observed_this_task_mutation: NONE_IDS_START_TIMES_IMAGES_RESTARTS_INGRESS_UNCHANGED
+  deployed_sha: 74dfc1fd235af31fc7345c43f770d9991960da70
+  frontend_deployed_sha: 74dfc1fd235af31fc7345c43f770d9991960da70
+  deployed_sha_semantics: READ_ONLY_IMAGE_LABELS_AFTER_OTHER_OWNER_RELEASE_NOT_THIS_TASK_DEPLOYMENT
   canonical_url: https://pos.lanzhounoodlesmtl.com
   application_release: COMPLETE
   password_login: NOT_TESTED_NO_EXISTING_BROWSER_SESSION_OR_PRIVATE_PASSWORD
@@ -72,9 +84,11 @@ production:
   uber_activated: true
   uber_active_bindings: 1
   uber_binding_semantics: CONTINUOUS_STORE1_ONLY_UUID_CUTOVER_TABLET_RETAINS_ORDER_MANAGER
-  flyway: V39
+  flyway: UNKNOWN_NOT_QUERIED_BY_THIS_TASK
+  historical_flyway: V39_AS_OF_ORIGINAL_EVIDENCE
   mutation_authorized: false
-  current_release_authorization: COMPLETED_OWNER_20261024_ALL_STORE_SPLIT_LABEL_SAFE_V39_SAME_APP_PAIR_PRESERVE_CONTINUOUS_UBER
+  current_release_authorization: OTHER_OWNER_THREAD_COMPLETED_NOT_MUTATION_AUTHORITY_FOR_ALLO_TASK
+  current_runtime_evidence: ../delivery/allo-nouilles/DELIVERY_TRACKER.md
   evidence: ../SPLIT_TABLE_LABEL_MODE_20261024.md
   runtime_observation_evidence: ../SPLIT_TABLE_LABEL_MODE_20261024.md
   canonical_addons_per_store: 15
@@ -384,8 +398,8 @@ uber_store_capability:
   production_mutation: OWNER_20261021_LOCAL_MODULES_1_3_PREPARED_WORKER_FALSE
 
 gate:
-  type: TECHNICAL
-  next_action: SEAL_REVIEWED_ALLO_CANDIDATE_THEN_EXACT_TEST_RETIREMENT_AND_DEPLOY_WHEN_PRODUCTION_RELEASE_FINISHED
+  type: OWNER
+  next_action: OWNER_ACCEPT_ALLO_PUBLIC_TEST_NO_AUTOMATIC_FURTHER_MUTATION
 
 authorization:
   dining_table_soft_delete: OWNER_20261024_ALL_STORE_IS_ACTIVE_SOFT_DELETE_ACTIVE_ORDER_GUARD_CACHE_AND_NEW_ORDER_BLOCK_IMPLEMENT_TEST_REVIEW_MERGE_STAGING_DIRECT_PRODUCTION_PRESERVE_HISTORY_AB_SPLIT_LABELS_PRINTING_AND_UBER_NO_REAL_TEST_ORDERS

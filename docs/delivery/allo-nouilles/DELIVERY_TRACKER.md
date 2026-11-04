@@ -11,14 +11,14 @@ EXPECTED_REPAIR_CLASS：HIGH。只限首店，不开发第二客户、完整模�
 - 明确批准永久删除归属已核实的旧 Template Test 四个停止容器、专属数据库/Volume、无共享引用的网络及旧运行配置。旧 Test 数据库备份已明确豁免。
 - Allô 使用独立 Backend/PostgreSQL/Frontend/Relay、凭据、网络和数据；复用原 Test 域名及 `127.0.0.1:28080` / Relay `28480`，保持共享 Nginx/证书不变。
 - 精确最小打印 CR 已明确批准，见 `REQUIRED_CHANGE_REQUEST.md`。仅 Allô 显式 Test/MOCK；没有 HOT、Pad 协议、状态/去重算法、Android、实体打印或旧店发布授权。
-- Production 绝对不部署/重启/改数据配置。Staging 不启动或变更。另一线程正在发布 `74dfc1f…`，本任务必须等其完成并稳定，再取得现有运维锁处理 Test；本地工作继续。
+- Production 绝对不部署/重启/改数据配置。Staging 不启动或变更。另一线程的 Production 发布已于 2026-11-04 05:23:59 UTC 完成并停止；本任务随后核对实际运行并取得现有运维锁处理 Test。
 - 旧 Test 镜像若无法完整证明无回滚依赖则保留，不执行全局 prune、递归目录删除或恢复旧 Test。
 
 ## 来源与工作现场
 
 - 分支：`codex/allo-nouilles-delivery-20261103`。
 - 工作区：`/Users/xuzilin/.codex/worktrees/allo-nouilles-delivery-20261103/Restaurant_System`。
-- 初始 HEAD：`b6cab1b29c330c3020a009942973e083793d228c`；实际模板应用来源 `dbe207a1cc62256c7173108ccc375499f1e16caf`。新鲜 `origin/main=80e888fcdad74e98326fcbeaa5df14bc0d9baed6`；分支为 behind2/ahead10，main 两个新增提交仅旧店发布证据。未 merge/rebase/reset/clean。
+- 初始 HEAD：`b6cab1b29c330c3020a009942973e083793d228c`；实际模板应用来源 `dbe207a1cc62256c7173108ccc375499f1e16caf`。新鲜 `origin/main=80e888fcdad74e98326fcbeaa5df14bc0d9baed6`；恢复时分支为 behind2/ahead10，main 两个新增提交仅旧店发布证据。未 merge/rebase/reset/clean。
 - 原开发目录、Research028 和前轮 planning 工作区均未改动。Allô 未提交改动完整恢复；仅本任务拥有的路径可 stage/commit。
 - 客户 PDF 两页，SHA256 `2ebcf2ef38fb58a8080a2078e4f957af590767b48e886a72ae16339904057db8`。
 - 私有规范化来源 `menu.source.json`（加入来源联系/品牌元数据后）SHA256 `9a855f6565f426c38957d3004efcf8e944a5e4c3ac472ae27fa061bc9713ab79`，版本 `20261103-v1`；配置/客户原文件/凭据不入 Git。
@@ -45,31 +45,104 @@ EXPECTED_REPAIR_CLASS：HIGH。只限首店，不开发第二客户、完整模�
 - Backend：`mvn -q test`，182 suites / 1377 total / 1260 PASS / 117 conditional SKIP / 0 FAIL / 0 ERROR。条件跳过不视为 PG 或设备验收。
 - Frontend：78 files / 433 PASS；`tsc -b` PASS。最后收费 Add-on distinct 上限仍可数量2、C6 每项数量1；三语切换保留 draft；重印 namespace 保护旧未知结果请求。
 - 原打印相关 focused：178/178 PASS，包括旧 GRAB/HOT/前台 cents/Job/Dispatcher/Pad/manual 行为和 Allô 新渲染。
-- 全新隔离本地 PG18：实际成功应用 V1–V41，ddl validate；未使用 Production dump。PG18 有上游 Flyway16支持范围提示；远端部署沿 reviewed PostgreSQL16 固定镜像，远端迁移须独立验证。
+- 全新隔离本地 PG18：实际成功应用 V1–V41，ddl validate；未使用 Production dump。PG18 有上游 Flyway16支持范围提示；远端部署沿 reviewed PostgreSQL16 固定镜像，远端 PostgreSQL16 实际 V1–V41 全部成功，见公网主流程 `41_successful_migrations`（仅 Allô 新数据库 SELECT）。
 - 本地 HTTP 主流程：27/27 PASS。32 价格/FR 名核对，C6 错误语义验证，同幂等身份同订单，87.92 原计价断言、初单/Update、两模块票据、旧 Job 不变、新批次独立语言、同类续加正反例、DISABLED Submit/Update、跨 Store 403、Owner/Manager 登录。
 - 本地补充：8/8 PASS。纯饮品一张前台票/零厨房任务；有 Update 的全单重印明确拒绝；原件副本文本/字节/context 相同且同重印 key 不重复；厨房错误不回滚订单、前台成功、警告持久化。
 - 导入闭环：8/8 PASS。重复来源保留 Owner 改价/FR 名，冲突来源失败且事务原值保留，恢复原来源再次启动。已恢复本任务测试修改；最终 34 商品/39 provenance rows/测试标记0/MOCK/默认中文。
 - 独立业务 Agent6：ACCEPT WITH LIMITATIONS，无剩余所审 P0/P1/P2。覆盖前轮普通4项、打印3项、后续空饮品/font/引用3项及 FE cluster；不宣称全 SaaS 安全。
 - 同端口替换部署守卫：99/99 PASS。精确退休 ownership/共享引用/完整 ID/partial failure：15/15 PASS（合计114）；独立运维 Agent6 ACCEPT WITH LIMITATIONS，无剩余所审P0/P1/P2。
-- 本地浏览器工具曾多次超时，未据此伪报完整浏览器点击验收；实际 DOM/截图、弱网断线/恢复和公共 HTTPS 仍待对应环境验收。
+- 公网浏览器实际打开登录页，中/英/法切换及保留账号输入已确认；authenticated POS 全流程点击、真实弱网断线/恢复 NOT_RUN。单元测试与 HTTP 验收不冒充这两项浏览器验收。
 - 私有证据：`.merchant-private/allo-nouilles/local-http-evidence.json`、`local-extra-evidence.json`、`local-import-evidence.json`、`local-import-final-state.json` 及相关日志。真实票据在 `local-test-receipts.json`，不入公开 Git。
 
-## Test 替换执行记录
+## 实际交付身份与入口
 
-待 Production 发布完成和稳定后：取得现有 `.production-ops.lock` 与 Staging hygiene lock；只读生成实际完整 ID/Compose labels/mounts/networks/ports/protected snapshot/shared ingress hash；封存精确删除清单并自动复核后执行。任何归属不明的资源保留。仅旧 Test 已获豁免备份；Production/Staging 数据仍完全受保护。
+- Test：<https://test.lanzhounoodlesmtl.com/>，部署及公网验收 PASS；Owner 业务验收待进行。
+- 应用源码／运行 SHA：`a19b5d64eab36bfc770927b1b1bb4bfe8876d15d`。
+- 运维工具 SHA：`9803ada1184c7d9a310a507cdd2c0f242b82da6d`。仅修 Docker 可选 Health 字段读取；应用 Backend/Frontend 与 a19 相同，复用已验收 JAR/dist，没有重新构建应用。
+- Draft PR：<https://github.com/Z1linXu/Restaurant_System/pull/308>；未合并、未授权自动合并。分支尚未集成 main 的两项文档提交；PR 当前不可直接合并，留待 Owner 后续决定，不为交付 Test 擅自 rebase/merge。
+- JAR SHA256：`09bed11a656558b2bc88837c3db3cb1ab2b66a36ad34ae281357c0054784770e`；dist tree SHA256：`9faf320476b61e81e879969cd0f7968e4f62290bfd6401a2e25ffa72b5275f44`。
+- 封存包 SHA256：`705baf41eab32c0c16349cca554950eb4998696ecf20150da5c947ff317bc210`。应用 release 与工具-only operations 目录分别保留，未覆盖已封存 manifest。
+- 后续本轮文档提交仅记录证据，不是新应用 release，不触发 rebuild/redeploy。
 
-Allô 固定预算沿原路径：Backend512 MiB、DB128 MiB、Frontend32 MiB、Relay16 MiB，总 cap688 MiB；CPU caps 合计1.25，非预期同时满载保证。启动前门槛仍为 MemAvailable≥1100 MiB / 可用磁盘≥6 GiB，不能降低；启动中/后复检 Production 健康和资源。失败只停止 Allô 专属组件，保留数据/日志，不恢复旧 Test。
+| 服务／容器 | 完整容器 ID | 实际镜像 ID |
+|---|---|---|
+| `allo-nouilles-test-backend-1` | `9ea3a9da222af41186f14fbb060f66bee4aa4d57b1a16139acf26882d4f32a39` | `sha256:0d5dc0fd5d37d92e62e986703471a6437108110731da89ae69677a8829d30622` |
+| `allo-nouilles-test-frontend-1` | `fea8ac2d6db1eb123c24912d9acfbd1328b6847e33e1b9f2f830a7f3253c68af` | `sha256:79e4db1941d15bcccc1a6f9d8a48f96c12f49a5cd6b87494637826e006d33ea2` |
+| `allo-nouilles-test-db-1` | `57f1e8a3152cb08d88bd2f0a26abe1495ca9dfbde8444047aeb598ff157d2d09` | `sha256:cbf42f0edc946c0bc1b8eeed62403734e1f25dc67a3491455d07a92fdb558b28` |
+| `allo-nouilles-test-relay-1` | `d2c024d5e8108fe3d21e9e1690e9c61bc2c846c1339124b296fabcb4a6e518d0` | `sha256:84ed8c0dd296c188bfc24ed506f46589e9285fb0b11cf3a04d91d524d3067e11` |
 
-前轮容量采样838 MiB只代表当时12容器并存；不得作为现在已停止 Staging/Test 后的真实资源。下一次以实时测量为准。部署镜像只 COPY 本地最终 JAR/dist，不在服务器跑 Maven/npm 编译。
+Backend/Frontend 镜像 tag 均为各自 `allo-nouilles-test-{backend,frontend}:a19b5d64eab36bfc770927b1b1bb4bfe8876d15d`。最终四容器均运行、无 restarting，DB healthy；Backend 无 Docker Health 字段，健康另由实际 HTTPS API 证明。
 
-当前尚无已部署 Allô SHA或实际退休删除结果。候选以本分支commit及私有artifact receipt的精确SHA/哈希为准；不把源码提交当已部署。
+## Test 替换执行结果
 
-Governance validator 已按HEAD原脚本只读执行：FAIL，原因是 sparse checkout 未物化的历史文档 `docs/governance/UBER_TEST_MENU_FULL_COMPARE_20261002.md` 链接；未为无关历史链接改动源码或扩治理工具。当前修改 diff-check PASS。
+另一线程 Production 发布结束后，本任务重新采集实际状态，在 `.production-ops.lock` 与 Staging hygiene lock 内逐项复核完整 ID、Compose labels、mounts、共享引用、端口、保护集合与 ingress hash。精确退休计划 SHA256：`582a7227d3af3807a44de16572c3a0927e8830c6a6483cd55520e5573f2c6fa5`；执行前自动重建比对，结果 PASS。
 
-## 已知限制与验收边界
+2026-11-04 05:25:38 UTC 永久删除旧 `restaurant-template-test`：
+
+- 四个已停止容器 relay/frontend/backend/db，精确 ID 保存在私有 `retire-result.json`。
+- 专属 `restaurant-template-test_postgres` volume（包含旧测试数据库/订单）。Owner 已明确豁免备份；无法从本次操作恢复旧 Test 数据。
+- 专属 `restaurant-template-test_internal`、`restaurant-template-test_ingress` 两个网络。
+- 精确私有配置 `/srv/restaurant-pos/test/private/runtime.env`。
+- 所有镜像及历史 release/evidence 保留，保护共享及回滚引用。无全局 prune、递归删除或共享 Nginx reload。
+
+实测释放文件系统 **72,146,944 bytes（68.8 MiB）**。停止容器本来不占运行内存，未把退休描述为释放在线 RAM。旧四容器最终剩余0；没有恢复旧 Test。
+
+新 Compose project `allo-nouilles-test`，根目录 `/srv/restaurant-pos/allo-nouilles-test`。独立数据库 `restaurant_allo_nouilles_test`、用户 `allo_test`、volume `allo-nouilles-test_postgres`、网络 `allo-nouilles-test_internal` 与 `allo-nouilles-test_ingress`。Backend/DB 仅 internal、无 host port；Frontend 发布 `127.0.0.1:28080`；专用 host-network Relay 复用 `172.18.0.1:28480` 与原 edge allowlist。凭据全新独立，未读取/复制 Production 数据库或凭据。
+
+共享 Nginx 宿主模板与有效配置 SHA256 始终为 `c70c419d83f6d541228a27bdf66bec59d62aca43832f108a0de6cdea07a42db8`；证书/DNS/配置/进程未变，无 reload。
+
+## 部署后验收与证据索引
+
+以下证据均在 ignored 私有 `.merchant-private/allo-nouilles/`，没有公开上传客户菜单、票据或凭据：
+
+| 证据文件 | 实际结果 |
+|---|---|
+| `remote-deploy-result.json` | PASS，精确 app/tool SHA、资源 admission、保护集合及 ingress 不变、Production HTTP200/UP |
+| `public-http-evidence.json` | 27 PASS：全部来源价格/名称、V1–V41、C6、续加、初单/Update、幂等、跨店拒绝、打印语言/旧 Job 不变、DISABLED 不阻塞保存 |
+| `public-extra-evidence.json` | 8 PASS：饮品零厨房任务、原件副本/重印去重、多批次整单拒绝、厨房失败仍保存且前台成功 |
+| `public-acceptance-summary.json` | 公网根页/health/logo/精确前端 SHA 正常；`/ws` 与 `/ws/info`403、`/actuator/env`404、未登录 catalog401，共9项入口检查 |
+| `public-menu-ticket-matrix.json` | 19 PASS：每种打印语言覆盖全部32商品＋2续加、全部13加料各两份；金额565.42；34行、28 BACK_KITCHEN tasks；仅 GRAB＋FRONTDESK 两张 MOCK，完整必要零价选项 |
+| `remote-repeat-bootstrap.json` | 仅 Allô Backend 同完整 ID 重启一次：0 created / 0 updated / 34 unchanged，39 provenance、菜单 revision 不变；14个启动采样中 Production 始终 UP |
+| `public-final-state.json` | PASS：中文默认、目标覆盖 null、BACK_KITCHEN；品牌/Logo hash、refresh 后授权上下文；34商品/39provenance、真实打印 endpoint0、pending Job0 |
+| `remote-runtime-before.json` / `remote-runtime-after.json` | 8个保护容器的 ID/image/start/restarts/running/restarting/health 全部不变；4个 Staging 主服务继续停止 |
+| `retire-plan.json` / `retire-result.json` | 精确删除对象、计划 hash、实际结果与释放空间 |
+
+最后公网测试已恢复 MOCK、默认中文、厨房/前台 override=null。故障验收产生的失败厨房任务保留用于证明，前台成功且未盲目重发；不清理测试历史掩盖结果。4张桌台为明确 TEST 占位，不冒充真实厅面桌号。
+
+当前观测 Production Backend/Nginx 镜像标签均为另一线程完成的 `74dfc1fd235af31fc7345c43f770d9991960da70`，实际 HTTPS HTTP200/UP、DB healthy。本任务没有 Production restart/deploy/config/data/Flyway 动作；未查询其数据库验证 schema。Staging nginx/backend/ingress/db 继续停止（Backend/Frontend 标签 a14cc4ce87ecaea17b31d86aa55aae76f1a79294）；既有 uber-sandbox-webhook 仍运行且未变，不把它说成已停止。
+
+## Docker / Disk Hygiene
+
+| 指标 | 替换前／部署 admission | 最后快照 2026-11-04 05:51:41 UTC |
+|---|---|---|
+| MemAvailable | 初始1929 MiB；部署 admission1912 MiB | 1550 MiB |
+| Load 1/5/15min | 0.22 / 0.23 / 0.22 | 0.68 / 0.37 / 0.27（2 vCPU） |
+| Disk Used / Free | 65%；部署 admission21,421,649,920 bytes | 66%；21,169,999,872 bytes（19.72 GiB） |
+| Build Cache / Reclaimable | 8.562 GB / 1.572 GB | 8.678 GB / 1.575 GB |
+| Cleanup | 仅已授权旧 Test 专属资源 | 释放68.8 MiB；无 cache/image/volume 全局清理 |
+
+Allô 固定上限 BE512/DB128/FE32/Relay16 MiB，总688 MiB；CPU caps合计1.25。部署沿原 MemAvailable≥1100 MiB、可用磁盘≥6 GiB 门槛，无阈值下调。重复启动采样 MemAvailable 最低1574 MiB、load最高1.83；最终1550 MiB仍通过门槛。Cache8–12GB 区间已复核：增长0.116GB来自本次两应用 COPY 镜像层；disk<70%、cache<12GB，不扩大为额外清理。保护 Production/Staging 当前镜像、数据库、回滚 release、共享入口与证据，均未删改。
+
+## 安全登录与 Owner 验收
+
+账号 `allo_owner` / `allo_manager`。密码仅在本地 ignored、0600 文件 `.merchant-private/allo-nouilles/TEST_ACCESS.md`，不在报告/PR/终端输出明文。文件含准确 Test URL 和使用说明；无 Production 凭据。
+
+建议 Owner 先在 Test 核对菜单/品牌，分别切换三语，选择 C6 两项、Add-on 数量2，堂食提交/Update/同类续加，在 PrintCenter 检查 MOCK 原件与重印。切换 UI 语言与打印默认/厨房/前台语言应互不替代。完整 authenticated browser POS 点击及真实弱网恢复仍需 Owner 验收；已有433前端测试不是这两项实机证明。
+
+### 后续实体打印验收清单（尚未授权执行）
+
+1. 明确目标 Test 设备/打印机型号、纸宽、连接方式、目标 Station 及授权范围；保持三旧店设备/配置完全不动。
+2. 中英法各测一张含长菜名/重音字符/必要零价选项/数量2加料的厨房与前台票，核对实际字形、换行、纸宽、字号、切纸。
+3. 初单、Update 只打印对应新增批次；纯饮品无厨房纸；对照前台金额/税；同幂等重试不多打一张。
+4. 改语言不改变历史原件；显式选原 Job 重印一次；断电/断网等不明确出纸结果人工核对，不盲目自动重发。
+5. 单独确认设备协议与字体/codepage；MOCK UTF-8 证明字节不得直接当成实体/PAD 可用载荷。未获得明确授权前保持 MOCK/无真实 endpoint。
+
+## 已知限制与停止边界
 
 - 本店核心用户路径三语已完成；部分高级定价/Display Rule/高级报表/Android诊断仍有历史文案，不宣称全仓翻译。
 - C6 是本菜单定价主食，未启用旧促销 Combo；通用 Combo 仍为原已验证子集，不扩未知套餐。
 - 实体机型/codepage/纸宽/出纸、真实 Android、Uber/支付、Production 上线均 NOT_RUN；MOCK PRINTED 只代表软件模拟成功。
-- 历史有多批次的整单不重新组合排版；PrintCenter 以具体原件重印。F31/STOMP 安全缺口保留，公网 `/ws` 必须继续拒绝。
-- 本阶段完成后 Stop：`FIRST_RESTAURANT_ALLO_TEST_DELIVERY_ONLY_NO_REAL_PRINT_OR_PRODUCTION`，等 Owner 在 Test 反馈，不自动第二店/下一阶段。
+- 历史多批次整单不重新组合排版；PrintCenter 以具体原件重印。F31/STOMP 缺口保留，公网 `/ws` 与 `/ws/info`403，只是入口收口，不宣称修复 Broker/SaaS 隔离。
+- Governance validator FAIL：sparse checkout 未物化的历史链接 `docs/governance/UBER_TEST_MENU_FULL_COMPARE_20261002.md`；不为无关历史链接扩治理工具。当前文档 diff-check 及本轮具体链接核对独立记录。
+- Agent6 对业务代码、受保护打印切片、退休/部署守卫、执行 caller 及 Health 修复 ACCEPT WITH LIMITATIONS，无剩余所审 P0/P1/P2；纯证据文档收尾采用文档风险例外，不重跑应用构建/部署。
+- STOP：`FIRST_RESTAURANT_ALLO_TEST_DELIVERY_ONLY_NO_REAL_PRINT_OR_PRODUCTION`。技术交付已完成，等待 Owner 在 Test 验收，不自动第二店/下一阶段/正式上线。

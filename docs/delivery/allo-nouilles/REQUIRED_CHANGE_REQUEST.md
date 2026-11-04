@@ -50,8 +50,8 @@
 - 三语同订单显示正确名称/份量/价格及零价制作信息；UI locale独立于Store打印locale；更改语言后旧event/Job text/bytes hash不变，新batch用新配置。
 - 合成MOCK及严格encoder/markup/base64检查；不发送真实字节。真实机型/codepage/纸宽/出纸仍NOT_RUN，后续独立授权。
 - 缺text/bytes/历史revision、跨设备编码不兼容明确人工核对，不能静默转码/自动重印；不承诺给三旧店历史任务自动改行为。
-- 候选review后绑定精确SHA，独立Agent6；只在隔离Test迁移/部署。回退以保留原模板Test容器/数据库和前一候选包实现入口恢复，不rollback数据库或删除新记录；共享入口另行精确审批。
+- 候选review后绑定精确SHA，独立Agent6；只在隔离Test迁移/部署。运行恢复边界已被最新 Owner 指令替代：旧 Template Test 永久退休；Allô 失败只停精确验证的 Allô 组件，保留数据/日志，不恢复旧 Test，不改共享 Nginx 或 Production。
 
 ## Owner决策
 
-请明确批准或拒绝上表保护文件/方法的这个单店最小切片。批准仅用于Allô新Store/Test、MOCK验证，不批准三家旧店发布、实体打印、Android、真实Uber/支付或正式上线。尚未批准时，仅暂停上述受保护修改，菜单/三语UI/普通元数据/导入与测试继续。
+Owner 已明确回复“批准这份单店最小打印 CR”。批准仅用于上表 Allô 新Store/Test 的最小文件/方法切片及 MOCK 验证；不批准三家旧店发布、实体打印、Android、真实Uber/支付或正式上线。该批准未扩张；实际交付与验证见 DELIVERY_TRACKER.md。
