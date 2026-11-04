@@ -13,7 +13,7 @@ const PANEL = 'min-w-0 rounded-[26px] bg-[rgba(255,255,255,0.82)] p-5 shadow-[0_
 
 function amountLabel(metric: ChannelMetric) {
   return metric.revenue == null && metric.known_revenue > 0
-    ? `Known ${channelMoney(metric.known_revenue)}` : channelMoney(metric.revenue)
+    ? channelMoney(metric.known_revenue) : channelMoney(metric.revenue)
 }
 function Amount({ metric, scope = 'items' }: { metric: ChannelMetric; scope?: 'orders' | 'items' }) {
   const pending = metric.unknown_order_count ?? metric.unknown_amount_count
@@ -93,7 +93,7 @@ export function ChannelTrend({ points }: { points: ChannelPoint[] }) {
           <div className="bg-[#8b2922]" style={{ height: `${point.in_store.known_revenue / max * 100}%` }} />
         </div><div className="mt-2 font-semibold">{point.label}</div>
       </div>)}
-    </div></div><p className="text-xs text-[var(--muted)]">POS first submission time · Uber placed time. Bars show known amounts; pending is not zero.</p>
+    </div></div><p className="text-xs text-[var(--muted)]">POS first submission time · Uber placed time. Bars exclude pending amounts; pending is not zero.</p>
   </div>
 }
 
