@@ -7,6 +7,26 @@ export interface UberConnection { unmapped_orders: number; enabled: boolean; env
 export interface UberChoice { id: number; code: string; group: string; zh: string; en: string; parentCode: string | null }
 const base = (store: number) => `/api/v1/stores/${store}/integrations/uber-eats`
 export const fetchUberOrders = (store: number) => apiRequest<UberOrder[]>(`${base(store)}/orders`)
+export interface UberInboxPage { orders: UberOrder[]; has_more: boolean; next_before_id: number | null }
+export interface UberInboxFeed {
+  business_date: string
+  time_zone: string
+  today: UberInboxPage
+  attention: UberInboxPage
+  history: UberInboxPage | null
+}
+export interface UberInboxQuery {
+  limit?: number
+  today_before_id?: number
+  attention_before_id?: number
+  history_date?: string
+  history_before_id?: number
+}
+export function fetchUberInbox(store: number, query: UberInboxQuery = {}, signal?: AbortSignal) {
+  const params = new URLSearchParams()
+  Object.entries(query).forEach(([key, value]) => { if (value !== undefined) params.set(key, String(value)) })
+  return apiRequest<UberInboxFeed>(`${base(store)}/inbox${params.size ? `?${params}` : ''}`, { signal })
+}
 export const fetchUberConnection = (store: number) => apiRequest<UberConnection>(`${base(store)}/connection`)
 export const decideUberOrder = (store: number, id: number, action: 'accept' | 'deny' | 'retry-local', reason = 'OTHER') => apiRequest<UberOrder>(`${base(store)}/orders/${id}/${action}`, { method: 'POST', body: JSON.stringify({ reason_code: reason }) })
 export const saveUberMapping = (store: number, mapping: UberMapping) => apiRequest<UberMapping>(`${base(store)}/mappings`, { method: 'PUT', body: JSON.stringify(mapping) })

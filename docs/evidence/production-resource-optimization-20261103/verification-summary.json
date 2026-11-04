@@ -1,0 +1,94 @@
+{
+  "agent6": {
+    "closed_findings": [
+      "archive SQL delimiter collision",
+      "Inbox invalid parameter 500"
+    ],
+    "final_contract_consistency": "ACCEPT",
+    "open_P0_P1_P2": 0,
+    "result": "ACCEPT"
+  },
+  "authorization": "LOCAL_IMPLEMENTATION_ISOLATED_TESTS_PR_ONLY",
+  "backend": {
+    "java_version": "17.0.14",
+    "new_suites": {
+      "com.restaurant.system.analytics.controller.SalesPeriodReportControllerTest": {
+        "errors": "0",
+        "failures": "0",
+        "skipped": "0",
+        "tests": "4"
+      },
+      "com.restaurant.system.analytics.service.SalesPeriodReportServiceTest": {
+        "errors": "0",
+        "failures": "0",
+        "skipped": "0",
+        "tests": "4"
+      },
+      "com.restaurant.system.integration.ubereats.UberEatsInboxBatchTest": {
+        "errors": "0",
+        "failures": "0",
+        "skipped": "0",
+        "tests": "5"
+      },
+      "com.restaurant.system.integration.ubereats.UberEatsInboxControllerValidationTest": {
+        "errors": "0",
+        "failures": "0",
+        "skipped": "0",
+        "tests": "8"
+      },
+      "com.restaurant.system.integration.ubereats.UberEatsInboxReadPostgresTest": {
+        "errors": "0",
+        "failures": "0",
+        "skipped": "0",
+        "tests": "6"
+      }
+    },
+    "note": "Final full regression after both Agent6 P2 clusters were repaired.",
+    "results": {
+      "errors": 0.0,
+      "executed_pass": 1158,
+      "failures": 0.0,
+      "skipped": 118.0,
+      "tests": 1276.0,
+      "time": 24.121000000000024
+    }
+  },
+  "database_lifecycle": {
+    "delete_executor": false,
+    "independent_rerun": "PASS",
+    "result": "PASS",
+    "tests": 12
+  },
+  "disk_governance": {
+    "independent_rerun": "PASS",
+    "native_logrotate_tests": 1,
+    "result": "PASS",
+    "safety_tests": 14
+  },
+  "frontend": {
+    "build": "PASS",
+    "changed_file_lint": "PASS",
+    "failures": 0,
+    "files": 67,
+    "tests": 388
+  },
+  "governance": "PASS; task-installed node_modules temporarily outside repository-wide Markdown scan",
+  "implementation_base": "27612b6f72dabc48e0167cc7d214a3ece565dd5e",
+  "limitations": [
+    "118 backend tests conditionally skipped; no live Staging or Production deployment acceptance",
+    "synthetic benchmark is not Production CPU attribution or HTTP latency",
+    "full grouped index P95 improvement not established",
+    "no transaction deletion class proven; no executor",
+    "heap used/committed/nonheap UNKNOWN"
+  ],
+  "local_test_clusters": "STOPPED_TASK_OWNED_ONLY",
+  "manual_index_guards": {
+    "production_index_executed": false,
+    "result": "PASS",
+    "tests": 6
+  },
+  "production_mutation": false,
+  "protected_paths_changed": [],
+  "schema_baseline": "V39.1",
+  "staging_test_started": false
+}

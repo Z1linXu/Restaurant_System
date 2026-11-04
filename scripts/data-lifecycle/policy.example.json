@@ -1,0 +1,6 @@
+{
+  "automatic_cleanup_enabled": false,
+  "retention_days": {"A": null, "B": 2555, "C": 365, "D": 365},
+  "batch_size": 100,
+  "note": "Retention ages are review horizons only, not deletion authorization or a legal retention decision. No table currently has an approved deletion path."
+}

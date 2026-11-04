@@ -1,0 +1,13 @@
+{
+  "repository": "Z1linXu/Restaurant_System",
+  "pr": 309,
+  "url": "https://github.com/Z1linXu/Restaurant_System/pull/309",
+  "draft": true,
+  "merged": false,
+  "base_branch": "codex/production-resource-baseline-27612b6",
+  "base_sha": "27612b6f72dabc48e0167cc7d214a3ece565dd5e",
+  "implementation_sha": "0346c8bae09ecfd37e52cf8499a1ca0c3be3cc73",
+  "head_branch": "codex/production-resource-optimization",
+  "subsequent_sync": "DOCUMENTATION_EVIDENCE_ONLY_NO_REBUILD_OR_DEPLOY",
+  "production_mutation": false
+}

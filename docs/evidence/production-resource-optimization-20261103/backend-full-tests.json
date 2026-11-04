@@ -1,0 +1,44 @@
+{
+  "java_version": "17.0.14",
+  "results": {
+    "tests": 1276.0,
+    "failures": 0.0,
+    "errors": 0.0,
+    "skipped": 118.0,
+    "time": 24.121000000000024,
+    "executed_pass": 1158
+  },
+  "new_suites": {
+    "com.restaurant.system.analytics.service.SalesPeriodReportServiceTest": {
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    "com.restaurant.system.integration.ubereats.UberEatsInboxReadPostgresTest": {
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    "com.restaurant.system.integration.ubereats.UberEatsInboxControllerValidationTest": {
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    "com.restaurant.system.analytics.controller.SalesPeriodReportControllerTest": {
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    "com.restaurant.system.integration.ubereats.UberEatsInboxBatchTest": {
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    }
+  },
+  "note": "Final full regression after both Agent6 P2 clusters were repaired."
+}

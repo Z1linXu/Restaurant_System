@@ -2236,3 +2236,63 @@ second menu catalog. Prefix compatibility preserves distinct ingredient/operatio
 semantics; proposals never choose among conflicting custom aliases. Draft/validate/
 publish/preview endpoints remain the only rule mutation workflow. No-op proposals
 need no revision. Rule edits affect future renderings, not frozen Print Job text.
+
+
+## Resource optimization read contracts
+
+### Grouped Uber Inbox
+
+GET `/api/v1/stores/{storeId}/integrations/uber-eats/inbox`
+
+Uses the existing frontdesk `ORDER_VIEW_ACTIVE`, Store/Organization access and
+`UBER_EATS` module checks. No operational write is performed.
+
+Optional parameters: `limit` (default100, range1..200), `today_before_id`,
+`attention_before_id`, `history_date` (YYYY-MM-DD), `history_before_id`.
+Cursors must be positive; a history cursor requires a history date.
+
+Response `data`:
+
+```json
+{
+  "business_date": "2026-11-03",
+  "time_zone": "America/Toronto",
+  "today": { "orders": [], "has_more": false, "next_before_id": null },
+  "attention": { "orders": [], "has_more": false, "next_before_id": null },
+  "history": null
+}
+```
+
+Orders retain the existing `InboxOrder` fields and printing/warning semantics.
+Today covers every processing mode in the selected Store's current day.
+Attention preserves exceptions and cross-day unfinished work, including
+unresolved print fallback and missing local references; it may overlap today.
+Clients should render an overlapping order once in the attention area.
+History is null until explicitly requested by business date. Each descending-ID
+page has an independent cursor; a first-page refresh discovers new work.
+The existing GET `/orders` array contract is unchanged, with batched state reads.
+No Accept/Deny/retry-local/manual reprint or Worker contract changes.
+
+### Store daily/monthly sales projection
+
+GET `/api/v1/admin/analytics/period-report?store_id=ID&period=day|month&date=YYYY-MM-DD`
+
+Store ID is required. Authorization reuses `ADMIN_STORE_CONFIG`, `REPORTING_CORE`
+and `AnalyticsReadScope`; no implicit organization-wide scope is introduced.
+`day` selects the anchor date; `month` selects its calendar month. Response
+contains `store_id`, `business_timezone`, `period`, `start_date`, `end_date`,
+`projection_mode=LIVE_RECOMPUTED_NOT_ARCHIVE`, `original_transactions_required=true`,
+`channel_sales`, `pending`, and informational `adjustments`.
+
+`channel_sales` is the existing shared channel model: Store/channel counts,
+known and nullable complete revenue, unknown orders/lines, frozen item keys and
+names, quantity, item/category sales and daily series. No new financial amounts
+are inferred. Unknown pending amounts are null rather than zero. Recorded POS
+order discounts are informational and not subtracted again. Separate tax, Uber
+discount and refund amounts remain null/UNKNOWN where no verified ledger exists.
+Read-only repeatable-read recomputation reflects late data and valid existing
+corrections without incrementing/double-counting a persisted total. Original
+transactions, financial snapshots and dedup records remain required.
+
+Lifecycle and disk tooling are internal offline/CLI preparation only; no web
+cleanup endpoint or automatic deletion API is introduced.

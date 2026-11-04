@@ -1,0 +1,7 @@
+{
+  "services": {
+    "db": {"logging": {"driver": "local", "options": {"max-size": "10m", "max-file": "3"}}},
+    "backend": {"logging": {"driver": "local", "options": {"max-size": "10m", "max-file": "3"}}},
+    "nginx": {"logging": {"driver": "local", "options": {"max-size": "10m", "max-file": "3"}}}
+  }
+}

@@ -3,11 +3,14 @@ package com.restaurant.system.integration.ubereats.controller;
 import com.restaurant.system.audit.service.AuditLogService;
 import com.restaurant.system.common.auth.*;
 import com.restaurant.system.common.response.ApiResponse;
+import com.restaurant.system.common.exception.BusinessException;
 import com.restaurant.system.integration.ubereats.config.UberEatsProperties;
 import com.restaurant.system.integration.ubereats.dto.UberOrderSnapshot;
 import com.restaurant.system.integration.ubereats.entity.*;
 import com.restaurant.system.integration.ubereats.mapping.UberEatsMenuMappingService;
 import com.restaurant.system.integration.ubereats.repository.UberEatsOrderRepository;
+import com.restaurant.system.integration.ubereats.repository.UberEatsInboxReadRepository;
+import com.restaurant.system.user.repository.StoreRepository;
 import com.restaurant.system.integration.ubereats.service.*;
 import com.restaurant.system.modules.*;
 
@@ -31,6 +34,8 @@ public class UberEatsInboxController {
     private final StoreModuleAccessEvaluator modules;
     private final AuditLogService audit;
     private final UberEatsKitchenView kitchen;
+    private final UberEatsInboxReadRepository reads;
+    private final StoreRepository stores;
 
     public UberEatsInboxController(
             AuthorizationService auth,
@@ -43,7 +48,9 @@ public class UberEatsInboxController {
             UberEatsMenuMappingService menu,
             StoreModuleAccessEvaluator modules,
             AuditLogService audit,
-            UberEatsKitchenView kitchen) {
+            UberEatsKitchenView kitchen,
+            UberEatsInboxReadRepository reads,
+            StoreRepository stores) {
         this.auth = auth;
         this.access = access;
         this.config = config;
@@ -55,6 +62,8 @@ public class UberEatsInboxController {
         this.modules = modules;
         this.audit = audit;
         this.kitchen = kitchen;
+        this.reads = reads;
+        this.stores = stores;
     }
 
     public record InboxOrder(
@@ -101,19 +110,79 @@ public class UberEatsInboxController {
         var zone = java.time.ZoneId.of(config.businessTimeZone);
         var today = java.time.LocalDate.now(zone);
         var day = UberEatsInboxDay.of(today, zone, java.time.ZoneId.systemDefault());
-        return ApiResponse.success(
-                orders
-                        .todayInbox(
-                                config.environment,
-                                storeId,
-                                day.start(),
-                                day.end(),
-                                day.createdStart(),
-                                day.createdEnd(),
-                                PageRequest.of(0, 200))
-                        .stream()
-                        .map(this::view)
-                        .toList());
+        var rows=orders.todayInbox(config.environment,storeId,day.start(),day.end(),
+                day.createdStart(),day.createdEnd(),PageRequest.of(0,200));
+        var states=kitchen.states(rows);
+        return ApiResponse.success(rows.stream().map(row->view(row,states.get(row))).toList());
+    }
+
+    public record InboxPage(List<InboxOrder> orders, boolean has_more, Long next_before_id) {}
+    public record Inbox(String business_date,String time_zone,InboxPage today,InboxPage attention,InboxPage history) {}
+
+    /** Separate current-day work, unresolved attention, and explicitly requested history. */
+    @GetMapping("/inbox")
+    public ApiResponse<Inbox> groupedInbox(@PathVariable Long storeId,
+            @RequestParam(name="limit",required=false) String limitValue,
+            @RequestParam(name="today_before_id",required=false) String todayBeforeValue,
+            @RequestParam(name="attention_before_id",required=false) String attentionBeforeValue,
+            @RequestParam(name="history_date",required=false) String historyDateValue,
+            @RequestParam(name="history_before_id",required=false) String historyBeforeValue) {
+        staff(storeId,Capability.ORDER_VIEW_ACTIVE);
+        int limit=parseLimit(limitValue);
+        Long today_before_id=parseCursor(todayBeforeValue);
+        Long attention_before_id=parseCursor(attentionBeforeValue);
+        Long history_before_id=parseCursor(historyBeforeValue);
+        java.time.LocalDate history_date=parseHistoryDate(historyDateValue);
+        if (history_before_id!=null && history_date==null) throw invalidInboxPage();
+        String timezone=stores.findById(storeId).map(store->store.timezone).filter(value->!value.isBlank()).orElse(config.businessTimeZone);
+        var zone=java.time.ZoneId.of(timezone);
+        var today=java.time.LocalDate.now(zone);
+        var day=UberEatsInboxDay.of(today,zone,java.time.ZoneId.systemDefault());
+        var current=reads.page(config.environment,storeId,day,"today",today_before_id,limit);
+        var attention=reads.page(config.environment,storeId,day,"attention",attention_before_id,limit);
+        var historical=history_date==null?null:reads.page(config.environment,storeId,
+            UberEatsInboxDay.of(history_date,zone,java.time.ZoneId.systemDefault()),"history",history_before_id,limit);
+        List<UberEatsOrder> rows=new ArrayList<>(current.rows()); rows.addAll(attention.rows());
+        if (historical!=null) rows.addAll(historical.rows());
+        var states=kitchen.states(rows);
+        return ApiResponse.success(new Inbox(today.toString(),timezone,page(current,states),page(attention,states),
+            historical==null?null:page(historical,states)));
+    }
+
+    private int parseLimit(String value) {
+        if (value==null) return 100;
+        Long limit=parseCursor(value);
+        if (limit>200) throw invalidInboxPage();
+        return limit.intValue();
+    }
+
+    private Long parseCursor(String value) {
+        if (value==null) return null;
+        if (value.length()>19 || !value.matches("[0-9]+")) throw invalidInboxPage();
+        try {
+            long cursor=Long.parseLong(value);
+            if (cursor<=0) throw invalidInboxPage();
+            return cursor;
+        } catch (NumberFormatException invalid) {
+            throw invalidInboxPage();
+        }
+    }
+
+    private java.time.LocalDate parseHistoryDate(String value) {
+        if (value==null) return null;
+        if (!value.matches("[0-9]{4}-[0-9]{2}-[0-9]{2}")) throw invalidInboxPage();
+        try {
+            var day=java.time.LocalDate.parse(value);
+            if (day.getYear()<1) throw invalidInboxPage();
+            return day;
+        } catch (java.time.format.DateTimeParseException invalid) {
+            throw invalidInboxPage();
+        }
+    }
+
+    private BusinessException invalidInboxPage() { return new BusinessException("INVALID_INBOX_PAGE"); }
+    private InboxPage page(UberEatsInboxReadRepository.Page page,Map<UberEatsOrder,UberEatsKitchenView.State> states) {
+        return new InboxPage(page.rows().stream().map(row->view(row,states.get(row))).toList(),page.hasMore(),page.nextBeforeId());
     }
 
     @PostMapping("/orders/{id}/accept")
@@ -234,8 +303,11 @@ public class UberEatsInboxController {
     }
 
     @SuppressWarnings("unchecked")
-    private InboxOrder view(UberEatsOrder row) {
-        var print = kitchen.state(row);
+    private InboxOrder view(UberEatsOrder row) { return view(row,kitchen.state(row)); }
+
+    @SuppressWarnings("unchecked")
+    private InboxOrder view(UberEatsOrder row,UberEatsKitchenView.State print) {
+        var content=kitchen.content(row);
         return new InboxOrder(
                 row.id,
                 print.status(),
@@ -256,9 +328,9 @@ public class UberEatsInboxController {
                 com.restaurant.system.printing.renderer.ExternalOrderReceiptHeader.kitchenLabel(
                         row.customerDisplayName, row.displayId),
                 row.releasedAt,
-                kitchen.mappedItems(row),
+                content.mappedItems(),
                 print.grab(),
                 print.hotKitchen(),
-                row.acceptedObservedAt, kitchen.rawItems(row), kitchen.orderNote(row));
+                row.acceptedObservedAt, content.rawItems(), content.orderNote());
     }
 }

@@ -1,20 +1,22 @@
 schema_version: 1
-updated_at: 2026-10-24
+updated_at: 2026-11-04
 
 repository:
   ref: origin/main
-  sha: c7b65ecc62633d6c1a60341995d199b440331d58
+  sha: 80e888fcdad74e98326fcbeaa5df14bc0d9baed6
   sha_semantics: IMPLEMENTATION_AUTHORITY_AT_STATE_WRITE
 
 phase:
   current: PHASE_B
-  package: DINING_TABLE_SOFT_DELETE
-  status: TABLE_DELETE_IMPLEMENTATION_AND_REVIEW
+  package: PRODUCTION_RESOURCE_OPTIMIZATION
+  status: LOCAL_VALIDATED_OWNER_REVIEW_NO_DEPLOYMENT
   next_phase_authorized: false
 
 staging:
+  operating_state: PAUSED_OWNER_20261103_DO_NOT_RESTORE
+  source_identity: NOT_REVALIDATED_PAUSED_CONTAINERS_PRESERVED
   deployed_sha: f838e48de1f20689253716bd1910b952fcbc00d3
-  deployed_sha_semantics: SAME_VERIFIED_BACKEND_FRONTEND_PAIR
+  deployed_sha_semantics: HISTORICAL_RECORDED_NOT_REVALIDATED_WHILE_PAUSED
   frontend_deployed_sha: f838e48de1f20689253716bd1910b952fcbc00d3
   policy_config_sha: d2316234b2936fd89a926aa24a7b6343008834e6
   flyway: V39
@@ -28,12 +30,12 @@ staging:
   endpoint_policy_gate: TEST_STORE18_MOCK_ACCEPTED_NO_PHYSICAL_PRINT
 
   uber_verified_sha: 7d573be03d66a9505e0c68f92fa17829247f56e3
-  runtime_owner: SPLIT_TABLE_LABEL_MODE_COMPLETED
+  runtime_owner: PAUSED_OWNER_20261103
   uber_worker_enabled: false
 
 production:
-  deployed_sha: f838e48de1f20689253716bd1910b952fcbc00d3
-  frontend_deployed_sha: f838e48de1f20689253716bd1910b952fcbc00d3
+  deployed_sha: 27612b6f72dabc48e0167cc7d214a3ece565dd5e
+  frontend_deployed_sha: 27612b6f72dabc48e0167cc7d214a3ece565dd5e
   canonical_url: https://pos.lanzhounoodlesmtl.com
   application_release: COMPLETE
   password_login: NOT_TESTED_NO_EXISTING_BROWSER_SESSION_OR_PRIVATE_PASSWORD
@@ -41,11 +43,11 @@ production:
   uber_activated: true
   uber_active_bindings: 1
   uber_binding_semantics: CONTINUOUS_STORE1_ONLY_UUID_CUTOVER_TABLET_RETAINS_ORDER_MANAGER
-  flyway: V39
+  flyway: V39.1
   mutation_authorized: false
-  current_release_authorization: COMPLETED_OWNER_20261024_ALL_STORE_SPLIT_LABEL_SAFE_V39_SAME_APP_PAIR_PRESERVE_CONTINUOUS_UBER
-  evidence: ../SPLIT_TABLE_LABEL_MODE_20261024.md
-  runtime_observation_evidence: ../SPLIT_TABLE_LABEL_MODE_20261024.md
+  current_release_authorization: NONE_RESOURCE_OPTIMIZATION_LOCAL_ONLY
+  evidence: ../RESOURCE_OPTIMIZATION_20261103.md
+  runtime_observation_evidence: ../RESOURCE_OPTIMIZATION_20261103.md
   canonical_addons_per_store: 15
   canonical_addon_assignments: 195
   addon_conflicts: 0
@@ -353,10 +355,11 @@ uber_store_capability:
   production_mutation: OWNER_20261021_LOCAL_MODULES_1_3_PREPARED_WORKER_FALSE
 
 gate:
-  type: TECHNICAL
-  next_action: IMPLEMENT_TEST_REVIEW_MERGE_STAGING_AND_OWNER_AUTHORIZED_PRODUCTION_TABLE_SOFT_DELETE
+  type: OWNER
+  next_action: OWNER_UNIFIED_REVIEW_LOCAL_RESOURCE_OPTIMIZATION_NO_RUNTIME_ACTION
 
 authorization:
+  resource_optimization: OWNER_20261103_LOCAL_IMPLEMENT_ISOLATED_TEST_REVIEW_PR_ONLY_NO_MERGE_DEPLOY_INDEX_DATA_DELETE_OR_HOST_CLEANUP
   dining_table_soft_delete: OWNER_20261024_ALL_STORE_IS_ACTIVE_SOFT_DELETE_ACTIVE_ORDER_GUARD_CACHE_AND_NEW_ORDER_BLOCK_IMPLEMENT_TEST_REVIEW_MERGE_STAGING_DIRECT_PRODUCTION_PRESERVE_HISTORY_AB_SPLIT_LABELS_PRINTING_AND_UBER_NO_REAL_TEST_ORDERS
   split_table_label_mode: COMPLETED_OWNER_20261024_PER_TABLE_LEFT_RIGHT_INSIDE_OUTSIDE_SAFE_FLYWAY_IMPLEMENT_TEST_REVIEW_MERGE_STAGING_DIRECT_PRODUCTION_ALL_STORES_INCLUDING_CHINATOWN_PRESERVE_AB_IDENTITIES_ACTIVE_ORDER_GUARD_TOP_FEED_UBER_AND_NO_REAL_TEST_ORDERS
   dine_in_top_feed: COMPLETED_OWNER_20261023_ALL_STORE_SIX_DINE_IN_TICKETS_EXTRA_AT_LEAST_15MM_SINGLE_TOP_FEED_IMPLEMENT_TEST_REVIEW_MERGE_STAGING_DIRECT_PRODUCTION_PRESERVE_UBER_AND_NO_TEST_ORDERS
@@ -385,4 +388,19 @@ authorization:
   production: NONE
 
 stop:
-  marker: DINING_TABLE_SOFT_DELETE_IN_PROGRESS
+  marker: RESOURCE_OPTIMIZATION_LOCAL_COMPLETE_NO_PRODUCTION_MUTATION
+
+resource_optimization:
+  implementation_base_sha: 27612b6f72dabc48e0167cc7d214a3ece565dd5e
+  baseline_semantics: VERIFIED_PRODUCTION_V39_1_EXCLUDES_PENDING_V3_FINANCIAL_CANDIDATE
+  branch: codex/production-resource-optimization
+  implementation_commit: 0346c8bae09ecfd37e52cf8499a1ca0c3be3cc73
+  review_pr: 309
+  review_pr_state: DRAFT_NOT_MERGED
+  independent_review: ACCEPT_TWO_P2_CLUSTERS_CLOSED
+  automatic_database_cleanup: DISABLED_NO_DELETE_EXECUTOR
+  existing_host_maintenance_policy: UNCHANGED_ALREADY_ENABLED
+  index: MANUAL_OPT_IN_OUTSIDE_FLYWAY_NOT_EXECUTED
+  staging_test: PAUSED_NO_LIFECYCLE_ACTION
+  production_mutation: NONE
+  evidence: ../RESOURCE_OPTIMIZATION_20261103.md

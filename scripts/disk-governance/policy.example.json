@@ -1,0 +1,7 @@
+{
+  "rollback_image_ids": [
+    "sha256:bf09f83635d532523b82c39dae30afbdfa12840858dd195d46423423cf49f696",
+    "sha256:af9a528ae56ceb905597794823b2ad417ef3c580fac6e3689c311ec837dcc9d9"
+  ],
+  "note": "Known pre-27612b6 Production rollback pair. Reconfirm against fresh private recovery models; do not treat this example as runtime authority."
+}
