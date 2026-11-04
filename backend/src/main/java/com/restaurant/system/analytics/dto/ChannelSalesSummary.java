@@ -2,6 +2,7 @@ package com.restaurant.system.analytics.dto;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 public class ChannelSalesSummary {
     public String revenue_basis = "MERCHANDISE_INCLUDING_TAX_EXCLUDING_PLATFORM_FEES_TIPS";
@@ -19,7 +20,11 @@ public class ChannelSalesSummary {
         /** Null means one or more real amounts are unknown. Never coerce to zero. */
         public BigDecimal revenue;
         public BigDecimal known_revenue;
+        /** Legacy field: unknown addends; retained for compatibility. */
         public int unknown_amount_count;
+        public int unknown_order_count;
+        public int unknown_line_count;
+        public Map<String, Integer> pending_reasons;
         public int order_count;
         public int quantity;
         public BigDecimal average_order_value;

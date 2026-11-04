@@ -17,67 +17,68 @@ public record UberFinancialSnapshot(
     public static UberFinancialSnapshot capture(JsonNode order) {
         List<String> problems = new ArrayList<>();
         JsonNode payment = order.path("payment");
-        JsonNode rawCharges = payment.path("charges");
-        ObjectNode charges = JsonNodeFactory.instance.objectNode();
-        String currency = rawCharges.path("sub_total").path("currency_code").asText("");
-        if (!currency.matches("[A-Z]{3}")) problems.add("CURRENCY_MISSING");
-        for (String key : List.of("sub_total", "tax", "total", "total_fee")) {
-            if (rawCharges.has(key)) charges.set(key, moneyNode(rawCharges.get(key)));
-        }
-        // Unsupported fees/promotions/accounting must not be silently treated as merchandise.
-        if (!payment.isObject() || !rawCharges.isObject()) problems.add("CHARGES_MISSING");
+        if (!payment.isObject()) problems.add("CHARGES_MISSING");
         payment.fieldNames().forEachRemaining(key -> {
-            if (!"charges".equals(key) && nonEmpty(payment.path(key)))
-                problems.add("UNSUPPORTED_PAYMENT_DETAIL");
-        });
-        rawCharges.fieldNames().forEachRemaining(key -> {
-            if (!Set.of("sub_total", "tax", "total", "total_fee").contains(key)
-                    && nonEmpty(rawCharges.path(key))) problems.add("UNSUPPORTED_CHARGE_DETAIL");
+            if (!Set.of("charges", "promotions").contains(key) && nonEmpty(payment.path(key)))
+                problems.add(key.equals("refunds") ? "REFUNDS_REQUIRE_REVIEW" : "UNSUPPORTED_PAYMENT_DETAIL");
         });
         for (String key : List.of("promotions", "discounts", "refunds", "adjustments", "tax_reporting")) {
-            if (nonEmpty(order.path(key))) problems.add("UNSUPPORTED_FINANCIAL_ADJUSTMENT");
+            if (nonEmpty(order.path(key))) problems.add(key.equals("refunds") ? "REFUNDS_REQUIRE_REVIEW" : "UNSUPPORTED_FINANCIAL_ADJUSTMENT");
         }
         List<Line> lines = lines(order.path("cart").path("items"), 0, problems);
-        if (lines.isEmpty()) problems.add("ITEM_AMOUNTS_MISSING");
-        Set<String> instances = new HashSet<>();
-        for (Line line : lines) {
-            if (!line.instance_id().isEmpty() && !instances.add(line.instance_id()))
-                problems.add("DUPLICATE_ITEM_INSTANCE");
+        return reconcile(text(order, "id"), text(order.path("store"), "id"), text(order, "placed_at"),
+                lines, payment.path("charges"), payment.path("promotions"), false, problems);
+    }
+
+    /** Pure preview only. Original v1 remains immutable; activation requires a correction journal entry. */
+    public static UberFinancialSnapshot reconcileRetained(UberFinancialSnapshot original, JsonNode charges) {
+        List<String> problems = new ArrayList<>();
+        if (original.version() != 1 || original.revenue_minor() != null || original.blocked_reason() == null)
+            problems.add("ORIGINAL_NOT_BLOCKED_V1");
+        for (String key : List.of("sub_total", "tax", "total")) {
+            if (!Objects.equals(amount(original.charges(), key, original.currency()), amount(charges, key, original.currency())))
+                problems.add("SOURCE_BASELINE_CHANGED");
         }
-        Long subtotal = amount(charges, "sub_total", currency);
-        Long tax = amount(charges, "tax", currency);
-        Long total = amount(charges, "total", currency);
-        Long fees = amount(charges, "total_fee", currency);
-        if (subtotal == null || tax == null || total == null) problems.add("CHARGES_INCOMPLETE");
-        if (charges.has("total_fee") && (fees == null || fees != 0)) problems.add("FEES_REQUIRE_REVIEW");
+        if (!charges.hasNonNull("total_promo_applied")) problems.add("PROMO_CHARGES_MISSING");
+        return reconcile(original.order_id(), original.store_id(), original.placed_at(), original.items(),
+                charges, JsonNodeFactory.instance.nullNode(), true, problems);
+    }
+
+    private static UberFinancialSnapshot reconcile(String orderId, String storeId, String placedAt, List<Line> lines,
+            JsonNode rawCharges, JsonNode promotions, boolean retained, List<String> problems) {
+        if (lines == null || lines.isEmpty() || lines.size() > 200) {
+            problems.add("ITEM_AMOUNTS_MISSING"); lines = List.of();
+        }
+        Set<String> instances = new HashSet<>();
+        String currency = rawCharges.path("sub_total").path("currency_code").asText("");
         BigDecimal weight = BigDecimal.ZERO;
         for (Line line : lines) {
+            if (line.id() == null || line.id().isBlank() || line.quantity() < 1 || line.quantity() > 100)
+                problems.add("FINANCIAL_ITEM_IDENTITY_INVALID");
+            if (line.instance_id() != null && !line.instance_id().isEmpty() && !instances.add(line.instance_id()))
+                problems.add("DUPLICATE_ITEM_INSTANCE");
             Long value = amount(line.price(), "total_price", currency);
             if (value == null) problems.add("ITEM_AMOUNT_INVALID");
             else weight = weight.add(BigDecimal.valueOf(value));
         }
-        if (subtotal != null && weight.compareTo(BigDecimal.valueOf(subtotal)) != 0)
-            problems.add("ITEM_SUBTOTAL_MISMATCH");
-        if (subtotal != null && tax != null && total != null
-                && BigDecimal.valueOf(subtotal).add(BigDecimal.valueOf(tax)).compareTo(BigDecimal.valueOf(total)) != 0)
-            problems.add("MERCHANDISE_TOTAL_MISMATCH");
-        if (weight.signum() == 0 && total != null && total != 0) problems.add("ZERO_WEIGHT_WITH_REVENUE");
-        if (problems.isEmpty()) {
-            List<Line> allocated = new ArrayList<>();
-            BigDecimal cumulative = BigDecimal.ZERO;
-            long assigned = 0;
-            for (Line line : lines) {
+        var selected = UberPromotionFinancialPolicy.select(rawCharges, promotions, weight, retained);
+        problems.addAll(selected.problems());
+        List<Line> allocated = new ArrayList<>();
+        BigDecimal cumulative = BigDecimal.ZERO;
+        long assigned = 0;
+        for (Line line : lines) {
+            Long revenue = null;
+            if (problems.isEmpty()) {
                 cumulative = cumulative.add(BigDecimal.valueOf(amount(line.price(), "total_price", currency)));
-                long target = weight.signum() == 0 ? 0 : BigDecimal.valueOf(total).multiply(cumulative)
+                long target = weight.signum() == 0 ? 0 : BigDecimal.valueOf(selected.total()).multiply(cumulative)
                         .divide(weight, 0, RoundingMode.HALF_UP).longValueExact();
-                allocated.add(new Line(line.id(), line.instance_id(), line.quantity(), line.price(), line.modifiers(), target - assigned));
-                assigned = target;
+                revenue = target - assigned; assigned = target;
             }
-            lines = List.copyOf(allocated);
+            allocated.add(new Line(line.id(), line.instance_id(), line.quantity(), line.price(), line.modifiers(), revenue));
         }
-        return new UberFinancialSnapshot(1, text(order, "id"), text(order.path("store"), "id"),
-                text(order, "placed_at"), currency, problems.isEmpty() ? total : null,
-                problems.isEmpty() ? null : problems.get(0), charges, lines);
+        return new UberFinancialSnapshot(selected.version(), orderId, storeId, placedAt, currency,
+                problems.isEmpty() ? selected.total() : null, problems.isEmpty() ? null : problems.get(0),
+                selected.charges(), List.copyOf(allocated));
     }
 
     private static List<Line> lines(JsonNode nodes, int depth, List<String> problems) {
@@ -89,7 +90,14 @@ public record UberFinancialSnapshot(
         for (JsonNode node : nodes) {
             ObjectNode price = JsonNodeFactory.instance.objectNode();
             for (String key : List.of("unit_price", "total_price", "base_unit_price", "base_total_price"))
-                if (node.path("price").has(key)) price.set(key, moneyNode(node.path("price").get(key)));
+                if (node.path("price").has(key)) {
+                    JsonNode money = node.path("price").get(key);
+                    money.fieldNames().forEachRemaining(field -> {
+                        if (!Set.of("amount", "currency_code", "formatted_amount").contains(field) && nonEmpty(money.path(field)))
+                            problems.add("UNSUPPORTED_ITEM_MONEY_DETAIL");
+                    });
+                    price.set(key, moneyNode(money));
+                }
             node.path("price").fieldNames().forEachRemaining(key -> {
                 if (!Set.of("unit_price", "total_price", "base_unit_price", "base_total_price").contains(key)
                         && nonEmpty(node.path("price").path(key))) problems.add("UNSUPPORTED_ITEM_PRICE_DETAIL");

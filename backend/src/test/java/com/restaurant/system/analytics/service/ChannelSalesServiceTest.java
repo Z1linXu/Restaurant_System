@@ -122,6 +122,42 @@ class ChannelSalesServiceTest {
         assertThat(build().totals.total.order_count).isZero();
     }
 
+    @Test void pendingOrderCountsAreDistinctFromCategoryLines() {
+        when(uber.load(anyList(),any(),any())).thenReturn(List.of(new UberSalesSource.Sale(1L,"unknown",date.atTime(18,15),"CAD",null,
+            List.of(uberItem("one","SOUP_NOODLE",2,null),uberItem("two","SOUP_NOODLE",1,null)),"PROMO_TOTAL_RECONCILIATION_REQUIRED")));
+        var result=build();
+        assertThat(result.totals.total.unknown_order_count).isEqualTo(1);
+        assertThat(result.totals.total.unknown_line_count).isEqualTo(2);
+        assertThat(group(result,"SOUP_NOODLE").total.unknown_order_count).isEqualTo(1);
+        assertThat(group(result,"SOUP_NOODLE").total.unknown_line_count).isEqualTo(2);
+        assertThat(group(result,"SOUP_NOODLE").total.pending_reasons).containsEntry("PROMO_TOTAL_RECONCILIATION_REQUIRED",1);
+    }
+
+    @Test void dayTotalsPreserve106OrdersAndKnownAmountsAfterEightCorrections() {
+        var posRows=new java.util.ArrayList<Order>();
+        for(long i=1;i<=60;i++) posRows.add(pos(i,i==60?"2639.25":"0.00"));
+        when(orders.findAllByStoreId(1L)).thenReturn(posRows);
+        when(items.findAllByOrderIds(anyList())).thenReturn(List.of());
+        var sales=new java.util.ArrayList<UberSalesSource.Sale>();
+        for(int i=0;i<46;i++) sales.add(sale("synthetic-"+i,i==0?Long.valueOf(110313):i<32?Long.valueOf(0):null,List.of()));
+        when(uber.load(anyList(),any(),any())).thenReturn(sales);
+        var before=build();
+        assertThat(before.totals.total.order_count).isEqualTo(106);
+        assertThat(before.totals.total.known_revenue).isEqualByComparingTo("3742.38");
+        assertThat(before.totals.total.unknown_order_count).isEqualTo(14);
+        for(int i=32;i<40;i++)sales.set(i,sale("synthetic-"+i,i==32?29993L:0L,List.of()));
+        var after=build();
+        assertThat(after.totals.total.order_count).isEqualTo(106);
+        assertThat(after.totals.in_store.order_count).isEqualTo(60);
+        assertThat(after.totals.uber_eats.order_count).isEqualTo(46);
+        assertThat(after.totals.in_store.revenue).isEqualByComparingTo("2639.25");
+        assertThat(after.totals.uber_eats.known_revenue).isEqualByComparingTo("1403.06");
+        assertThat(after.totals.total.known_revenue).isEqualByComparingTo("4042.31");
+        assertThat(after.totals.total.unknown_order_count).isEqualTo(6);
+        assertThat(after.totals.total.revenue).isNull();
+        assertThat(after.totals.total.average_order_value).isNull();
+    }
+
     private ChannelSalesSummary build() { return service.build(List.of(1L), date, date, true); }
     private ChannelSalesSummary.Category group(ChannelSalesSummary summary, String group) { return summary.categories.stream().filter(row -> row.reporting_group.equals(group)).findFirst().orElseThrow(); }
     private Order pos(Long id, String total) { Order order = new Order(); order.id = id; order.store_id = 1L; order.status = "completed"; order.submitted_at = date.atTime(18, 10); order.total_amount = new BigDecimal(total); return order; }
