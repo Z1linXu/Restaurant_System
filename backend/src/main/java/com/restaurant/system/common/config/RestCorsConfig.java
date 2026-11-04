@@ -5,7 +5,7 @@ import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
-@org.springframework.context.annotation.Profile("!template-test")
+@org.springframework.context.annotation.Profile("!template-test & !allo-test")
 public class RestCorsConfig implements WebMvcConfigurer {
 
     @Override

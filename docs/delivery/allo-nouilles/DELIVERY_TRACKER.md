@@ -146,3 +146,9 @@ Allô 固定上限 BE512/DB128/FE32/Relay16 MiB，总688 MiB；CPU caps合计1.2
 - Governance validator FAIL：sparse checkout 未物化的历史链接 `docs/governance/UBER_TEST_MENU_FULL_COMPARE_20261002.md`；不为无关历史链接扩治理工具。当前文档 diff-check 及本轮具体链接核对独立记录。
 - Agent6 对业务代码、受保护打印切片、退休/部署守卫、执行 caller 及 Health 修复 ACCEPT WITH LIMITATIONS，无剩余所审 P0/P1/P2；纯证据文档收尾采用文档风险例外，不重跑应用构建/部署。
 - STOP：`FIRST_RESTAURANT_ALLO_TEST_DELIVERY_ONLY_NO_REAL_PRINT_OR_PRODUCTION`。技术交付已完成，等待 Owner 在 Test 验收，不自动第二店/下一阶段/正式上线。
+
+## 2026-11-04 浏览器登录修复
+
+PRIMARY_REPAIR_GOAL：修复 Allô Test 浏览器携带 Origin 登录被403拒绝。EXPECTED_REPAIR_CLASS：SMALL。Owner实际反馈重新授权此单店 Test 局部修复；不改账号权限、数据、Production/Staging。
+
+已复现：无 Origin auth/login200；带 `Origin: https://test.lanzhounoodlesmtl.com` 返回403 `Invalid CORS request`。旧验收遗漏浏览器 Origin。`RestCorsConfig` 的 `!template-test` 仍在 allo-test 注册，覆盖同路径专属 CORS 配置。最小修复仅将 profile 排除扩展到 allo-test；沿用现有显式 Test origin allowlist，不增加通配符或信任未知来源。新增 profile/来源隔离回归，原 Staging 代理回归保留。
