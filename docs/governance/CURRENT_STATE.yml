@@ -43,6 +43,9 @@ test:
   final_observation_utc: 2026-11-04T16:27:55.482040+00:00
   owner_acceptance: NOT_RUN
   print_transport: MOCK_ONLY_NO_ENDPOINTS
+  latest_owner_menu_configuration: NOODLE_B1_B8_SPICY_FOUR_LEVELS_DEFAULT_NON_SPICY_ZERO_SURCHARGE_REFILL_EXCLUDED
+  latest_menu_revision: 94
+  latest_menu_configuration_validation: PASS_EIGHT_API_READBACKS_BROWSER_B1_B8_TRILINGUAL_PREVIEW_NO_ORDER_SUBMIT
   public_websocket: MUST_REMAIN_DENIED_F31_NOT_CLOSED
   further_mutation_authorized: NONE_PENDING_OWNER_TEST_ACCEPTANCE
   production_release_dependency: OTHER_74DFC1F_RELEASE_COMPLETED_AND_STABLE_BEFORE_TEST_MUTATION

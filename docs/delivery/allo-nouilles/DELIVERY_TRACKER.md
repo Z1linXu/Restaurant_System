@@ -206,6 +206,14 @@ STOP：保持现Phase/Package，等待Owner最终验收；不自动合并Draft P
 
 Final runtime evidence: `browser-20261104/runtime-final.json`, `deploy-update.log`, `update-entry-proof.json`, `final-readback.json`. Current application container/image identities:
 
+### Owner 辣度配置（2026-11-04）
+
+Owner 明确要求八款面类主食添加截图中的 Non-Spicy/不辣、Mild/少辣、Regular/正常辣、Extra/加辣，排除加面/续面。仅调用既有 Allô Test Store1 item option-groups API，对 AN_B1–AN_B8（item10–17）各追加一个独立 SPICY_LEVEL 组，单选必选、默认不辣、四项均0加价，并补齐法文名称。逐项保存前检查无并发改动，保存后核对原面型/加料组及全部原Option ID/默认/价格完全不变；不改选项库、菜价或其他菜品，item33续面组逐字段不变。
+
+配置8/8成功，最终catalog revision94。真实浏览器确认B1/B8显示四档辣度且保留面型/加料，B1切换中英法显示正确，改选加辣小计仍16.99；没有加入或提交订单，最终四桌空闲。仅用既有配置能力，无业务源码修改、构建、部署或Production/Staging动作。运行SHA仍f08a930；本次为Owner授权的Test菜单配置修改，非新Phase或正式上线。
+
+私有证据位于 `.merchant-private/allo-nouilles/spicy-20261104/`：groups-before.json、各菜请求/回读、refill-before.json、result.json、catalog-before/after.json、b1-zh/en/fr.txt、b8-zh.txt、spicy-configured.png。保留回退所需配置原件，不上传客户菜单/凭据。纯配置及证据工作无Agent6代码审查需求，未宣称本轮重新验收下单或实体打印。
+
 | Service | Container ID | Image ID |
 |---|---|---|
 | `frontend` | `0730be19d04cb77f70fccb08f09a18c86e030c3d18a02c4798ced8a7414abd33` | `sha256:fc7ddbeab711eec8091c80b6b50e44e48da1bde79f3966e116112747e24faa8c` |
