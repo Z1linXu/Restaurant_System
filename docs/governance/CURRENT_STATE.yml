@@ -1,5 +1,5 @@
 schema_version: 1
-updated_at: 2026-11-03
+updated_at: 2026-11-04
 
 repository:
   ref: origin/main
@@ -9,7 +9,7 @@ repository:
 phase:
   current: PHASE_B
   package: UBER_ANALYTICS_ORDER_TOTAL_REPAIR
-  status: RELEASE_STOPPED_LIVE_ANALYTICS_BASELINE_CHANGED
+  status: PRODUCTION_COMPLETE_6_APPLIED_ZERO_ORDER_PENDING
   next_phase_authorized: false
 
 staging:
@@ -33,8 +33,8 @@ staging:
   uber_worker_enabled: false
 
 production:
-  deployed_sha: 27612b6f72dabc48e0167cc7d214a3ece565dd5e
-  frontend_deployed_sha: 27612b6f72dabc48e0167cc7d214a3ece565dd5e
+  deployed_sha: 74dfc1fd235af31fc7345c43f770d9991960da70
+  frontend_deployed_sha: 74dfc1fd235af31fc7345c43f770d9991960da70
   canonical_url: https://pos.lanzhounoodlesmtl.com
   application_release: COMPLETE
   password_login: NOT_TESTED_NO_EXISTING_BROWSER_SESSION_OR_PRIVATE_PASSWORD
@@ -42,11 +42,11 @@ production:
   uber_activated: true
   uber_active_bindings: 1
   uber_binding_semantics: CONTINUOUS_STORE1_ONLY_UUID_CUTOVER_TABLET_RETAINS_ORDER_MANAGER
-  flyway: V39.1
+  flyway: V39.2
   mutation_authorized: false
-  current_release_authorization: COMPLETED_OWNER_20261103_UBER_ANALYTICS_ONLY_TARGET14_STRICT8_APPLIED_6_PENDING_STAGING_TEST_PAUSED
-  evidence: ../UBER_ANALYTICS_PENDING_REPAIR_20261103.md
-  runtime_observation_evidence: ../UBER_ANALYTICS_PENDING_REPAIR_20261103.md
+  current_release_authorization: COMPLETED_OWNER_NEW_BASELINE107_EXACT74DFC1F_SIX31541_V3_APPLIED_PRESERVE_ITEM_UNCERTAINTY_STAGING_TEST_PAUSED
+  evidence: ../UBER_ANALYTICS_ORDER_TOTAL_PRODUCTION_20261104.md
+  runtime_observation_evidence: ../UBER_ANALYTICS_ORDER_TOTAL_PRODUCTION_20261104.md
   canonical_addons_per_store: 15
   canonical_addon_assignments: 195
   addon_conflicts: 0
@@ -379,12 +379,12 @@ uber_analytics_pending_repair:
   flyway: V39.1_ADDITIVE_FINANCIAL_JOURNAL_ONLY
   original_v1_snapshots: PRESERVED_UNCHANGED
   target: PRODUCTION_STORE1_SAINT_DENIS_2026_11_03_14_RECORDS
-  corrections: 8
-  remaining_pending: 6_UNEXPLAINED_ONE_CENT_MISMATCHES
-  known_sales_cad: 4110.10
-  known_uber_sales_cad: 1403.06
+  legacy_v2_corrections: 8_PRESERVED
+  remaining_pending: 0_ORDER_TOTALS_6_ITEM_RECONCILIATION
+  known_sales_cad: 4425.51
+  known_uber_sales_cad: 1718.47
   pos_sales_cad: 2707.04
-  complete_sales_aov: UNKNOWN_NOT_ZERO
+  complete_sales_aov: 41.36
   order_counts: TOTAL107_POS61_UBER46_AFTER_EXISTING_2330_DAILY_CLOSE
   agent6: ACCEPT_NO_P0_P1_P2
   backup: FULL_LOCAL_RESTORE_AND_FINGERPRINTS_PASS
@@ -397,18 +397,19 @@ uber_analytics_pending_repair:
 uber_analytics_order_total_repair:
   evidence: ../UBER_ANALYTICS_ORDER_TOTAL_20261103.md
   candidate_sha: 74dfc1fd235af31fc7345c43f770d9991960da70
-  production_deployed: false
-  production_data_changed: false
-  release_attempt: STOPPED_BEFORE_MUTATION_OWNER_DATA_GATE
-  release_attempt_evidence: ../UBER_ANALYTICS_ORDER_TOTAL_PRODUCTION_GATE_20261103.md
+  production_deployed: true
+  production_data_changed: SIX_V3_JOURNAL_INSERTS_ONLY
+  release_attempt: COMPLETE_OWNER_ACCEPTED_NEW_BASELINE107
+  prior_stopped_gate_evidence: ../UBER_ANALYTICS_ORDER_TOTAL_PRODUCTION_GATE_20261103.md
+  production_evidence: ../UBER_ANALYTICS_ORDER_TOTAL_PRODUCTION_20261104.md
   live_baseline_orders: TOTAL107_POS61_UBER46
   live_baseline_pos_minor_cad: 270704
   live_baseline_known_total_minor_cad: 411010
   discrepancy_cause: EXISTING_2330_DAILY_CLOSE_ONE_POS_ORDER_6779_CENTS
-  conditional_new_projected_total_minor_cad: 442551
-  conditional_new_projected_aov_cad: 41.36
+  verified_total_minor_cad: 442551
+  verified_total_aov_cad: 41.36
   target: SIX_EXACT_PRODUCTION_STORE1_2026_11_03_RECORDS_ONLY
-  migration: V39.2_PREPARED_ONLY_NOT_APPLIED
+  migration: V39.2_APPLIED_CHECK_ONLY_CHECKSUM_684147509
   rule: MERCHANT_POST_PROMO_ORDER_TOTAL_V3
   preview_sha256: 8c96d7b6a8fc3fa2bbaf1339c4ff3275224299a1fa9700f8c5ee0b08c6c41360
   candidate_minor_cad: 31541
@@ -424,15 +425,15 @@ uber_analytics_order_total_repair:
   agent6: ACCEPT_NO_P0_P1_P2
   local_backend: FULL1254_ERRORS0_FAILURES0_CONDITIONAL_SKIPS117_FOCUSED31_PASS
   local_frontend: TESTS374_BUILD_LINT_PASS
-  production_authorization: OWNER_EXACT_SHA_SIX_TARGET_RELEASE_CONDITIONAL_STOPPED_LIVE_BASELINE_CHANGED
+  production_authorization: COMPLETED_OWNER_EXACT_SHA_SIX31541_NEW_BASELINE107_ALL_GATES_PASS
   staging_test: REMAIN_PAUSED
 
 gate:
   type: OWNER
-  next_action: OWNER_REVIEW_DAILY_CLOSE_BASELINE_107_POS61_2707_04_BEFORE_RELEASE_CONTINUATION
+  next_action: OWNER_MANUAL_ACCEPTANCE_NO_FURTHER_RUNTIME_OR_DATA_MUTATION
 
 authorization:
-  uber_analytics_order_total_repair: OWNER_AUTHORIZED_EXACT74DFC1F_SIX31541_V3_PRODUCTION_RELEASE_AFTER_GATES_STOPPED_BEFORE_MUTATION_ON_DATA_BASELINE_MISMATCH
+  uber_analytics_order_total_repair: COMPLETED_OWNER_EXACT74DFC1F_SIX31541_V3_PRODUCTION_NEW_BASELINE107_BACKUP_RESTORE_AND_ACCEPTANCE_PASS
   uber_analytics_pending_repair: COMPLETED_OWNER_DIRECT_PRODUCTION_ONLY_STRICT8_OF14_JOURNAL_CORRECTIONS_NO_PRINT_WEBHOOK_ORDER_STATE_OR_OTHER_DATE_STORE_MUTATION
   dining_table_soft_delete: COMPLETED_OWNER_20261024_ALL_STORE_IS_ACTIVE_SOFT_DELETE_ACTIVE_ORDER_GUARD_CACHE_AND_NEW_ORDER_BLOCK_IMPLEMENT_TEST_REVIEW_MERGE_STAGING_DIRECT_PRODUCTION_PRESERVE_HISTORY_AB_SPLIT_LABELS_PRINTING_AND_UBER_NO_REAL_TEST_ORDERS
   split_table_label_mode: COMPLETED_OWNER_20261024_PER_TABLE_LEFT_RIGHT_INSIDE_OUTSIDE_SAFE_FLYWAY_IMPLEMENT_TEST_REVIEW_MERGE_STAGING_DIRECT_PRODUCTION_ALL_STORES_INCLUDING_CHINATOWN_PRESERVE_AB_IDENTITIES_ACTIVE_ORDER_GUARD_TOP_FEED_UBER_AND_NO_REAL_TEST_ORDERS
@@ -462,4 +463,4 @@ authorization:
   production: NONE
 
 stop:
-  marker: UBER_ANALYTICS_ORDER_TOTAL_RELEASE_STOPPED_BASELINE_CHANGED_PROD_UNTOUCHED
+  marker: UBER_ANALYTICS_ORDER_TOTAL_PRODUCTION_COMPLETE_6_APPLIED_ZERO_ORDER_PENDING
