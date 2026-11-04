@@ -15,10 +15,16 @@ function amountLabel(metric: ChannelMetric) {
   return metric.revenue == null && metric.known_revenue > 0
     ? `Known ${channelMoney(metric.known_revenue)}` : channelMoney(metric.revenue)
 }
-function Amount({ metric }: { metric: ChannelMetric }) {
+function Amount({ metric, scope = 'items' }: { metric: ChannelMetric; scope?: 'orders' | 'items' }) {
   const pending = metric.unknown_order_count ?? metric.unknown_amount_count
   const reason = Object.entries(metric.pending_reasons ?? {}).map(([code, count]) => `${code === 'PROMO_TOTAL_RECONCILIATION_REQUIRED' ? 'Promotion totals need reconciliation' : 'Financial details need review'}: ${count}`).join('; ')
-  return <><strong className="tabular-nums">{amountLabel(metric)}</strong>{pending > 0 ? <span title={reason || undefined} className="block text-xs text-amber-800">Incomplete · {pending} {metric.unknown_order_count == null ? 'amounts' : 'orders'} pending{metric.unknown_line_count != null && metric.unknown_line_count > 0 ? ` · ${metric.unknown_line_count} lines` : ''}</span> : null}</>
+  const itemPending = metric.item_pending_order_count ?? 0
+  const pendingLabel = scope === 'orders' ? `${pending} orders pending`
+    : metric.unknown_order_count == null ? `${metric.unknown_amount_count} amounts pending`
+    : `Item amounts pending · ${metric.unknown_order_count} orders${(metric.unknown_line_count ?? 0) > 0 ? ` · ${metric.unknown_line_count} lines` : ''}`
+  return <><strong className="tabular-nums">{amountLabel(metric)}</strong>{pending > 0 ? <span title={reason || undefined} className="block text-xs text-amber-800">Incomplete · {pendingLabel}{scope === 'orders' && (metric.unknown_line_count ?? 0) > 0 ? ` · ${metric.unknown_line_count} lines` : ''}</span> : null}
+    {scope === 'orders' && itemPending > 0 ? <span className="block text-xs text-amber-800">Item amounts pending review · {itemPending} orders{(metric.unknown_line_count ?? 0) > 0 ? ` · ${metric.unknown_line_count} lines` : ''}</span> : null}</>
+
 }
 
 export function ChannelSalesKpis({ summary }: { summary: ChannelSalesSummary }) {
@@ -26,7 +32,7 @@ export function ChannelSalesKpis({ summary }: { summary: ChannelSalesSummary }) 
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {CHANNELS.map((channel) => <div key={channel} className={PANEL}>
         <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">{`${CHANNEL_LABELS[channel]} Sales`}</h2>
-        <div className="mt-3 text-2xl"><Amount metric={summary.totals[channel]} /></div>
+        <div className="mt-3 text-2xl"><Amount metric={summary.totals[channel]} scope="orders" /></div>
         <p className="mt-2 text-sm text-[var(--muted)]">{summary.totals[channel].order_count} orders · AOV {channelMoney(summary.totals[channel].average_order_value)}</p>
       </div>)}
       <div className={PANEL}><h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Total Orders</h2>
@@ -61,7 +67,7 @@ export function ChannelRevenueMix({ summary, range }: { summary: ChannelSalesSum
     <h2 className="text-lg font-bold">{range === 'today' ? '今日营业额构成' : '营业额构成'}</h2>
     <p className="mt-1 text-sm text-[var(--muted)]">{range === 'today' ? "Today's Revenue Mix" : 'Revenue Mix'}</p>
     <div className="mt-3 flex flex-wrap gap-2" aria-label="Revenue channel">{CHANNELS.map((value) => <button key={value} type="button" aria-pressed={channel === value} onClick={() => setChannel(value)} className={`rounded-full px-3 py-2 text-sm ${channel === value ? 'bg-[var(--primary)] text-white' : 'bg-[rgba(26,28,25,0.06)]'}`}>{CHANNEL_LABELS[value]}</button>)}</div>
-    {!complete ? <p className="mt-3 text-sm text-amber-800">Category amounts pending from Uber; quantities remain included.</p> : null}
+    {!complete ? <p className="mt-3 text-sm text-amber-800">Category amounts pending reconciliation; order totals are shown independently. Quantities remain included.</p> : null}
     <div className="mt-4 flex flex-wrap items-center justify-center gap-5">
       <div className="relative h-44 w-44 shrink-0"><svg viewBox="0 0 120 120" role="img" aria-label={`${CHANNEL_LABELS[channel]} revenue mix`} className="h-full w-full -rotate-90">
         <circle cx="60" cy="60" r="48" fill="none" stroke="#e8e8e3" strokeWidth="16" />

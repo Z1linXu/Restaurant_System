@@ -17,10 +17,23 @@ final class UberPromotionFinancialPolicy {
     private static final Set<String> TYPES = Set.of("FLATOFF", "PERCENTOFF", "FREEITEM_MINBASKET",
             "CATEGORY_DISCOUNT", "BOGO", "FREEDELIVERY", "MENU_ITEM_DISCOUNT");
 
-    record Selection(int version, String currency, Long total, ObjectNode charges, List<String> problems) {}
+    static final String ORDER_TOTAL_RULE = "MERCHANT_POST_PROMO_ORDER_TOTAL_V3";
+    record Selection(int version, String currency, Long total, ObjectNode charges,
+                     List<String> problems, List<String> allocationProblems) {}
 
     static Selection select(JsonNode raw, JsonNode promotions, BigDecimal itemWeight, boolean retained) {
+        return select(raw,promotions,itemWeight,retained,false);
+    }
+
+    static Selection selectOrderTotal(JsonNode raw, JsonNode promotions, BigDecimal itemWeight, boolean retained) {
+        return select(raw,promotions,itemWeight,retained,true);
+    }
+
+    private static Selection select(JsonNode raw, JsonNode promotions, BigDecimal itemWeight,
+                                    boolean retained, boolean orderTotalPolicy) {
+        boolean authoritative=orderTotalPolicy && raw.hasNonNull("total_promo_applied");
         var problems = new ArrayList<String>();
+        var allocationProblems = new ArrayList<String>();
         ObjectNode charges = JsonNodeFactory.instance.objectNode();
         if (!raw.isObject()) problems.add("CHARGES_MISSING");
         String currency = raw.path("sub_total").path("currency_code").asText("");
@@ -43,10 +56,11 @@ final class UberPromotionFinancialPolicy {
         Long grossTotal = amount(raw.path("total"), currency);
         if (gross == null || grossTax == null || grossTotal == null) problems.add("CHARGES_INCOMPLETE");
         if (gross != null && itemWeight.compareTo(BigDecimal.valueOf(gross)) != 0)
-            problems.add("ITEM_SUBTOTAL_MISMATCH");
+            (authoritative ? allocationProblems : problems).add("ITEM_SUBTOTAL_MISMATCH");
         if (gross != null && grossTax != null && grossTotal != null
                 && !BigDecimal.valueOf(gross).add(BigDecimal.valueOf(grossTax)).equals(BigDecimal.valueOf(grossTotal)))
-            problems.add("MERCHANDISE_TOTAL_MISMATCH");
+            componentMismatch(BigDecimal.valueOf(grossTotal).subtract(BigDecimal.valueOf(gross).add(BigDecimal.valueOf(grossTax))),
+                    authoritative,"MERCHANDISE_TOTAL_MISMATCH",problems,allocationProblems);
         for (String fee : List.of("total_fee", "total_fee_tax")) {
             if (raw.hasNonNull(fee) && !Long.valueOf(0).equals(amount(raw.path(fee), currency)))
                 problems.add("FEES_REQUIRE_REVIEW");
@@ -60,22 +74,41 @@ final class UberPromotionFinancialPolicy {
             Long subtotal = amount(raw.path("sub_total_promo_applied"), currency);
             Long tax = amount(raw.path("tax_promo_applied"), currency);
             total = amount(raw.path("total_promo_applied"), currency);
-            if (subtotal == null || tax == null || total == null) problems.add("PROMO_CHARGES_INCOMPLETE");
+            if (total == null) problems.add("PROMO_CHARGES_INCOMPLETE");
+            if (subtotal == null || tax == null) (authoritative ? allocationProblems : problems).add("PROMO_COMPONENTS_INCOMPLETE");
+            if (total != null && grossTotal != null && total > grossTotal) problems.add("PROMO_TOTAL_INVALID");
             if (subtotal != null && gross != null && subtotal > gross) problems.add("PROMO_SUBTOTAL_INVALID");
             if (tax != null && grossTax != null && tax > grossTax) problems.add("PROMO_TAX_INVALID");
             if (subtotal != null && tax != null && total != null
                     && BigDecimal.valueOf(subtotal).add(BigDecimal.valueOf(tax)).compareTo(BigDecimal.valueOf(total)) != 0)
-                problems.add("PROMO_TOTAL_RECONCILIATION_REQUIRED");
+                componentMismatch(BigDecimal.valueOf(total).subtract(BigDecimal.valueOf(subtotal).add(BigDecimal.valueOf(tax))),
+                        authoritative,"PROMO_TOTAL_RECONCILIATION_REQUIRED",problems,allocationProblems);
             if (funding.complete && subtotal != null && gross != null
                     && BigDecimal.valueOf(gross).subtract(BigDecimal.valueOf(subtotal)).compareTo(funding.merchant) != 0)
                 problems.add("PROMO_FUNDING_MISMATCH");
         } else if (nonEmpty(promotions) && (!funding.complete || funding.merchant.signum() != 0)) {
             problems.add("PROMO_CHARGES_MISSING");
         }
-        if (itemWeight.signum() == 0 && total != null && total != 0) problems.add("ZERO_WEIGHT_WITH_REVENUE");
+        if (itemWeight.signum() == 0 && total != null && total != 0)
+            (authoritative ? allocationProblems : problems).add("ZERO_WEIGHT_WITH_REVENUE");
+        if (authoritative) {
+            // Order-level truth does not prove per-item net merchandise revenue.
+            allocationProblems.add("PROMO_ITEM_ALLOCATION_UNVERIFIED");
+            charges.put("_order_total_source","payment.charges.total_promo_applied");
+            charges.put("_item_allocation_status","PENDING_RECONCILIATION");
+            charges.put("_item_reconciliation_reason",allocationProblems.contains("PROMO_COMPONENT_ROUNDING_REVIEW")
+                    ? "PROMO_COMPONENT_ROUNDING_REVIEW" : "PROMO_ITEM_ALLOCATION_UNVERIFIED");
+            Long subtotal=amount(raw.path("sub_total_promo_applied"),currency);
+            Long tax=amount(raw.path("tax_promo_applied"),currency);
+            if(subtotal!=null && tax!=null && total!=null)
+                charges.put("_component_delta_minor",BigDecimal.valueOf(total).subtract(BigDecimal.valueOf(subtotal).add(BigDecimal.valueOf(tax))));
+            charges.put("_component_reconciliation_status",allocationProblems.contains("PROMO_COMPONENT_ROUNDING_REVIEW")
+                    ? "ROUNDING_REVIEW" : subtotal==null||tax==null ? "INCOMPLETE" : "EXACT");
+            charges.putArray("_allocation_review_reasons").addAll(allocationProblems.stream().map(JsonNodeFactory.instance::textNode).toList());
+        }
         if (promo || nonEmpty(promotions) || retained) {
-            charges.put("_analytics_rule", RULE);
-            charges.put("_allocation_basis", "GROSS_ITEM_WEIGHT_DERIVED");
+            charges.put("_analytics_rule", authoritative ? ORDER_TOTAL_RULE : RULE);
+            charges.put("_allocation_basis", authoritative ? "UNCONFIRMED_ITEM_NET_AMOUNTS" : "GROSS_ITEM_WEIGHT_DERIVED");
             charges.put("_source_kind", retained ? "RETAINED_CHARGES" : "SAME_UBER_RESPONSE");
             charges.put("_funding_detail_complete", funding.complete);
             if (funding.complete) {
@@ -83,7 +116,15 @@ final class UberPromotionFinancialPolicy {
                 charges.put("_uber_funded_minor", funding.uber.longValueExact());
             }
         }
-        return new Selection(promo || nonEmpty(promotions) || retained ? 2 : 1, currency, total, charges, problems);
+        return new Selection(authoritative ? 3 : promo || nonEmpty(promotions) || retained ? 2 : 1,
+                currency,total,charges,List.copyOf(problems),List.copyOf(allocationProblems));
+    }
+
+    private static void componentMismatch(BigDecimal delta, boolean authoritative, String conflict,
+                                          List<String> problems, List<String> allocationProblems) {
+        if(authoritative && delta.abs().compareTo(BigDecimal.ONE)<=0)
+            allocationProblems.add("PROMO_COMPONENT_ROUNDING_REVIEW");
+        else problems.add(conflict);
     }
 
     private record Funding(boolean complete, BigDecimal merchant, BigDecimal uber) {}

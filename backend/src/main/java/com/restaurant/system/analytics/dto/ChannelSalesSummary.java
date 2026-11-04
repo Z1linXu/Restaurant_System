@@ -24,6 +24,9 @@ public class ChannelSalesSummary {
         public int unknown_amount_count;
         public int unknown_order_count;
         public int unknown_line_count;
+        /** Item-level uncertainty is independent from trusted order-level revenue. */
+        public int item_pending_order_count;
+        public Map<String, Integer> item_pending_reasons;
         public Map<String, Integer> pending_reasons;
         public int order_count;
         public int quantity;

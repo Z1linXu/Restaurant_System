@@ -158,6 +158,45 @@ class ChannelSalesServiceTest {
         assertThat(after.totals.total.average_order_value).isNull();
     }
 
+    @Test void trustedOrderTotalsRemainCompleteWhileSixOrdersHaveUnconfirmedItems() {
+        var posRows=new java.util.ArrayList<Order>();
+        for(long i=1;i<=60;i++)posRows.add(pos(i,i==60?"2639.25":"0.00"));
+        when(orders.findAllByStoreId(1L)).thenReturn(posRows);when(items.findAllByOrderIds(anyList())).thenReturn(List.of());
+        var sales=new java.util.ArrayList<UberSalesSource.Sale>();
+        for(int i=0;i<40;i++)sales.add(sale("confirmed-"+i,i==0?140306L:0L,List.of()));
+        long[] totals={5114,7066,7354,4769,3274,3964};
+        for(int i=0;i<6;i++)sales.add(new UberSalesSource.Sale(1L,"order-total-"+i,date.atTime(18,15),"CAD",totals[i],
+            List.of(uberItem("noodle-a","SOUP_NOODLE",1,null),uberItem("noodle-b","SOUP_NOODLE",2,null)),null,"PROMO_COMPONENT_ROUNDING_REVIEW"));
+        when(uber.load(anyList(),any(),any())).thenReturn(sales);
+        var result=build();
+        assertThat(result.totals.total.order_count).isEqualTo(106);
+        assertThat(result.totals.in_store.revenue).isEqualByComparingTo("2639.25");
+        assertThat(result.totals.uber_eats.revenue).isEqualByComparingTo("1718.47");
+        assertThat(result.totals.total.revenue).isEqualByComparingTo("4357.72");
+        assertThat(result.totals.total.average_order_value).isEqualByComparingTo("41.11");
+        assertThat(result.totals.uber_eats.average_order_value).isEqualByComparingTo("37.36");
+        assertThat(result.totals.total.unknown_order_count).isZero();
+        assertThat(result.totals.total.unknown_amount_count).isZero();
+        assertThat(result.totals.total.item_pending_order_count).isEqualTo(6);
+        assertThat(result.totals.total.unknown_line_count).isEqualTo(12);
+        assertThat(result.totals.total.item_pending_reasons).containsEntry("PROMO_COMPONENT_ROUNDING_REVIEW",6);
+        assertThat(group(result,"SOUP_NOODLE").total.revenue).isNull();
+        assertThat(group(result,"SOUP_NOODLE").total.item_pending_order_count).isEqualTo(6);
+        assertThat(result.categories).allSatisfy(row->assertThat(row.total.percentage).isNull());
+        assertThat(result.daily.get(0).total.revenue).isEqualByComparingTo("4357.72");
+        assertThat(result.stores.get(0).total.revenue).isEqualByComparingTo("4357.72");
+    }
+
+    @Test void absentItemEvidenceDoesNotAssignTheWholeAuthoritativeOrderToOther() {
+        when(uber.load(anyList(),any(),any())).thenReturn(List.of(new UberSalesSource.Sale(1L,"no-items",date.atTime(18,15),"CAD",5114L,List.of(),null,"PROMO_ITEM_ALLOCATION_UNVERIFIED")));
+        var result=build();
+        assertThat(result.totals.total.revenue).isEqualByComparingTo("51.14");
+        assertThat(result.totals.total.item_pending_order_count).isEqualTo(1);
+        assertThat(result.totals.total.unknown_line_count).isZero();
+        assertThat(group(result,"OTHER").total.revenue).isNull();
+        assertThat(group(result,"OTHER").total.known_revenue).isZero();
+    }
+
     private ChannelSalesSummary build() { return service.build(List.of(1L), date, date, true); }
     private ChannelSalesSummary.Category group(ChannelSalesSummary summary, String group) { return summary.categories.stream().filter(row -> row.reporting_group.equals(group)).findFirst().orElseThrow(); }
     private Order pos(Long id, String total) { Order order = new Order(); order.id = id; order.store_id = 1L; order.status = "completed"; order.submitted_at = date.atTime(18, 10); order.total_amount = new BigDecimal(total); return order; }

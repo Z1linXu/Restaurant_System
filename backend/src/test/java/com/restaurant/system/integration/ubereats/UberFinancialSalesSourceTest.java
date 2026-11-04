@@ -65,6 +65,22 @@ class UberFinancialSalesSourceTest {
         assertThat(item.categoryCode()).isEqualTo("OTHER"); assertThat(item.sku()).isNull();
         assertThat(item.revenueMinor()).isEqualTo(2300L);
     }
+    @Test void v3OrderIdentityAndAuthoritativeMoneyAreIndependentOfItemIdentity() throws Exception {
+        var source=source();var row=row();
+        var charges=json.createObjectNode().put("_analytics_rule","MERCHANT_POST_PROMO_ORDER_TOTAL_V3");
+        charges.putObject("total_promo_applied").put("amount",2300).put("currency_code","CAD");
+        var snapshot=new UberFinancialSnapshot(3,"order","store","2026-10-03T22:15:00Z","CAD",2300L,null,charges,List.of());
+        row.itemFinancialSnapshotJson=json.writeValueAsString(snapshot);
+        when(orders.salesWindow(anyString(),anyLong(),any(),any())).thenReturn(List.of(row));
+        var sale=source.load(List.of(1L),start,start.plusDays(1)).get(0);
+        assertThat(sale.revenueMinor()).isEqualTo(2300);assertThat(sale.items()).allSatisfy(i->assertThat(i.revenueMinor()).isNull());
+        ((com.fasterxml.jackson.databind.node.ObjectNode)charges.path("total_promo_applied")).put("amount",9999);
+        row.itemFinancialSnapshotJson=json.writeValueAsString(snapshot);
+        assertThat(source.load(List.of(1L),start,start.plusDays(1)).get(0).revenueMinor()).isNull();
+        row.itemFinancialSnapshotJson=json.writeValueAsString(new UberFinancialSnapshot(3,"order","store","2026-10-03T22:15:00Z","CAD",2300L,null,null,List.of()));
+        assertThat(source.load(List.of(1L),start,start.plusDays(1)).get(0).revenueMinor()).isNull();
+    }
+
     @Test void excludesOtherEnvironmentStoreCancelledEditedAndNotAccepted() throws Exception {
         var source=source(); var foreign=row(); foreign.storeId=2L;
         var production=row(); production.environment="production";

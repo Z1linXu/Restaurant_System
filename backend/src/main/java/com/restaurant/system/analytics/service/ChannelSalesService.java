@@ -49,7 +49,7 @@ public class ChannelSalesService {
                             SalesReporting.group(item.category_code_snapshot, item.item_sku_snapshot),
                             item.quantity == null ? 0 : item.quantity, allocated.revenue());
                 }).toList();
-                sales.add(new Sale("POS:" + order.id, storeId, order.submitted_at, false, SalesReporting.money(order.total_amount), lines, null));
+                sales.add(new Sale("POS:" + order.id, storeId, order.submitted_at, false, SalesReporting.money(order.total_amount), lines, null, null));
             }
         }
         Set<String> seenUber = new HashSet<>();
@@ -64,8 +64,8 @@ public class ChannelSalesService {
             List<Line> lines = sourceLines.stream().map(item -> new Line(itemKey(item.sku(), "UBER_" + item.stableId()),
                 item.name(), SalesReporting.group(item.categoryCode(), item.sku()), item.quantity(),
                 currencyMatches && (revenue == null || reconciles) ? fromMinor(item.revenueMinor()) : null)).toList();
-            if (lines.isEmpty()) lines = List.of(new Line("UNMAPPED_UBER", "Unmapped Uber item", SalesReporting.Group.OTHER, 0, revenue));
-            sales.add(new Sale("UBER:" + order.orderId(), order.storeId(), order.placedAt(), true, revenue, lines, order.pendingReason()));
+            if (lines.isEmpty()) lines = List.of(new Line("UNMAPPED_UBER", "Unmapped Uber item", SalesReporting.Group.OTHER, 0, order.itemPendingReason()==null ? revenue : null));
+            sales.add(new Sale("UBER:" + order.orderId(), order.storeId(), order.placedAt(), true, revenue, lines, order.pendingReason(), order.itemPendingReason()));
         }
         ChannelSalesSummary result = new ChannelSalesSummary();
         result.totals = summarize(sales, null);
@@ -114,14 +114,14 @@ public class ChannelSalesService {
         for (Sale sale : sales) {
             Accumulator target = sale.uber ? platform : pos;
             if (filter == null) {
-                target.add(sale.key, sale.lines.stream().mapToInt(line -> line.quantity).sum(), sale.revenue, (int) sale.lines.stream().filter(line -> line.revenue == null).count(), sale.pendingReason);
+                target.add(sale.key, sale.lines.stream().mapToInt(line -> line.quantity).sum(), sale.revenue, (int) sale.lines.stream().filter(line -> line.revenue == null && line.quantity>0).count(), sale.pendingReason, sale.itemPendingReason);
             } else {
-                sale.lines.stream().filter(filter).forEach(line -> target.add(sale.key, line.quantity, line.revenue, line.revenue == null ? 1 : 0, sale.pendingReason));
+                sale.lines.stream().filter(filter).forEach(line -> target.add(sale.key, line.quantity, line.revenue, line.revenue == null && line.quantity>0 ? 1 : 0, sale.pendingReason, sale.itemPendingReason));
             }
         }
         Split split = new Split(); split.in_store = pos.metric(); split.uber_eats = platform.metric();
         pos.known = pos.known.add(platform.known); pos.unknown += platform.unknown; pos.quantity += platform.quantity; pos.orderIds.addAll(platform.orderIds);
-        pos.unknownOrders.addAll(platform.unknownOrders); pos.unknownLines += platform.unknownLines; pos.reasons.putAll(platform.reasons);
+        pos.unknownOrders.addAll(platform.unknownOrders); pos.unknownLines += platform.unknownLines; pos.reasons.putAll(platform.reasons); pos.itemReasons.putAll(platform.itemReasons);
         split.total = pos.metric(); return split;
     }
 
@@ -149,13 +149,14 @@ public class ChannelSalesService {
     private static BigDecimal fromMinor(Long value) { return value == null ? null : BigDecimal.valueOf(value, 2); }
     private static boolean inside(LocalDateTime date, LocalDateTime start, LocalDateTime end) { return date != null && !date.isBefore(start) && date.isBefore(end); }
     private record Line(String key, String name, SalesReporting.Group group, int quantity, BigDecimal revenue) {}
-    private record Sale(String key, Long storeId, LocalDateTime placedAt, boolean uber, BigDecimal revenue, List<Line> lines, String pendingReason) {}
+    private record Sale(String key, Long storeId, LocalDateTime placedAt, boolean uber, BigDecimal revenue, List<Line> lines, String pendingReason, String itemPendingReason) {}
     private static class Accumulator {
         BigDecimal known = BigDecimal.ZERO.setScale(2); int unknown; int quantity; Set<String> orderIds = new HashSet<>();
         Set<String> unknownOrders = new HashSet<>(); int unknownLines;
-        Map<String, String> reasons = new LinkedHashMap<>();
-        void add(String orderId, int qty, BigDecimal revenue, int missingLines, String reason) {
+        Map<String, String> reasons = new LinkedHashMap<>(), itemReasons = new LinkedHashMap<>();
+        void add(String orderId, int qty, BigDecimal revenue, int missingLines, String reason, String itemReason) {
             orderIds.add(orderId); quantity += qty; unknownLines += missingLines;
+            if(missingLines>0 || itemReason!=null) itemReasons.putIfAbsent(orderId,itemReason==null ? "ITEM_ALLOCATION_INCOMPLETE" : itemReason);
             if (revenue == null) {
                 unknown++; unknownOrders.add(orderId);
                 reasons.putIfAbsent(orderId, reason == null ? "ITEM_ALLOCATION_INCOMPLETE" : reason);
@@ -165,6 +166,8 @@ public class ChannelSalesService {
             Metric result = new Metric(); result.known_revenue = known; result.revenue = unknown == 0 ? known : null;
             result.unknown_amount_count = unknown;
             result.unknown_order_count = unknownOrders.size(); result.unknown_line_count = unknownLines;
+            result.item_pending_order_count=itemReasons.size(); result.item_pending_reasons=new LinkedHashMap<>();
+            itemReasons.values().forEach(reason -> result.item_pending_reasons.merge(reason,1,Integer::sum));
             result.pending_reasons = new LinkedHashMap<>();
             reasons.values().forEach(reason -> result.pending_reasons.merge(reason, 1, Integer::sum));
             result.quantity = quantity; result.order_count = orderIds.size();

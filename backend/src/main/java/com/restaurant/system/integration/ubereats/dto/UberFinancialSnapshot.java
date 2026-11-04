@@ -27,12 +27,22 @@ public record UberFinancialSnapshot(
         }
         List<Line> lines = lines(order.path("cart").path("items"), 0, problems);
         return reconcile(text(order, "id"), text(order.path("store"), "id"), text(order, "placed_at"),
-                lines, payment.path("charges"), payment.path("promotions"), false, problems);
+                lines, payment.path("charges"), payment.path("promotions"), false, true, problems);
     }
 
     /** Pure preview only. Original v1 remains immutable; activation requires a correction journal entry. */
     public static UberFinancialSnapshot reconcileRetained(UberFinancialSnapshot original, JsonNode charges) {
+        return reconcileRetained(original,charges,false);
+    }
+
+    public static UberFinancialSnapshot reconcileRetainedOrderTotal(UberFinancialSnapshot original, JsonNode charges) {
+        return reconcileRetained(original,charges,true);
+    }
+
+    private static UberFinancialSnapshot reconcileRetained(UberFinancialSnapshot original, JsonNode charges, boolean orderTotalPolicy) {
         List<String> problems = new ArrayList<>();
+        if(orderTotalPolicy && !"UNSUPPORTED_PAYMENT_DETAIL".equals(original.blocked_reason()))
+            problems.add("ORIGINAL_REASON_NOT_APPROVED");
         if (original.version() != 1 || original.revenue_minor() != null || original.blocked_reason() == null)
             problems.add("ORIGINAL_NOT_BLOCKED_V1");
         for (String key : List.of("sub_total", "tax", "total")) {
@@ -41,11 +51,11 @@ public record UberFinancialSnapshot(
         }
         if (!charges.hasNonNull("total_promo_applied")) problems.add("PROMO_CHARGES_MISSING");
         return reconcile(original.order_id(), original.store_id(), original.placed_at(), original.items(),
-                charges, JsonNodeFactory.instance.nullNode(), true, problems);
+                charges, JsonNodeFactory.instance.nullNode(), true, orderTotalPolicy, problems);
     }
 
     private static UberFinancialSnapshot reconcile(String orderId, String storeId, String placedAt, List<Line> lines,
-            JsonNode rawCharges, JsonNode promotions, boolean retained, List<String> problems) {
+            JsonNode rawCharges, JsonNode promotions, boolean retained, boolean orderTotalPolicy, List<String> problems) {
         if (lines == null || lines.isEmpty() || lines.size() > 200) {
             problems.add("ITEM_AMOUNTS_MISSING"); lines = List.of();
         }
@@ -58,17 +68,23 @@ public record UberFinancialSnapshot(
             if (line.instance_id() != null && !line.instance_id().isEmpty() && !instances.add(line.instance_id()))
                 problems.add("DUPLICATE_ITEM_INSTANCE");
             Long value = amount(line.price(), "total_price", currency);
-            if (value == null) problems.add("ITEM_AMOUNT_INVALID");
+            if (value == null) {
+                if (!(orderTotalPolicy && rawCharges.hasNonNull("total_promo_applied") && !line.price().hasNonNull("total_price")))
+                    problems.add("ITEM_AMOUNT_INVALID");
+            }
             else weight = weight.add(BigDecimal.valueOf(value));
         }
-        var selected = UberPromotionFinancialPolicy.select(rawCharges, promotions, weight, retained);
+        var selected = orderTotalPolicy ? UberPromotionFinancialPolicy.selectOrderTotal(rawCharges,promotions,weight,retained)
+                : UberPromotionFinancialPolicy.select(rawCharges, promotions, weight, retained);
+        if(selected.version()==3) problems.removeIf(problem -> Set.of("ITEM_AMOUNTS_MISSING",
+                "FINANCIAL_ITEMS_SHAPE_INVALID","FINANCIAL_ITEM_IDENTITY_INVALID","DUPLICATE_ITEM_INSTANCE").contains(problem));
         problems.addAll(selected.problems());
         List<Line> allocated = new ArrayList<>();
         BigDecimal cumulative = BigDecimal.ZERO;
         long assigned = 0;
         for (Line line : lines) {
             Long revenue = null;
-            if (problems.isEmpty()) {
+            if (problems.isEmpty() && selected.allocationProblems().isEmpty()) {
                 cumulative = cumulative.add(BigDecimal.valueOf(amount(line.price(), "total_price", currency)));
                 long target = weight.signum() == 0 ? 0 : BigDecimal.valueOf(selected.total()).multiply(cumulative)
                         .divide(weight, 0, RoundingMode.HALF_UP).longValueExact();

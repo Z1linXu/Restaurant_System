@@ -32,11 +32,11 @@ class UberPromotionFinancialTest {
         var list=((ObjectNode)order.path("payment")).putObject("promotions").putArray("promotions");
         for(var entry:entries)list.add(entry);
     }
-    @Test void merchantPromoUsesPostPromotionTotalAndExactDerivedLineAllocation() throws Exception {
+    @Test void merchantPromoUsesAuthoritativeTotalWithoutInventingItemNetAmounts() throws Exception {
         var o=order();promo(o,2500,375,2875);promotions(o,promotion("organization",500));
         var s=UberFinancialSnapshot.capture(o);
-        assertThat(s.version()).isEqualTo(2);assertThat(s.blocked_reason()).isNull();assertThat(s.revenue_minor()).isEqualTo(2875);
-        assertThat(s.items().stream().mapToLong(x->x.revenue_minor()).sum()).isEqualTo(2875);
+        assertThat(s.version()).isEqualTo(3);assertThat(s.blocked_reason()).isNull();assertThat(s.revenue_minor()).isEqualTo(2875);
+        assertThat(s.items()).allSatisfy(x->assertThat(x.revenue_minor()).isNull());
         assertThat(s.charges().path("_merchant_funded_minor").asLong()).isEqualTo(500);
     }
     @Test void platformFundingIsNotSubtractedFromMerchantRevenueTwice() throws Exception {
@@ -63,12 +63,48 @@ class UberPromotionFinancialTest {
         ((ObjectNode)currency.path("payment").path("charges").path("tax_promo_applied")).put("currency_code","USD");
         assertThat(UberFinancialSnapshot.capture(currency).revenue_minor()).isNull();
     }
-    @Test void missingPromoFieldsAndOneCentDifferencesNeverFallBackToGrossOrAdjustMoney() throws Exception {
+    @Test void authoritativeTotalSurvivesComponentRoundingWithoutAdjustingSourceMoney() throws Exception {
         var o=order();promo(o,2500,375,2874);
-        assertThat(UberFinancialSnapshot.capture(o).blocked_reason()).isEqualTo("PROMO_TOTAL_RECONCILIATION_REQUIRED");
+        var result=UberFinancialSnapshot.capture(o);
+        assertThat(result.blocked_reason()).isNull();assertThat(result.revenue_minor()).isEqualTo(2874);
+        assertThat(result.charges().path("_component_delta_minor").asLong()).isEqualTo(-1);
+        assertThat(result.charges().path("_component_reconciliation_status").asText()).isEqualTo("ROUNDING_REVIEW");
+        assertThat(result.items()).allSatisfy(x->assertThat(x.revenue_minor()).isNull());
         ((ObjectNode)o.path("payment").path("charges")).remove("tax_promo_applied");
-        assertThat(UberFinancialSnapshot.capture(o).revenue_minor()).isNull();
+        assertThat(UberFinancialSnapshot.capture(o).revenue_minor()).isEqualTo(2874);
     }
+    @Test void authoritativeTotalsDoNotDependOnItemAllocationButMaterialConflictsStillBlock() throws Exception {
+        var o=order();promo(o,2500,375,2876);
+        var s=UberFinancialSnapshot.capture(o);
+        assertThat(s.revenue_minor()).isEqualTo(2876);assertThat(s.charges().path("_component_delta_minor").asLong()).isEqualTo(1);
+        promo(o,2500,375,2877);
+        assertThat(UberFinancialSnapshot.capture(o).blocked_reason()).isEqualTo("PROMO_TOTAL_RECONCILIATION_REQUIRED");
+        promo(o,2500,375,2875);
+        ((ObjectNode)o.path("cart").path("items").get(0)).remove("price");
+        assertThat(UberFinancialSnapshot.capture(o).revenue_minor()).isEqualTo(2875);
+        ((ObjectNode)o.path("cart")).remove("items");
+        assertThat(UberFinancialSnapshot.capture(o).revenue_minor()).isEqualTo(2875);
+        var huge=order();promo(huge,Long.MAX_VALUE,Long.MAX_VALUE,0);
+        assertThatCode(()->UberFinancialSnapshot.capture(huge)).doesNotThrowAnyException();
+        assertThat(UberFinancialSnapshot.capture(huge).revenue_minor()).isNull();
+    }
+
+    @Test void sixRetainedOrderTotalsPreserveEverySourceCentAndLeaveItemsUnconfirmed() throws Exception {
+        var rows=json.readTree(getClass().getResourceAsStream("/uber/pending-20261103-sanitized.json"));long sum=0;int count=0;
+        for(var row:rows)if(Set.of("U-e081b098","U-d40b43e1","U-284238ab","U-31281cd2","U-6f6dfe76","U-ae3be476").contains(row.path("audit_id").asText())) {
+            var old=json.readValue(row.path("original_snapshot_json").asText(),UberFinancialSnapshot.class);
+            var charges=json.readTree(row.path("source_charges_json").asText());
+            var s=UberFinancialSnapshot.reconcileRetainedOrderTotal(old,charges);
+            assertThat(s.version()).isEqualTo(3);assertThat(s.blocked_reason()).isNull();
+            assertThat(s.revenue_minor()).isEqualTo(charges.path("total_promo_applied").path("amount").asLong());
+            assertThat(s.charges().path("_component_delta_minor").asLong()).isIn(-1L,1L);
+            assertThat(s.items()).allSatisfy(x->assertThat(x.revenue_minor()).isNull());
+            assertThat(old.revenue_minor()).isNull();assertThat(old.version()).isEqualTo(1);
+            sum+=s.revenue_minor();count++;
+        }
+        assertThat(count).isEqualTo(6);assertThat(sum).isEqualTo(31541);
+    }
+
     @Test void fourteenRetainedSnapshotsYieldEightStrictCandidatesAndSixBlockedWithoutChangingOriginals() throws Exception {
         JsonNode rows=json.readTree(getClass().getResourceAsStream("/uber/pending-20261103-sanitized.json"));
         int allowed=0,blocked=0;

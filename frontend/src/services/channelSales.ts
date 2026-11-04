@@ -6,6 +6,8 @@ export interface ChannelMetric {
   known_revenue: number
   unknown_amount_count: number
   unknown_order_count?: number
+  item_pending_order_count?: number
+  item_pending_reasons?: Record<string, number>
   unknown_line_count?: number
   pending_reasons?: Record<string, number>
   order_count: number

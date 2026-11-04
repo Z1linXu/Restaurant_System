@@ -38,7 +38,10 @@ class UberFinancialCorrectionPostgresTest {
             db.update("INSERT INTO stores(id,name,code,status,organization_id,created_at,updated_at) VALUES(?,? ,?,'active',9001,now(),now())",store,"Synthetic "+store,"SYNTHETIC_"+store);
         db.update("INSERT INTO uber_eats_store_mappings(id,environment,uber_store_id,store_id,organization_id,enabled,created_at) VALUES(9001,'production','synthetic-store',1,9001,true,now())");
         fixture=new ArrayList<>();
-        JSON.readTree(UberFinancialCorrectionPostgresTest.class.getResourceAsStream("/uber/pending-20261103-sanitized.json")).forEach(fixture::add);
+        JsonNode input=System.getProperty("pending.private.fixture")==null
+            ? JSON.readTree(UberFinancialCorrectionPostgresTest.class.getResourceAsStream("/uber/pending-20261103-sanitized.json"))
+            : JSON.readTree(java.nio.file.Files.readString(java.nio.file.Path.of(System.getProperty("pending.private.fixture"))));
+        input.forEach(fixture::add);
         for(var f:fixture) {
             var original=JSON.readValue(f.path("original_snapshot_json").asText(),UberFinancialSnapshot.class);
             var raw=JSON.createObjectNode();var items=raw.putArray("items");
@@ -47,9 +50,9 @@ class UberFinancialCorrectionPostgresTest {
                 INSERT INTO uber_eats_orders(id,environment,store_mapping_id,store_id,uber_store_id,uber_order_id,status,
                 attempt_count,cancelled,edit_required,scheduled,placed_at,accepted_observed_at,next_attempt_at,created_at,updated_at,
                 item_financial_snapshot_json,raw_financial_snapshot_json,raw_order_snapshot_json)
-                VALUES(?,'production',9001,1,'synthetic-store',?,'RELEASED_TO_KITCHEN',0,false,false,false,
+                VALUES(?,'production',9001,1,?,?,'RELEASED_TO_KITCHEN',0,false,false,false,
                 '2026-11-03 12:00:00','2026-11-03 12:01:00',now(),now(),now(),?,?,?)
-                """,f.path("id").asLong(),original.order_id(),f.path("original_snapshot_json").asText(),
+                """,f.path("id").asLong(),original.store_id(),original.order_id(),f.path("original_snapshot_json").asText(),
                     f.path("source_charges_json").asText(),JSON.writeValueAsString(raw));
         }
     }
@@ -90,6 +93,46 @@ class UberFinancialCorrectionPostgresTest {
             assertThat(sales.stream().filter(x->x.revenueMinor()!=null).mapToLong(x->x.revenueMinor()).sum()).isEqualTo(expected);
             assertThat(readSales(2L)).isEmpty();
             assertThat(new UberFinancialCorrectionRepository(db).latest("sandbox",1L,fixture.stream().map(f->f.path("id").asLong()).toList())).isEmpty();
+            String v2Fingerprint=db.queryForObject("SELECT md5(string_agg(row_to_json(t)::text,'' ORDER BY id)) FROM uber_eats_financial_corrections t WHERE snapshot_version=2",String.class);
+            var totalPreview=UberFinancialCorrectionCli.executeOrderTotal(c,"preview",null);
+            if(System.getProperty("pending.preview.output")!=null)
+                java.nio.file.Files.writeString(java.nio.file.Path.of(System.getProperty("pending.preview.output")),JSON.writeValueAsString(totalPreview),java.nio.file.StandardOpenOption.CREATE_NEW);
+            assertThat(totalPreview.orders()).hasSize(6).allSatisfy(p->{
+                assertThat(p.allowed()).isTrue();assertThat(p.componentDeltaMinor()).isIn(-1L,1L);
+                assertThat(p.itemAmountStatus()).isEqualTo("PENDING_RECONCILIATION");
+            });
+            assertThat(totalPreview.orders().stream().mapToLong(x->x.candidateMinor()).sum()).isEqualTo(31541);
+            for(int process=0;process<2;process++) {
+                var fork=new ProcessBuilder(System.getProperty("java.home")+"/bin/java",
+                    "-Dpending.jdbc.url="+url,"-Dpending.db.user="+user,"-cp",
+                    System.getProperty("surefire.test.class.path",System.getProperty("java.class.path")),
+                    UberFinancialCorrectionCli.class.getName(),"--mode","preview","--case","order-total-v3")
+                    .redirectError(ProcessBuilder.Redirect.INHERIT).start();
+                String output=new String(fork.getInputStream().readAllBytes(),java.nio.charset.StandardCharsets.UTF_8);
+                assertThat(fork.waitFor()).isZero();
+                assertThat(JSON.readTree(output).path("previewSha256").asText()).isEqualTo(totalPreview.previewSha256());
+            }
+            assertThatThrownBy(()->UberFinancialCorrectionCli.executeOrderTotal(c,"apply",preview.previewSha256())).hasMessage("PREVIEW_CHANGED");
+            assertThat(UberFinancialCorrectionCli.executeOrderTotal(c,"apply",totalPreview.previewSha256()).inserted()).isEqualTo(6);
+            assertThat(UberFinancialCorrectionCli.executeOrderTotal(c,"apply",totalPreview.previewSha256()).inserted()).isZero();
+            var all=readSales(1L);
+            assertThat(all).hasSize(14).allSatisfy(x->assertThat(x.revenueMinor()).isNotNull());
+            assertThat(all.stream().mapToLong(x->x.revenueMinor()).sum()).isEqualTo(61534);
+            assertThat(all.stream().filter(x->x.itemPendingReason()!=null).count()).isEqualTo(6);
+            all.stream().filter(x->x.itemPendingReason()!=null).forEach(x->assertThat(x.items()).allSatisfy(i->assertThat(i.revenueMinor()).isNull()));
+            assertThat(businessFingerprint()).isEqualTo(before);
+            assertThat(db.queryForObject("SELECT md5(string_agg(row_to_json(t)::text,'' ORDER BY id)) FROM uber_eats_financial_corrections t WHERE snapshot_version=2",String.class)).isEqualTo(v2Fingerprint);
+            assertThat(readSales(2L)).isEmpty();
+            String v3Source=db.queryForObject("SELECT raw_financial_snapshot_json FROM uber_eats_orders WHERE id=693",String.class);
+            db.update("UPDATE uber_eats_orders SET raw_financial_snapshot_json=? WHERE id=693",v3Source+" ");
+            assertThat(readSales(1L).stream().filter(x->x.revenueMinor()!=null).count()).isEqualTo(13);
+            assertThatThrownBy(()->UberFinancialCorrectionCli.executeOrderTotal(c,"apply",totalPreview.previewSha256())).hasMessage("PREVIEW_CHANGED");
+            assertThat(UberFinancialCorrectionCli.executeOrderTotal(c,"revoke",totalPreview.previewSha256()).inserted()).isEqualTo(6);
+            assertThat(UberFinancialCorrectionCli.executeOrderTotal(c,"revoke",totalPreview.previewSha256()).inserted()).isZero();
+            db.update("UPDATE uber_eats_orders SET raw_financial_snapshot_json=? WHERE id=693",v3Source);
+            assertThatThrownBy(()->UberFinancialCorrectionCli.executeOrderTotal(c,"apply",totalPreview.previewSha256())).hasMessage("BATCH_ALREADY_REVOKED");
+            assertThat(readSales(1L).stream().filter(x->x.revenueMinor()!=null).count()).isEqualTo(8);
+            assertThat(businessFingerprint()).isEqualTo(before);
             // Evidence drift must fail closed in reads, without deleting or rewriting any original.
             long changed=fixture.stream().filter(f->preview.orders().stream().anyMatch(p->p.allowed()&&p.auditId().equals(f.path("audit_id").asText()))).findFirst().orElseThrow().path("id").asLong();
             String charges=db.queryForObject("SELECT raw_financial_snapshot_json FROM uber_eats_orders WHERE id=?",String.class,changed);
@@ -100,13 +143,17 @@ class UberFinancialCorrectionPostgresTest {
             assertThat(readSales(1L)).allSatisfy(s->assertThat(s.revenueMinor()).isNull());
             db.update("UPDATE uber_eats_orders SET raw_financial_snapshot_json=? WHERE id=?",charges,changed);
             assertThat(businessFingerprint()).isEqualTo(before);
-            assertThat(db.queryForObject("SELECT count(*) FROM uber_eats_financial_corrections",Integer.class)).isEqualTo(16);
+            assertThat(db.queryForObject("SELECT count(*) FROM uber_eats_financial_corrections",Integer.class)).isEqualTo(28);
             // The original application has no correction migration; Flyway future-migration compatibility is required for rollback.
             var locations=java.nio.file.Files.createTempDirectory("pending-old-flyway-");
             try(var resources=java.nio.file.Files.list(java.nio.file.Path.of("src/main/resources/db/migration"))) {
-                for(var path:resources.toList())if(!path.getFileName().toString().startsWith("V39_1__"))
+                for(var path:resources.toList())if(!path.getFileName().toString().startsWith("V39_1__") && !path.getFileName().toString().startsWith("V39_2__"))
                     java.nio.file.Files.copy(path,locations.resolve(path.getFileName()));
             }
+            Flyway.configure().dataSource(url,user,"").locations("filesystem:"+locations).load().validate();
+            // Current Production v39.1 application also accepts additive v39.2 for app rollback.
+            java.nio.file.Files.copy(java.nio.file.Path.of("src/main/resources/db/migration/V39_1__add_uber_financial_corrections.sql"),
+                    locations.resolve("V39_1__add_uber_financial_corrections.sql"));
             Flyway.configure().dataSource(url,user,"").locations("filesystem:"+locations).load().validate();
         }
     }

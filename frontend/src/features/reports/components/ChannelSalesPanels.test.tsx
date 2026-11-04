@@ -85,3 +85,19 @@ it('shows known subtotal and distinct pending orders without implying complete A
   expect(text()).not.toContain('PROMO_TOTAL_RECONCILIATION_REQUIRED')
   expect(view!.root.findAllByType('circle')).toHaveLength(1)
 })
+
+it('keeps confirmed order Sales and AOV visible while category amounts remain pending review', async () => {
+  const data=summary()
+  data.totals.total={ ...metric(4357.72,100),order_count:106,average_order_value:41.11,unknown_order_count:0,unknown_line_count:12,item_pending_order_count:6,item_pending_reasons:{PROMO_COMPONENT_ROUNDING_REVIEW:6} }
+  data.totals.uber_eats={...data.totals.total,revenue:1718.47,known_revenue:1718.47,order_count:46,average_order_value:37.36}
+  data.categories[0].total={...metric(null,18),known_revenue:100,unknown_order_count:6,unknown_line_count:12,item_pending_order_count:6}
+  await act(async () => { view=create(<><ChannelSalesKpis summary={data}/><ChannelRevenueMix summary={data} range="today"/></>) })
+  expect(text()).toContain('$4,357.72')
+  expect(text()).toContain('$1,718.47')
+  expect(text()).toContain('$41.11')
+  expect(text()).toContain('Item amounts pending review')
+  expect(text()).not.toContain('PROMO_COMPONENT_ROUNDING_REVIEW')
+  expect(text()).not.toContain('AOV Pending')
+  expect(view!.root.findAllByType('circle')).toHaveLength(1)
+  expect(text()).toContain('Category amounts pending reconciliation')
+})

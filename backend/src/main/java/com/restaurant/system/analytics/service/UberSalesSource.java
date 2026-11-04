@@ -9,9 +9,12 @@ public interface UberSalesSource {
     List<Sale> load(List<Long> storeIds, LocalDateTime start, LocalDateTime end);
 
     record Sale(Long storeId, String orderId, LocalDateTime placedAt, String currency,
-                Long revenueMinor, List<Item> items, String pendingReason) {
+                Long revenueMinor, List<Item> items, String pendingReason, String itemPendingReason) {
+        public Sale(Long storeId, String orderId, LocalDateTime placedAt, String currency, Long revenueMinor, List<Item> items, String pendingReason) {
+            this(storeId,orderId,placedAt,currency,revenueMinor,items,pendingReason,null);
+        }
         public Sale(Long storeId, String orderId, LocalDateTime placedAt, String currency, Long revenueMinor, List<Item> items) {
-            this(storeId, orderId, placedAt, currency, revenueMinor, items, null);
+            this(storeId, orderId, placedAt, currency, revenueMinor, items, null, null);
         }
     }
     record Item(String stableId, String sku, String categoryCode, String name,

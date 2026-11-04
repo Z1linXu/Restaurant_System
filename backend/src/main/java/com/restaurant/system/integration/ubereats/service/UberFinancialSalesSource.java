@@ -74,21 +74,34 @@ public class UberFinancialSalesSource implements UberSalesSource {
                         && revision.sourceHash().equals(com.restaurant.system.integration.ubereats.repository.UberFinancialCorrectionRepository.sha256(row.rawFinancialSnapshotJson)))
                     {
                     financial = json.readValue(revision.snapshotJson(), UberFinancialSnapshot.class);
-                    if (financial.version() != 2) financial = null;
+                    if (financial.version() != 2 && financial.version() != 3) financial = null;
                 }
                 else financial = null; // Changed evidence must not silently reuse a correction.
             } catch (Exception invalid) { financial = null; }
         }
-        boolean same = financial != null && (financial.version() == 1 || financial.version() == 2)
+        boolean orderIdentity = financial != null && Set.of(1,2,3).contains(financial.version())
                 && row.uberOrderId.equals(financial.order_id()) && row.uberStoreId.equals(financial.store_id())
-                && "CAD".equals(financial.currency()) && financial.items() != null
+                && "CAD".equals(financial.currency());
+        boolean same = orderIdentity && financial.items() != null
                 && rootItems.isArray() && rootItems.size() == financial.items().size();
         if (same) for (int n = 0; n < rootItems.size(); n++) {
             var line = financial.items().get(n);
             if (!rootItems.get(n).path("id").asText().equals(line.id())
                     || rootItems.get(n).path("quantity").asInt() != line.quantity()) { same = false; break; }
         }
-        boolean moneyKnown = same && financial.revenue_minor() != null && financial.blocked_reason() == null;
+        boolean validV3 = orderIdentity && financial.version()==3 && financial.charges()!=null
+                && "MERCHANT_POST_PROMO_ORDER_TOTAL_V3".equals(financial.charges().path("_analytics_rule").asText())
+                && "CAD".equals(financial.charges().path("total_promo_applied").path("currency_code").asText())
+                && financial.charges().path("total_promo_applied").path("amount").isIntegralNumber()
+                && financial.charges().path("total_promo_applied").path("amount").canConvertToLong()
+                && Objects.equals(financial.revenue_minor(),financial.charges().path("total_promo_applied").path("amount").longValue())
+                && financial.revenue_minor()!=null && financial.revenue_minor()>=0;
+        boolean moneyKnown = orderIdentity && (financial.version()==3 ? validV3 : same)
+                && financial.revenue_minor() != null && financial.blocked_reason() == null;
+        boolean itemMoneyKnown = moneyKnown && same && financial.version()!=3;
+        String itemReason = financial != null && financial.version()==3
+                ? financial.charges()==null ? "PROMO_ITEM_ALLOCATION_UNVERIFIED"
+                    : financial.charges().path("_item_reconciliation_reason").asText("PROMO_ITEM_ALLOCATION_UNVERIFIED") : null;
         boolean localIdentity = rootItems.isArray() && localItems.isArray() && rootItems.size() == localItems.size()
                 && local.path("store_id").asLong(-1) == row.storeId;
         List<Item> items = new ArrayList<>();
@@ -104,13 +117,13 @@ public class UberFinancialSalesSource implements UberSalesSource {
             items.add(new Item(source.path("id").asText(), mapped ? identity.path("item_sku_snapshot").asText() : null,
                     mapped ? identity.path("category_code_snapshot").asText() : "OTHER",
                     mapped ? identity.path("item_name_snapshot_en").asText() : source.path("title").asText("Uber item"),
-                    quantity, moneyKnown ? financial.items().get(n).revenue_minor() : null));
+                    quantity, itemMoneyKnown ? financial.items().get(n).revenue_minor() : null));
         }
-        return new Sale(row.storeId, row.uberOrderId, placed, same ? financial.currency() : null,
+        return new Sale(row.storeId, row.uberOrderId, placed, orderIdentity ? financial.currency() : null,
                 moneyKnown ? financial.revenue_minor() : null, List.copyOf(items), moneyKnown ? null
                         : financial == null ? "FINANCIAL_EVIDENCE_MISSING"
-                        : !same ? "FINANCIAL_IDENTITY_MISMATCH"
-                        : financial.blocked_reason() == null ? "FINANCIAL_AMOUNT_MISSING" : financial.blocked_reason());
+                        : !orderIdentity || !same && financial.version()!=3 ? "FINANCIAL_IDENTITY_MISMATCH"
+                        : financial.blocked_reason() == null ? "FINANCIAL_AMOUNT_MISSING" : financial.blocked_reason(),itemReason);
     }
 
     private JsonNode tree(String value) {
