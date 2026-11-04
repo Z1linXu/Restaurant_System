@@ -394,6 +394,9 @@ resource_optimization:
   implementation_base_sha: 27612b6f72dabc48e0167cc7d214a3ece565dd5e
   baseline_semantics: VERIFIED_PRODUCTION_V39_1_EXCLUDES_PENDING_V3_FINANCIAL_CANDIDATE
   branch: codex/production-resource-optimization
+  implementation_commit: 0346c8bae09ecfd37e52cf8499a1ca0c3be3cc73
+  review_pr: 309
+  review_pr_state: DRAFT_NOT_MERGED
   independent_review: ACCEPT_TWO_P2_CLUSTERS_CLOSED
   automatic_database_cleanup: DISABLED_NO_DELETE_EXECUTOR
   existing_host_maintenance_policy: UNCHANGED_ALREADY_ENABLED

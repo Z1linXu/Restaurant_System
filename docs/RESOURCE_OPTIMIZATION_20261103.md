@@ -11,6 +11,10 @@ is excluded. Branch:codex/production-resource-optimization. PR delivery uses an
 immutable27612b6 baseline branch to exclude the unmerged financial implementation
 from this optimization diff. No automatic merge/deploy follows this report.
 
+PR: https://github.com/Z1linXu/Restaurant_System/pull/309 (draft, not merged).
+Implementation commit: `0346c8bae09ecfd37e52cf8499a1ca0c3be3cc73`.
+Subsequent publication sync changes documentation/evidence only.
+
 ## A–C. Inbox, sharing and synthetic performance
 
 Implemented batch narrow latest PrintJob states and one batch missing-module
