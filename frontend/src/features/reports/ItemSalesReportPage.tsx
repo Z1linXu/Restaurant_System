@@ -17,12 +17,12 @@ export function ItemSalesReportPage() {
       onCompareToggle={report.setCompareEnabled} onCustomStartDateChange={report.setCustomStartDate} onCustomEndDateChange={report.setCustomEndDate} />
   }>
     {report.error ? <ReportEmptyState message={report.error} /> : null}
-    <div className="flex flex-wrap gap-2">{(['revenue', 'quantity'] as const).map((mode) => <button key={mode} type="button" onClick={() => setSortMode(mode)} aria-pressed={sortMode === mode} className={`rounded-full px-4 py-2 text-sm ${sortMode === mode ? 'bg-[var(--primary)] text-white' : 'bg-[rgba(26,28,25,0.06)]'}`}>Sort by {mode === 'revenue' ? 'Known Revenue' : 'Quantity'}</button>)}</div>
+    <div className="flex flex-wrap gap-2">{(['revenue', 'quantity'] as const).map((mode) => <button key={mode} type="button" onClick={() => setSortMode(mode)} aria-pressed={sortMode === mode} className={`rounded-full px-4 py-2 text-sm ${sortMode === mode ? 'bg-[var(--primary)] text-white' : 'bg-[rgba(26,28,25,0.06)]'}`}>Sort by {mode === 'revenue' ? 'Revenue' : 'Quantity'}</button>)}</div>
     <div className="grid gap-5 xl:grid-cols-2">
-      <ReportPanel title="Top Items" description="Top ten by the selected quantity or known-revenue ranking.">
+      <ReportPanel title="Top Items" description="Top ten by the selected quantity or revenue ranking. Pending amounts are excluded.">
         {report.loading ? <ReportEmptyState message="Loading item sales..." /> : rows.length ? <ChannelSalesTable rows={rows.slice(0, 10)} label="Item" /> : <ReportEmptyState message="No eligible item sales for this period." />}
       </ReportPanel>
-      <ReportPanel title="Worst Items" description="Lowest known total revenue; pending amounts are not ranked as zero.">
+      <ReportPanel title="Worst Items" description="Lowest total revenue; pending amounts are not ranked as zero.">
         {report.loading ? <ReportEmptyState message="Loading item sales..." /> : <ChannelSalesTable rows={rows.filter((row) => row.total.revenue != null).sort((a, b) => (a.total.revenue ?? 0) - (b.total.revenue ?? 0)).slice(0, 10)} label="Item" />}
       </ReportPanel>
     </div>

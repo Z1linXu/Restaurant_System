@@ -72,12 +72,14 @@ it('shared report table displays channel quantities and nullable amounts', async
   expect(text()).toContain('$10.00')
 })
 
-it('shows known subtotal and distinct pending orders without implying complete AOV or percentages', async () => {
+it('shows subtotal without a Known prefix and distinct pending orders without implying complete AOV or percentages', async () => {
   const data = summary()
   data.totals.total = { ...metric(null, 100), known_revenue: 3742.38, unknown_order_count: 14, unknown_line_count: 35, pending_reasons: { PROMO_TOTAL_RECONCILIATION_REQUIRED: 14 } }
   data.categories[0].total = data.totals.total
-  await act(async () => { view = create(<><ChannelSalesKpis summary={data} /><ChannelRevenueMix summary={data} range="today" /></>) })
-  expect(text()).toContain('Known $3,742.38')
+  await act(async () => { view = create(<><ChannelSalesKpis summary={data} /><ChannelRevenueMix summary={data} range="today" /><ChannelTrend points={[{ ...data.totals, label: '11-02', date: '2026-11-02', hour: null }]} /><ChannelNoodleSales rows={data.categories} range="week" /><ChannelSalesTable rows={[{ ...data.totals, item_key: 'synthetic', item_name: 'Synthetic item' }]} label="Item" /></>) })
+  expect(text()).toContain('$3,742.38')
+  expect(text()).not.toMatch(/\bknown\b/i)
+  expect(text()).toContain('Incomplete')
   expect(text()).toContain('orders')
   expect(text()).toContain('lines')
   expect(text()).toContain('Pending')
