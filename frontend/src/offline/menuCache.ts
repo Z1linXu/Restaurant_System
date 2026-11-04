@@ -64,6 +64,14 @@ function appendValue(parts: string[], value: unknown) {
   parts.push(`${normalized.length}:${normalized}|`)
 }
 
+// Keep optional delivery metadata in the same order as MenuCatalogHashService.
+function appendFrenchName(parts: string[], name: string | null | undefined) {
+  if (name != null) {
+    appendValue(parts, 'name_fr')
+    appendValue(parts, name)
+  }
+}
+
 function appendOptions(parts: string[], options: BackendMenuOption[] | undefined) {
   const safeOptions = options ?? []
   appendValue(parts, safeOptions.length)
@@ -76,6 +84,7 @@ function appendOptions(parts: string[], options: BackendMenuOption[] | undefined
     appendValue(parts, option.sort_order)
     appendValue(parts, option.name_zh)
     appendValue(parts, option.name_en)
+    appendFrenchName(parts, option.name_fr)
     appendValue(parts, option.price_delta)
     appendValue(parts, option.is_active)
     appendOptions(parts, option.side_item_remove_options)
@@ -89,6 +98,7 @@ function appendCategories(parts: string[], categories: BackendMenuCategory[], in
     appendValue(parts, category.code)
     appendValue(parts, category.name_zh)
     appendValue(parts, category.name_en)
+    appendFrenchName(parts, category.name_fr)
     appendValue(parts, category.sort_order)
     appendValue(parts, category.is_active)
     appendValue(parts, category.items.length)
@@ -98,6 +108,7 @@ function appendCategories(parts: string[], categories: BackendMenuCategory[], in
       appendValue(parts, item.station_id)
       appendValue(parts, item.name_zh)
       appendValue(parts, item.name_en)
+      appendFrenchName(parts, item.name_fr)
       appendValue(parts, item.sku)
       appendValue(parts, item.item_type)
       appendValue(parts, item.base_price)
@@ -110,6 +121,20 @@ function appendCategories(parts: string[], categories: BackendMenuCategory[], in
         appendValue(parts, item.default_combo_egg_component_code)
       }
       appendOptions(parts, item.options)
+      for (const group of item.option_groups ?? []) {
+        for (const locale of Object.keys(group.name_translations ?? {}).sort()) {
+          appendValue(parts, locale)
+          appendValue(parts, group.name_translations?.[locale as keyof typeof group.name_translations])
+        }
+        if (group.min_select != null) {
+          appendValue(parts, 'min_select')
+          appendValue(parts, group.min_select)
+        }
+        if (group.max_select != null) {
+          appendValue(parts, 'max_select')
+          appendValue(parts, group.max_select)
+        }
+      }
     })
   })
 }

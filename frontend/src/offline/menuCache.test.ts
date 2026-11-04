@@ -189,6 +189,31 @@ function catalog(): BackendMenuCatalog {
   return value
 }
 
+function translatedCatalog(): BackendMenuCatalog {
+  const value = catalog()
+  value.catalog_version = 'menu-catalog-v4'
+  const category = value.categories[0]
+  const item = category.items[0]
+  category.name_fr = 'Soupe'
+  item.name_fr = 'Nouilles au bœuf'
+  item.options[0].name_fr = 'Épicé'
+  item.options[0].side_item_remove_options = [{
+    id: 32, option_type: 'remove', option_code: 'no_onion', option_group: 'REMOVE',
+    parent_option_id: 31, sort_order: 3, name_zh: '去葱', name_en: 'No onion',
+    name_fr: 'Sans oignon', price_delta: 0, is_active: true,
+  }]
+  item.option_groups = [{
+    group_instance_code: 'protein', name: 'Protein', kind: 'CUSTOM',
+    selection_mode: 'MULTIPLE', required: true, sort_order: 0, is_active: true,
+    default_option_ids: [], options: [], min_select: 2, max_select: 2,
+    name_translations: { 'fr-CA': 'Protéines', 'zh-CN': '蛋白', en: 'Proteins' },
+  }]
+  // Independently evaluated with Java MenuCatalogHashService using its existing
+  // synthetic v4 test fixture plus these optional delivery fields.
+  value.content_hash = 'fnv1a32:5de0775e'
+  return value
+}
+
 describe('versioned menu cache identity and integrity', () => {
   it('uses account, organization, store, and revision in cache keys', () => {
     expect(menuScopeKey(scope)).toBe('account:5|organization:9|store:1')
@@ -217,6 +242,49 @@ describe('versioned menu cache identity and integrity', () => {
     validateMenuCatalog(next, scope, next.menu_revision)
     next.categories[0].items[0].default_combo_egg_component_code = 'combo_tea_egg'
     expect(() => validateMenuCatalog(next, scope, next.menu_revision)).toThrow('MENU_CACHE_HASH_MISMATCH')
+  })
+
+  it('matches the backend hash for French names, nested options, and group constraints', () => {
+    const value = translatedCatalog()
+    expect(calculateMenuContentHash(value)).toBe('fnv1a32:5de0775e')
+    expect(() => validateMenuCatalog(value, scope, 7)).not.toThrow()
+  })
+
+  it.each([
+    ['category French name', (value: BackendMenuCatalog) => { value.categories[0].name_fr = 'Autre' }],
+    ['item French name', (value: BackendMenuCatalog) => { value.categories[0].items[0].name_fr = 'Autre' }],
+    ['option French name', (value: BackendMenuCatalog) => { value.categories[0].items[0].options[0].name_fr = 'Autre' }],
+    ['nested option French name', (value: BackendMenuCatalog) => { value.categories[0].items[0].options[0].side_item_remove_options![0].name_fr = 'Autre' }],
+    ['group translation', (value: BackendMenuCatalog) => { value.categories[0].items[0].option_groups![0].name_translations!.en = 'Other' }],
+    ['minimum selection', (value: BackendMenuCatalog) => { value.categories[0].items[0].option_groups![0].min_select = 1 }],
+    ['maximum selection', (value: BackendMenuCatalog) => { value.categories[0].items[0].option_groups![0].max_select = 3 }],
+  ] as const)('rejects a changed %s under the saved hash', (_name, change) => {
+    const value = translatedCatalog()
+    change(value)
+    expect(() => validateMenuCatalog(value, scope, 7)).toThrow('MENU_CACHE_HASH_MISMATCH')
+  })
+
+  it('sorts translated locale keys like the backend TreeMap', () => {
+    const value = translatedCatalog()
+    value.categories[0].items[0].option_groups![0].name_translations = {
+      en: 'Proteins', 'zh-CN': '蛋白', 'fr-CA': 'Protéines',
+    }
+    expect(calculateMenuContentHash(value)).toBe(value.content_hash)
+  })
+
+  it('preserves legacy hashes when optional delivery metadata is null or absent', () => {
+    const value = catalog()
+    value.categories[0].name_fr = null
+    value.categories[0].items[0].name_fr = null
+    value.categories[0].items[0].options[0].name_fr = null
+    value.categories[0].items[0].option_groups = [{
+      group_instance_code: 'empty', name: 'Empty', kind: 'CUSTOM',
+      selection_mode: 'SINGLE', required: false, sort_order: 0, is_active: true,
+      default_option_ids: [], options: [], min_select: null, max_select: null,
+    }]
+    expect(calculateMenuContentHash(value)).toBe('fnv1a32:07ab0e4f')
+    value.categories[0].name_fr = ''
+    expect(calculateMenuContentHash(value)).not.toBe(value.content_hash)
   })
 
   it('rejects scope, revision, and content corruption', () => {

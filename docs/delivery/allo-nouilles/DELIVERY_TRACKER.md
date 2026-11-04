@@ -160,3 +160,9 @@ PRIMARY_REPAIR_GOAL：修复 Allô Test 浏览器携带 Origin 登录被403拒�
 Docker / Disk Hygiene：MemAvailable替换前1517MiB、后1479MiB；disk66%→66%；Build Cache8.678→8.794GB，未清理cache/镜像。只Allô应用/relay更新，Production/Staging无变更。实体打印仍NOT_RUN。
 
 实际浏览器 Owner 登录已进入 `/stores/1/admin/dashboard`，Allô品牌和管理导航可见；私有截图 `cors-login-success.png`。未创建订单、未清理浏览器草稿/Outbox。修复后停回 Owner 验收 Gate。
+
+## 2026-11-04 完整浏览器验收
+
+Owner授权仅Allô Test真实浏览器菜单/点单/Update/同类续加/MOCK/中英法验收；不操作Production/Staging。起始分支HEAD3007bcc，fresh origin/main80e888fcdad74e98326fcbeaa5df14bc0d9baed6，运行a1b94a2。
+
+PRIMARY_REPAIR_GOAL：解决实际POS菜单hash校验阻塞后完成原定浏览器闭环。EXPECTED_REPAIR_CLASS：SMALL。真实浏览器TEST1提示MENU_CACHE_HASH_MISMATCH，无商品可点；不清缓存/草稿/Outbox、不关闭校验。代码证据：Backend MenuCatalogHashService已将非null法文和组选项翻译/基数纳入canonical，Frontend menuCache尚未同步。最小修复仅同步canonical字段，保留legacy向后兼容哈希；普通局部缺陷按现有有界修复授权处理。
