@@ -26,7 +26,7 @@ class UberFinancialSalesSourceTest {
         config.environment = "sandbox";
         Store store = new Store(); store.id = 1L; store.timezone = "America/Toronto";
         when(stores.findById(1L)).thenReturn(Optional.of(store));
-        return new UberFinancialSalesSource(orders, stores, config, json);
+        return new UberFinancialSalesSource(orders, stores, config, json, mock(com.restaurant.system.integration.ubereats.repository.UberFinancialCorrectionRepository.class));
     }
     private UberEatsOrder row() throws Exception {
         UberEatsOrder row = new UberEatsOrder();

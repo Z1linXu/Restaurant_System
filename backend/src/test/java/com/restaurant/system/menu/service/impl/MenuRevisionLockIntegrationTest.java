@@ -68,6 +68,10 @@ class MenuRevisionLockIntegrationTest {
     @org.springframework.boot.test.mock.mockito.MockBean
     private com.restaurant.system.menu.remove.StoreRemoveOptionResolver storeRemoveOptionResolver;
 
+    // Existing table-event constructor dependency is outside this JPA slice.
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private com.restaurant.system.common.realtime.RealtimeEventPublisher realtimeEventPublisher;
+
     private ExecutorService executor;
 
     @BeforeEach

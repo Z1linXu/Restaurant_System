@@ -2179,7 +2179,9 @@ Dashboard and analytics summary responses add `channel_sales`, a shared read-onl
 projection with `revenue_basis`, `currency`, `revenue_note`, `totals`, `categories`,
 `noodle_sales`, `items`, `trend`, `daily`, and `stores`. Every row contains `in_store`,
 `uber_eats`, and `total` metrics: `revenue` (nullable), `known_revenue`,
-`unknown_amount_count`, `order_count`, `quantity`, `average_order_value` (nullable),
+`unknown_amount_count` (legacy), `unknown_order_count` (distinct orders),
+`unknown_line_count`, `pending_reasons` (reason -> distinct order count),
+`order_count`, `quantity`, `average_order_value` (nullable),
 and category `percentage` (nullable when incomplete). Unknown money must not be
 rendered as zero. Both Dashboard and Reports restrict organization/store parameters to the authenticated
 user's accessible Stores, including comparison rows. Foreign scope returns403;
@@ -2193,8 +2195,9 @@ non-cancelled/non-edit-review orders' immutable V35 financial evidence and `plac
 in each Store's local timezone. Mirror local orders are excluded from POS. Uber root
 `total_price` already includes quantity/modifiers; no local menu price enters Uber
 revenue. Supported charges must reconcile root sum=subtotal and subtotal+tax=total
-with no unsupported adjustment/fee. Actual tax is allocated by actual Uber line
-weights. Unsupported/missing financial data keeps quantity but null revenue.
+with no unsupported adjustment/fee. v2 also recognizes merchant post-promotion
+`*_promo_applied` charges and known `payment.promotions` funding details; post subtotal + tax must exactly equal post total. Platform-funded customer discounts are not subtracted again from merchant merchandise. Unexplained cent differences stay Pending. Tax and promotion-adjusted totals are allocated using gross Uber root weights; this is derived allocation, not actual item-level discount evidence. V39.1 journal corrections preserve original snapshots and are separately compensatable. Unsupported/missing financial data keeps quantity but null revenue.
+Incomplete metrics render labeled known subtotals, while full totals/AOV/percentages stay nullable; no new mutation endpoint is introduced.
 
 Groups remain SOUP_NOODLE, DRY_NOODLE, FRIED_NOODLE, DRINK, ALCOHOL, SIDE, FRIED, OTHER.
 Unknown historical root identity remains OTHER. Today trend remains10:00–22:00;

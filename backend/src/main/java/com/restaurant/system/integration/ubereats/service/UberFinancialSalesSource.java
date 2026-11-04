@@ -20,10 +20,12 @@ public class UberFinancialSalesSource implements UberSalesSource {
     private final StoreRepository stores;
     private final UberEatsProperties config;
     private final ObjectMapper json;
+    private final com.restaurant.system.integration.ubereats.repository.UberFinancialCorrectionRepository corrections;
 
     public UberFinancialSalesSource(UberEatsOrderRepository orders, StoreRepository stores,
-            UberEatsProperties config, ObjectMapper json) {
-        this.orders = orders; this.stores = stores; this.config = config; this.json = json;
+            UberEatsProperties config, ObjectMapper json,
+            com.restaurant.system.integration.ubereats.repository.UberFinancialCorrectionRepository corrections) {
+        this.orders = orders; this.stores = stores; this.config = config; this.json = json; this.corrections = corrections;
     }
 
     @Override
@@ -38,7 +40,9 @@ public class UberFinancialSalesSource implements UberSalesSource {
                     ? "America/Toronto" : store.timezone);
             LocalDateTime utcStart = LocalDateTime.ofInstant(start.atZone(zone).toInstant(), ZoneOffset.UTC);
             LocalDateTime utcEnd = LocalDateTime.ofInstant(end.atZone(zone).toInstant(), ZoneOffset.UTC);
-            for (UberEatsOrder row : orders.salesWindow(config.environment, storeId, utcStart, utcEnd)) {
+            var rows = orders.salesWindow(config.environment, storeId, utcStart, utcEnd);
+            var revisions = corrections.latest(config.environment, storeId, rows.stream().map(row -> row.id).filter(Objects::nonNull).toList());
+            for (UberEatsOrder row : rows) {
                 if (!storeId.equals(row.storeId) || !config.environment.equals(row.environment)
                         || Boolean.TRUE.equals(row.cancelled) || Boolean.TRUE.equals(row.editRequired)
                         || Boolean.TRUE.equals(row.scheduled) || row.placedAt == null
@@ -47,13 +51,14 @@ public class UberFinancialSalesSource implements UberSalesSource {
                     continue;
                 LocalDateTime placed = LocalDateTime.ofInstant(row.placedAt.toInstant(ZoneOffset.UTC), zone);
                 if (placed.isBefore(start) || !placed.isBefore(end) || !seen.add(row.environment + ":" + row.uberOrderId)) continue;
-                result.add(sale(row, placed));
+                result.add(sale(row, placed, revisions.get(row.id)));
             }
         }
         return List.copyOf(result);
     }
 
-    private Sale sale(UberEatsOrder row, LocalDateTime placed) {
+    private Sale sale(UberEatsOrder row, LocalDateTime placed,
+            com.restaurant.system.integration.ubereats.repository.UberFinancialCorrectionRepository.Entry revision) {
         JsonNode raw = tree(row.rawOrderSnapshotJson);
         JsonNode rootItems = raw.path("items");
         JsonNode local = tree(row.localRequestJson);
@@ -63,7 +68,18 @@ public class UberFinancialSalesSource implements UberSalesSource {
             if (row.itemFinancialSnapshotJson != null)
                 financial = json.readValue(row.itemFinancialSnapshotJson, UberFinancialSnapshot.class);
         } catch (Exception ignored) { /* Incomplete evidence yields unknown money, never zero. */ }
-        boolean same = financial != null && financial.version() == 1
+        if (revision != null && "APPLY".equals(revision.action())) {
+            try {
+                if (revision.originalHash().equals(com.restaurant.system.integration.ubereats.repository.UberFinancialCorrectionRepository.sha256(row.itemFinancialSnapshotJson))
+                        && revision.sourceHash().equals(com.restaurant.system.integration.ubereats.repository.UberFinancialCorrectionRepository.sha256(row.rawFinancialSnapshotJson)))
+                    {
+                    financial = json.readValue(revision.snapshotJson(), UberFinancialSnapshot.class);
+                    if (financial.version() != 2) financial = null;
+                }
+                else financial = null; // Changed evidence must not silently reuse a correction.
+            } catch (Exception invalid) { financial = null; }
+        }
+        boolean same = financial != null && (financial.version() == 1 || financial.version() == 2)
                 && row.uberOrderId.equals(financial.order_id()) && row.uberStoreId.equals(financial.store_id())
                 && "CAD".equals(financial.currency()) && financial.items() != null
                 && rootItems.isArray() && rootItems.size() == financial.items().size();
@@ -91,7 +107,10 @@ public class UberFinancialSalesSource implements UberSalesSource {
                     quantity, moneyKnown ? financial.items().get(n).revenue_minor() : null));
         }
         return new Sale(row.storeId, row.uberOrderId, placed, same ? financial.currency() : null,
-                moneyKnown ? financial.revenue_minor() : null, List.copyOf(items));
+                moneyKnown ? financial.revenue_minor() : null, List.copyOf(items), moneyKnown ? null
+                        : financial == null ? "FINANCIAL_EVIDENCE_MISSING"
+                        : !same ? "FINANCIAL_IDENTITY_MISMATCH"
+                        : financial.blocked_reason() == null ? "FINANCIAL_AMOUNT_MISSING" : financial.blocked_reason());
     }
 
     private JsonNode tree(String value) {
