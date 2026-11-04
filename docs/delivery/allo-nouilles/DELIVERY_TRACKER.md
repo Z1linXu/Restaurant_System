@@ -54,7 +54,7 @@ EXPECTED_REPAIR_CLASS：HIGH。只限首店，不开发第二客户、完整模�
 - 公网浏览器实际打开登录页，中/英/法切换及保留账号输入已确认；authenticated POS 全流程点击、真实弱网断线/恢复 NOT_RUN。单元测试与 HTTP 验收不冒充这两项浏览器验收。
 - 私有证据：`.merchant-private/allo-nouilles/local-http-evidence.json`、`local-extra-evidence.json`、`local-import-evidence.json`、`local-import-final-state.json` 及相关日志。真实票据在 `local-test-receipts.json`，不入公开 Git。
 
-## 实际交付身份与入口
+## 首次交付身份与入口（后续登录修复见文末）
 
 - Test：<https://test.lanzhounoodlesmtl.com/>，部署及公网验收 PASS；Owner 业务验收待进行。
 - 应用源码／运行 SHA：`a19b5d64eab36bfc770927b1b1bb4bfe8876d15d`。
@@ -152,3 +152,11 @@ Allô 固定上限 BE512/DB128/FE32/Relay16 MiB，总688 MiB；CPU caps合计1.2
 PRIMARY_REPAIR_GOAL：修复 Allô Test 浏览器携带 Origin 登录被403拒绝。EXPECTED_REPAIR_CLASS：SMALL。Owner实际反馈重新授权此单店 Test 局部修复；不改账号权限、数据、Production/Staging。
 
 已复现：无 Origin auth/login200；带 `Origin: https://test.lanzhounoodlesmtl.com` 返回403 `Invalid CORS request`。旧验收遗漏浏览器 Origin。`RestCorsConfig` 的 `!template-test` 仍在 allo-test 注册，覆盖同路径专属 CORS 配置。最小修复仅将 profile 排除扩展到 allo-test；沿用现有显式 Test origin allowlist，不增加通配符或信任未知来源。新增 profile/来源隔离回归，原 Staging 代理回归保留。
+
+修复实际运行 SHA：`a1b94a216a294de4e6f0b462aca414eef5266c5c`，取代上文首次交付 a19。Agent6 ACCEPT WITH LIMITATIONS；新增2项＋既有转发7项全部PASS，JDK21打包及前端build/typecheck PASS。未受影响的全量业务测试复用前轮证据，没有冒称重新全跑。
+
+公网 `cors-public-proof.json`：Owner/Manager 带真实Origin登录、workspace、Store1 context、catalog均200；Store2访问403，恶意Origin和错误端口403，浏览器预检OPTIONS200。`cors-deploy.log`证明精确SHA、V1–V41、共享入口hash不变、Production UP、8保护容器不变。数据库volume与凭据原样复用，没有清除菜单/订单/草稿或提升权限。
+
+Docker / Disk Hygiene：MemAvailable替换前1517MiB、后1479MiB；disk66%→66%；Build Cache8.678→8.794GB，未清理cache/镜像。只Allô应用/relay更新，Production/Staging无变更。实体打印仍NOT_RUN。
+
+实际浏览器 Owner 登录已进入 `/stores/1/admin/dashboard`，Allô品牌和管理导航可见；私有截图 `cors-login-success.png`。未创建订单、未清理浏览器草稿/Outbox。修复后停回 Owner 验收 Gate。
