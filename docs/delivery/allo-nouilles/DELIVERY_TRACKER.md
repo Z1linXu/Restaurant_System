@@ -228,3 +228,26 @@ PRIMARY_REPAIR_GOAL：把已有兰州大按钮网格、双语标签、modifier�
 Ground Truth：分支codex/allo-nouilles-delivery-20261103，起始HEAD85f59cf，fresh origin/main80e888fcdad74e98326fcbeaa5df14bc0d9baed6；工作区clean，运行f08a930。仍Phase6同一首店Package，未开启下一阶段。新Owner请求覆盖前一Owner待验收Stop中的本次UI切片。
 
 实际原因：两分支已共用ChoiceButton/CheckboxRow/AddOnQuantityRow，但template分支缺grid和modifier容器并清空sublabel。最小复用现成控件/样式，保留selectTemplateOption、C6 cardinality、加料数量和价格、备注/提交API、草稿/Outbox及打印边界。无新增Owner步骤、重复配置、硬件blocker或UI设置。
+
+
+实际运行应用 SHA：`2b44aa95d6b9f5ead343858b3a4a18c4eda3d0a9`。复用既有 `ChoiceButton`、`CheckboxRow`、`AddOnQuantityRow`，补齐 template 分支的响应式等宽 grid、双语主副标题和灰色 modifier 容器。普通单选组先于 modifier，COMBO 仍保持配置顺序；legacy 分支及底层选择/计价未改。Allô 继续仅有本店已配置的三面型、四辣度及加料；未凭旧店截图新增 Remove 或任何菜单事实。现有灰色备注卡片、固定底部数量/金额/加入操作沿用。
+
+验证：focused legacy14＋template9＝23 PASS；全前端79 files /450 tests PASS；typecheck/build、diff-check PASS。Agent6 `ACCEPT WITH LIMITATIONS`，无所审P0/P1/P2；其视觉限制由本轮真实浏览器补证。Backend/Flyway/API未改，JAR SHA256 `dacfc20c8af57c20fba14b9c45f99e934c13d773dbd2c124b759ac698e1eee3d` 与上轮逐字节一致，未冒称重新跑Backend全套。dist tree `bcaac6f328aa872b29f998367d494b95e0bad4d55336319cbde0b071a24757eb`；sealed bundle SHA256 `eca36f2c26fdde5a319031746067619b1a2812713f68c249dcebc9c48987d93e`。operations仍固定9803ada。
+
+| 本轮真实浏览器验收 | 结果及私有证据 layout-reuse-20261104/ |
+|---|---|
+| 排版/点击区域 | PASS；1280×720中三面型同排，四辣度同排；四个辣度按钮均214.5×62.3125px；01/02/08 |
+| 双语及中英法 | PASS；zh/en为英文主文＋中文副文，fr为法文主文＋中文副文；切换保留粗面/加辣/牛肉qty2及备注；03/04 |
+| 价格/草稿 | PASS；B1 16.99＋7.99×2＝32.97，加入草稿后粗面、牛肉x2、加辣、原备注正确，税4.94/总37.91；05。随后仅通过UI移除本次测试行，原草稿ID保留，未清IDB/Outbox |
+| C6 | PASS；0/1选不可加入，2选允许且第3项禁用，固定19.99；06。关闭未提交 |
+| 加料/备注/底栏 | PASS；灰色加料区两列、备注区和固定底栏可见、可滚动到达；07/08 |
+| 菜单配置保全 | PASS；部署前后catalog仅排除generated_at后逐字段完全相同，revision94，canonical SHA256 `9a413c3f3106c0903cd08929addaa471ac571bc2932fbafefaeebc8ad2b981e1`；menu-unchanged.json |
+| 入口/权限 | PASS；Owner/Manager真实Origin登录及Store1访问成功，跨Store两次403、恶意Origin/错误端口403、preflight及前端SHA正确；entry-proof.json |
+
+本轮为UI呈现切片，未新建/提交服务端订单或触发MOCK Job，既有Update/同类续加/原件复制/MOCK闭环证据仍为上节f08a930真实浏览器验收，未把旧证据记作本轮重跑。实体打印、Android、真实断线/未知结果重放、F31/STOMP等既有未验证/未关闭项继续保留。
+
+Docker / Disk Hygiene：16:52:24→16:58:22 UTC，disk66%→66%，available20,810,797,056→20,738,875,392 bytes；BuildCache8.814→8.820GB（reclaimable1.584→1.586GB），MemAvailable1440→1445MiB。无cache/image/release/volume清理。复用既有双锁精确SHA工具，只更新Allô应用/relay，数据库容器原样复用。独立复核8/8保护容器完整ID/image/StartedAt/restarts/health不变，共享Nginx配置hash不变、未reload；Production HTTPS200/UP，Staging四主服务继续停止。没有Production/Staging代码、数据、配置、部署或重启动作。
+
+PRODUCT REPAIR：仅modal呈现代码及其专门回归，必要的技术行为说明。TOOLING / GOVERNANCE REPAIR：无工具代码改动，复用reviewed pack/upload/deploy；仅本任务私有caller的SHA/保护快照及tracker/CURRENT_STATE证据同步。文档收尾提交不重新build/deploy。Draft PR308保持未合并，未rebase/auto-merge。STOP回Owner验收Gate，沿用 `FIRST_RESTAURANT_ALLO_TEST_DELIVERY_ONLY_NO_REAL_PRINT_OR_PRODUCTION`。
+
+治理全链接检查：FAIL，仍为既有 sparse checkout 缺失 `SYSTEM_DOCUMENTATION.md -> docs/governance/UBER_TEST_MENU_FULL_COMPARE_20261002.md`，保留governance-validation.log；该历史链接未被本轮修改，不扩大修复范围。新增/变更文档的diff-check PASS。
