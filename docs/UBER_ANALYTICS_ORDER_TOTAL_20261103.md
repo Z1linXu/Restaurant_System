@@ -151,3 +151,54 @@ correction CLI, one version CHECK, Analytics completeness fields/UI and tests.
 TOOLING / GOVERNANCE: no deployment framework/change; optional private financial
 fixture/preview output in the existing isolated PG test, this plan and technical/
 current-state sync only. No build or upload on Production occurred this round.
+
+## Immutable local release batch
+
+Candidate source SHA: `74dfc1fd235af31fc7345c43f770d9991960da70`.
+Production stays `27612b6f72dabc48e0167cc7d214a3ece565dd5e` / V39.1.
+Java17 isolated re-run and its independent JVM previews match the same private
+financial-source preview byte-for-byte. Local Java17 application JAR and static
+build succeed; nothing was built/uploaded/deployed on the Production host.
+
+- JAR SHA256: `5a5efdc7e4fb1df91b1a7227e419ee4e5859c4446fc1a3f01a714947246eba34`.
+- Static archive SHA256: `aa598848c65cf27822f222612a230bf9291c9ffe8942139efc07b5c97eab012c`.
+- V39.2 migration file SHA256: `07785bfa52ec8a8aa2abb28713a4d9bc7254792bc01721f1aa0506911cd06e4f`.
+- Six-row preview batch SHA256: `8c96d7b6a8fc3fa2bbaf1339c4ff3275224299a1fa9700f8c5ee0b08c6c41360`.
+
+Machine-readable approval artifacts:
+[preview](UBER_ANALYTICS_ORDER_TOTAL_20261103_PREVIEW.json),
+[release manifest](UBER_ANALYTICS_ORDER_TOTAL_20261103_RELEASE.json).
+JAR/static artifacts are retained in this task's private local directory, with
+no credentials or external order identifiers in the public manifests. Image IDs
+for the future release are NOT BUILT/UNKNOWN; current Production base image IDs
+are immutable and preserved. Any changed source/artifact/preview invalidates the
+proposed batch and requires renewed review. Final documentation-only sync does
+not change executable trees or trigger rebuild/deploy.
+
+Exact executable scope relative to current Production:
+financial policy/capture/read adapter and case-scoped CLI; shared channel metric
+DTO/service/source interface; three frontend channel report/types/test paths;
+focused financial/PG/Analytics tests; one new V39.2 CHECK migration. No prior
+applied migration or deployment helper changed. SYSTEM/API/current-state and
+this preview/plan/manifest are documentation/evidence only.
+
+Stop: UBER_ANALYTICS_ORDER_TOTAL_LOCAL_COMPLETE_AWAIT_OWNER_PRODUCTION.
+Production mutation: NONE. Staging/Test: remain paused. PR307 remains open,
+no merge. No new Phase, performance or archiving work follows this package.
+
+## Execution Time Breakdown
+
+Estimated attribution of approximately24 minutes from04:06 to04:30UTC on
+2026-11-04; parallel stages are not double counted.
+
+| Stage | Time | Notes |
+| --- | ---: | --- |
+| Investigation / Planning | 3m | Current SHA, six financial sources, official field meaning and4800-cent variance |
+| Implementation | 7m | Order/item separation, bounded v3 journal case and CHECK |
+| Tests | 5m | Full1254, focused31, frontend374, actual local PG, one rollback-fixture retry |
+| Agent 6 / PR / Merge | 3m | ACCEPT and independent31 PASS; PR307 updated, merge NOT RUN |
+| Staging Deploy | N/A | Owner requires paused |
+| Staging Acceptance | N/A | Local isolated evidence instead |
+| Local Release Artifacts | 2m | Java17/JVM identity, JAR/static checksums; no Production upload |
+| Evidence / Governance | 4m | Six-row preview, actual-value discrepancy, release/recovery plan and state sync |
+| Total | 24m Estimated | Stop for Owner release decision |

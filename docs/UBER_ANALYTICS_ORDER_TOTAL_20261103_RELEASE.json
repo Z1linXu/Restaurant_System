@@ -1,0 +1,10 @@
+{
+  "candidate_sha": "74dfc1fd235af31fc7345c43f770d9991960da70",
+  "production_sha": "27612b6f72dabc48e0167cc7d214a3ece565dd5e",
+  "jar_sha256": "5a5efdc7e4fb1df91b1a7227e419ee4e5859c4446fc1a3f01a714947246eba34",
+  "frontend_archive_sha256": "aa598848c65cf27822f222612a230bf9291c9ffe8942139efc07b5c97eab012c",
+  "migration_sha256": "07785bfa52ec8a8aa2abb28713a4d9bc7254792bc01721f1aa0506911cd06e4f",
+  "preview_sha256": "8c96d7b6a8fc3fa2bbaf1339c4ff3275224299a1fa9700f8c5ee0b08c6c41360",
+  "java17_preview_matches": true,
+  "production_upload_or_deploy": false
+}
