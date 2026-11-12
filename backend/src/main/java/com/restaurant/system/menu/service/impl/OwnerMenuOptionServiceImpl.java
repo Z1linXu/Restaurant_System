@@ -57,6 +57,7 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<MenuItemOptionAdminResponse> getOptions(Long itemId) {
         loadMenuItem(itemId);
         return addonResolver.resolve(menuItemOptionRepository.findAllByMenuItemIdOrdered(itemId)).stream()

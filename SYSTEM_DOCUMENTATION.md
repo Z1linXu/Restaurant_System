@@ -9831,6 +9831,12 @@ catalog and server validation, with checked repeatable reconciliation. Generic
 client group spoofing stays blocked; independent template choices require
 verified same-Store persisted option/item/group bindings.
 
+`OwnerMenuOptionServiceImpl.getOptions` wraps JPA reads and the canonical JDBC
+projection in one read-only transaction. With OSIV enabled, both use the same
+transaction-bound connection instead of each request retaining one connection
+while waiting for another. Pool limits, authorization, response fields and all
+write/revision semantics are unchanged.
+
 V42 adds an opt-in category-bulk-price capability, previews and idempotency
 ledger. Bulk applies base prices under the existing Store lock with server
 preview/revision/fingerprint validation and strict transactional audit; free

@@ -2318,6 +2318,11 @@ CUSTOM/SPICY/SIZE retain independently verified server-side semantics. A client
 snapshot group cannot opt out of canonical assignment or price validation. New
 Owner-saved ADD_ON choices must reference a same-Store catalog Add-on.
 
+Owner item-option GET reads run inside a read-only service transaction so JPA
+option loading and canonical JDBC resolution share one datasource connection.
+This preserves the response/authorization contract and prevents parallel
+option reads from exhausting the bounded connection pool under OSIV.
+
 The existing `GET/PUT /api/v1/stores/{storeId}/receipt-presentation` additionally
 supports `kitchen_category_enabled` (category-code-to-boolean) and optional
 `expected_revision`; stale saves return 409. Unknown/foreign categories are
