@@ -19,7 +19,7 @@ See [actual browser results](HUMAN_LIKE_E2E_REPORT.md).
 | --- | --- |
 | Source | `23f3e804713ad633f1d95f10d1b0cfebfcf31edf` |
 | Branch | `codex/allo-production-improvements-20261112` |
-| PR | [#310](https://github.com/Z1linXu/Restaurant_System/pull/310), draft, base `codex/allo-nouilles-delivery-20261103` at `1f9f1122efe7763015b49f1a6aa4ecbb33030dd8`; not merged into main |
+| PR | [#310](https://github.com/Z1linXu/Restaurant_System/pull/310), ready for review, base `codex/allo-nouilles-delivery-20261103` at `1f9f1122efe7763015b49f1a6aa4ecbb33030dd8`; not merged into main |
 | Fresh origin/main | `80e888fcdad74e98326fcbeaa5df14bc0d9baed6`; reference only, not Allô deployed source |
 | New archive SHA-256 | `f12e133270db93bb913071c7e60bab4c3c04ad58014a5e37d961c4f93ff04fb1` |
 | JAR SHA-256 | `d4b9473fce4d7bfaf35c6a5f1ace4e83bc5dc0ab24fe9c04a616c9187154f522` |
@@ -35,7 +35,7 @@ See [actual browser results](HUMAN_LIKE_E2E_REPORT.md).
 Archive59file hashes, source labels, verified existing base images, brand asset
 and JAR were checked locally and on43.166.242.250. Docker builds used
 `--network=none --pull=false`. Production namespace is retained. Source is
-pushed and reviewable; a draft PR on the separate Allô delivery line is not
+pushed and reviewable; a PR on the separate Allô delivery line is not
 claimed as a merge into main. Unrelated dirty main-checkout work was untouched.
 The oldc242/e7candidate artifacts are superseded and must not be activated.
 Documentation-only commits do not change/rebuild this exact application batch.
