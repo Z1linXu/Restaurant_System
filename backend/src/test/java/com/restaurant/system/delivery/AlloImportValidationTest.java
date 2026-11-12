@@ -15,6 +15,14 @@ class AlloImportValidationTest {
  s.putArray("addon_groups").add(group);var choice=row("ONE");choice.put("price_delta","0.00");var def=row("CHOICE");def.putArray("options").add(choice);s.putArray("option_groups").add(def);
  s.putArray("combo_offers");s.putObject("free_refills").put("cross_eligibility","SAME_CATEGORY_ONLY");return s;}
  @Test void validSyntheticSourceHasNoWriteDependency(){assertDoesNotThrow(()->AlloMenuImporter.validate(source()));}
+ @Test void canonicalAssignmentDtoFieldsDoNotChangeExistingImportFingerprints() throws Exception {
+  var importer=new AlloMenuImporter(null,null,null,null,null,mapper);
+  var option=new com.restaurant.system.menu.template.TemplateMenuModels.Option();option.option_code="extra_beef";option.option_group="ADD_ON";option.name_zh="牛肉";option.name_en="Beef";option.name_fr="Bœuf";
+  var legacy=mapper.valueToTree(option);((ObjectNode)legacy).remove(java.util.List.of("store_addon_id","addon_eligible"));
+  option.store_addon_id=123L;option.addon_eligible=true;
+  var hash=AlloMenuImporter.class.getDeclaredMethod("hash",Object.class);hash.setAccessible(true);
+  assertEquals(hash.invoke(importer,legacy),hash.invoke(importer,option));
+ }
  @Test void unknownOptionGroupIsRejected(){var s=source();((ObjectNode)s.path("items").get(0)).putArray("option_group_codes").add("MISSING");assertThrows(RuntimeException.class,()->AlloMenuImporter.validate(s));}
  @Test void unknownAddonGroupIsRejected(){var s=source();((ObjectNode)s.path("items").get(0)).putArray("addon_group_codes").add("MISSING");assertThrows(RuntimeException.class,()->AlloMenuImporter.validate(s));}
  @Test void duplicateReferencesAreRejected(){var s=source();((ObjectNode)s.path("items").get(0)).putArray("option_group_codes").add("CHOICE").add("CHOICE");assertThrows(RuntimeException.class,()->AlloMenuImporter.validate(s));}

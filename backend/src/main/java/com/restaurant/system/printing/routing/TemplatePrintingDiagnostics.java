@@ -24,7 +24,7 @@ public class TemplatePrintingDiagnostics {
    v.put("state",j!=null?j.status:reason==null?"PENDING":"UNRESOLVED");v.put("reason",reason);
    v.put("error_code",j==null?(f.error_code==null&&reason!=null?"TICKET_UNRESOLVED":f.error_code):j.error_code);
    v.put("rendered_text",j==null?f.rendered_text:j.rendered_text_snapshot);
-   v.put("menu_revision",f.menu_revision);v.put("routing_revision",f.routing_revision);v.put("execution_mode","MOCK");rows.add(v);
+   v.put("menu_revision",f.menu_revision);v.put("routing_revision",f.routing_revision);v.put("execution_mode",j!=null&&j.executionMode!=null?j.executionMode:f.execution_mode==null?"MOCK":f.execution_mode);rows.add(v);
   }return Map.of("tickets",rows);
  }
 }

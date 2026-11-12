@@ -7,6 +7,8 @@ import com.restaurant.system.printing.rules.PrintingDisplayRuleService;
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -31,7 +33,12 @@ public class StoreAddonService {
                            List<String> names_en, List<BigDecimal> prices, String reason) {}
     public record AddonList(List<Addon> addons, List<Conflict> conflicts) {}
     public record ReconciliationReport(Long store_id, boolean dry_run, int linked_groups,
-                                       int linked_options, List<Conflict> conflicts) {}
+                                       int linked_options, List<Conflict> conflicts,
+                                       Long menu_revision, String fingerprint) {
+        public ReconciliationReport(Long storeId, boolean dryRun, int groups, int options, List<Conflict> conflicts) {
+            this(storeId, dryRun, groups, options, conflicts, null, null);
+        }
+    }
     public static class WriteRequest {
         public Long store_id;
         public String code;
@@ -44,13 +51,15 @@ public class StoreAddonService {
         public Long store_id;
         public Boolean dry_run;
         public Map<String, BigDecimal> confirmed_prices;
+        public Long expected_menu_revision;
+        public String expected_fingerprint;
     }
     public static class EligibilityRequest { public Boolean enabled; }
 
     private record Values(String zh, String en, BigDecimal price, boolean active) {}
     private record Row(Long id, Long itemId, String code, String group, String type, String zh,
                        String en, BigDecimal price, Boolean active, Long addonId, Boolean eligible,
-                       Long parentOptionId) {}
+                       Long parentOptionId, String templateGroup) {}
     private record Group(String code, List<Row> rows, Addon existing, String conflict) {}
     private static final String SELECT_ADDONS = """
         select a.id, a.store_id, d.code, a.name_zh, a.name_en, a.price, a.active
@@ -132,8 +141,8 @@ public class StoreAddonService {
         jdbc.update("""
             update menu_item_options set name_zh=?, name_en=?, price_delta=?,
               is_active=(? and addon_eligible), updated_at=current_timestamp
-            where store_addon_id=? and template_group_code is null and menu_item_id in (select id from menu_items where store_id=?)
-            """, values.zh(), values.en(), values.price(), values.active(), addonId, before.store_id());
+            where store_addon_id=? and store_addon_store_id=? and menu_item_id in (select id from menu_items where store_id=?)
+            """, values.zh(), values.en(), values.price(), values.active(), addonId, before.store_id(), before.store_id());
         revisions.incrementRevision(before.store_id());
         return requireAddon(addonId);
     }
@@ -177,21 +186,61 @@ public class StoreAddonService {
         if (hasAmbiguousRelationships(itemRows.stream().filter(r -> addon.code().equals(r.code())).toList())) {
             throw failure("ADDON_RELATIONSHIP_CONFLICT: resolve duplicate item relationships before changing eligibility");
         }
+        List<Row> assigned = itemRows.stream().filter(row -> addonId.equals(row.addonId())).toList();
+        String templateGroup = null;
+        if (enabled && (assigned.isEmpty() || assigned.stream().anyMatch(row -> row.templateGroup() == null))) {
+            templateGroup = eligibilityTemplateGroup(storeId, itemId);
+        }
         int changed = jdbc.update("""
-            update menu_item_options set addon_eligible=?, is_active=?, updated_at=current_timestamp
-            where menu_item_id=? and store_addon_id=?
-            """, enabled, addon.active() && enabled, itemId, addonId);
-        if (changed == 0) {
+            update menu_item_options set addon_eligible=?, is_active=?,
+              template_group_code=coalesce(template_group_code,?), updated_at=current_timestamp
+            where menu_item_id=? and store_addon_id=? and store_addon_store_id=?
+              and (addon_eligible is distinct from ? or is_active is distinct from ?
+                or (template_group_code is null and cast(? as varchar) is not null))
+            """, enabled, addon.active() && enabled, templateGroup, itemId, addonId, storeId,
+            enabled, addon.active() && enabled, templateGroup);
+        if (assigned.isEmpty()) {
             if (!enabled) return;
             jdbc.update("""
                 insert into menu_item_options(menu_item_id,option_type,option_code,option_group,
-                  name_zh,name_en,price_delta,is_active,store_addon_id,store_addon_store_id,addon_eligible,sort_order,created_at,updated_at)
-                values (?,'addon',?,'ADD_ON',?,?,?,?,?,?,true,
+                  name_zh,name_en,price_delta,is_active,store_addon_id,store_addon_store_id,addon_eligible,template_group_code,template_default,sort_order,created_at,updated_at)
+                values (?,'addon',?,'ADD_ON',?,?,?,?,?,?,true,?,false,
                   (select coalesce(max(o.sort_order),0)+10 from menu_item_options o where o.menu_item_id=?),
                   current_timestamp,current_timestamp)
-                """, itemId, addon.code(), addon.name_zh(), addon.name_en(), addon.price(), addon.active(), addonId, storeId, itemId);
+                """, itemId, addon.code(), addon.name_zh(), addon.name_en(), addon.price(), addon.active(), addonId, storeId, templateGroup, itemId);
+            changed++;
         }
-        revisions.incrementRevision(storeId);
+        if (changed > 0) revisions.incrementRevision(storeId);
+    }
+
+    /** New eligibility must be visible to a configured item; never revive a disabled group. */
+    private String eligibilityTemplateGroup(Long storeId, Long itemId) {
+        Boolean managed = jdbc.queryForObject("select template_option_groups_enabled from menu_items where id=? and store_id=?", Boolean.class, itemId, storeId);
+        if (!Boolean.TRUE.equals(managed)) return null;
+        var candidates = jdbc.queryForList("select group_code,is_active from template_item_option_groups where menu_item_id=? and store_id=? and kind='ADD_ON' order by sort_order,id", itemId, storeId);
+        if (candidates.size() == 1 && Boolean.TRUE.equals(candidates.get(0).get("is_active"))) return (String) candidates.get(0).get("group_code");
+        if (!candidates.isEmpty()) throw failure("ADDON_TEMPLATE_GROUP_UNAVAILABLE");
+        String code = "catalog_addons";
+        jdbc.update("""
+            insert into template_item_option_groups(store_id,menu_item_id,group_code,name,kind,selection_mode,required,is_active,sort_order)
+            values (?,?,?,'Add-ons / 加料','ADD_ON','MULTIPLE',false,true,
+              (select coalesce(max(g.sort_order),0)+10 from template_item_option_groups g where g.menu_item_id=?))
+            """, storeId, itemId, code, itemId);
+        return code;
+    }
+
+    /** Owner API apply must match a read-only plan rechecked inside the existing Store lock. */
+    @Transactional
+    public ReconciliationReport reconcile(Long storeId, boolean dryRun, Long expectedRevision, String expectedFingerprint) {
+        lockStore(storeId);
+        long revision = currentRevision(storeId);
+        String fingerprint = fingerprint(storeId);
+        if (!dryRun) {
+            if (expectedRevision == null || expectedFingerprint == null || expectedFingerprint.isBlank()) throw failure("ADDON_RECONCILE_PREVIEW_REQUIRED");
+            if (revision != expectedRevision || !fingerprint.equals(expectedFingerprint)) throw failure("ADDON_RECONCILE_CHANGED");
+            if (!conflicts(plan(storeId, addons(storeId))).isEmpty()) throw failure("ADDON_RECONCILE_CONFLICT");
+        }
+        return reconcile(storeId, dryRun);
     }
 
     /** Explicit, bounded reconciliation; GET never materializes or changes eligibility. */
@@ -229,11 +278,11 @@ public class StoreAddonService {
                     """, addonId, storeId, Boolean.TRUE.equals(row.active()), catalogActive && Boolean.TRUE.equals(row.active()), row.id());
             }
         }
-        if (!dryRun) {
+        if (!dryRun && optionCount > 0) {
             printingRules.ensureCanonicalAddonFallback(storeId);
-            if (optionCount > 0) revisions.incrementRevision(storeId);
+            revisions.incrementRevision(storeId);
         }
-        return new ReconciliationReport(storeId, dryRun, groupCount, optionCount, conflicts(groups));
+        return new ReconciliationReport(storeId, dryRun, groupCount, optionCount, conflicts(groups), currentRevision(storeId), fingerprint(storeId));
     }
 
     /** Explicit current-data business decisions; never called by automatic provisioning. */
@@ -285,7 +334,8 @@ public class StoreAddonService {
             else if (existing != null && (!Objects.equals(existing.name_zh(), first.zh())
                 || !Objects.equals(existing.name_en(), first.en()) || !moneyEqual(existing.price(), first.price()))) {
                 conflict = "ADDON_CATALOG_VALUES_CONFLICT";
-            }
+            } else if (existing != null && !existing.active() && groupRows.stream().anyMatch(r -> r.addonId() == null && Boolean.TRUE.equals(r.active())))
+                conflict = "ADDON_CATALOG_AVAILABILITY_CONFLICT";
             result.add(new Group(code, groupRows, existing, conflict));
         });
         return result;
@@ -338,7 +388,7 @@ public class StoreAddonService {
                 rs.getString("option_group"), rs.getString("option_type"), rs.getString("name_zh"),
                 rs.getString("name_en"), rs.getBigDecimal("price_delta"), rs.getObject("is_active", Boolean.class),
                 rs.getObject("store_addon_id", Long.class), rs.getObject("addon_eligible", Boolean.class),
-                rs.getObject("parent_option_id", Long.class)), storeId)
+                rs.getObject("parent_option_id", Long.class), rs.getString("template_group_code")), storeId)
             .stream().filter(r -> isAddon(r.group(), r.type(), r.code(), r.zh(), r.en())).toList();
     }
 
@@ -363,6 +413,35 @@ public class StoreAddonService {
             (rs, n) -> rs.getObject(1, Long.class), storeId);
         if (ids.isEmpty() || ids.get(0) == null) throw failure("ADDON_STORE_ORGANIZATION_REQUIRED");
         return ids.get(0);
+    }
+
+    private long currentRevision(Long storeId) {
+        return jdbc.queryForObject("select menu_revision from stores where id=?", Long.class, storeId);
+    }
+
+    private String fingerprint(Long storeId) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            hashValue(digest, storeId);
+            List<Addon> catalog = addons(storeId);
+            List<Row> options = rows(storeId);
+            hashValue(digest, "catalog");hashValue(digest, catalog.size());
+            for (Addon addon : catalog) {
+                for (Object value : new Object[]{addon.id(), addon.code(), addon.name_zh(), addon.name_en(), addon.price(), addon.active()}) hashValue(digest, value);
+            }
+            hashValue(digest, "options");hashValue(digest, options.size());
+            for (Row row : options) {
+                for (Object value : new Object[]{row.id(),row.itemId(),row.code(),row.group(),row.type(),row.zh(),row.en(),row.price(),row.active(),row.addonId(),row.eligible(),row.parentOptionId(),row.templateGroup()}) hashValue(digest, value);
+            }
+            return java.util.HexFormat.of().formatHex(digest.digest());
+        } catch (java.security.NoSuchAlgorithmException impossible) { throw new IllegalStateException(impossible); }
+    }
+
+    private void hashValue(MessageDigest digest, Object value) {
+        digest.update((byte) (value == null ? 0 : 1));
+        if (value == null) return;
+        String text = value instanceof BigDecimal amount ? amount.stripTrailingZeros().toPlainString() : value.toString();
+        digest.update((text.length() + ":" + text).getBytes(StandardCharsets.UTF_8));
     }
 
     private Long definition(Long organizationId, String code) {

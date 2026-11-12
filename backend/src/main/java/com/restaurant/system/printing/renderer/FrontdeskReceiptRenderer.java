@@ -65,9 +65,14 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
         }
         BigDecimal subtotal = updateTicket ? calculateItemsSubtotal(allItems)
             : safeMoney(presentation == null ? order.subtotal_amount : presentation.subtotal);
-        BigDecimal total = updateTicket ? TaxCalculator.calculateTotal(subtotal)
+        boolean frozenUpdate = updateTicket && presentation != null && presentation.hasFrozenUpdateAmounts();
+        if (frozenUpdate && subtotal.compareTo(presentation.update_subtotal) != 0) {
+            throw new BusinessException("RECEIPT_UPDATE_SUBTOTAL_MISMATCH");
+        }
+        BigDecimal total = frozenUpdate ? presentation.update_total
+            : updateTicket ? TaxCalculator.calculateTotal(subtotal)
             : safeMoney(presentation == null ? order.total_amount : presentation.total);
-        BigDecimal tax = updateTicket ? TaxCalculator.calculateTax(subtotal)
+        BigDecimal tax = updateTicket && !frozenUpdate ? TaxCalculator.calculateTax(subtotal)
             : total.subtract(subtotal).setScale(2, RoundingMode.HALF_UP);
 
         StringBuilder builder = new StringBuilder();
@@ -155,7 +160,7 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
 
         appendSizedLine(builder, "--------------------------------");
         appendSizedLine(builder, (presentation == null ? "Subtotal" : presentation.label("subtotal")) + ": " + formatMoney(subtotal));
-        appendSizedLine(builder, (presentation == null ? "Tax" : presentation.label("tax")) + " (" + TaxCalculator.TAX_RATE_LABEL + "): " + formatMoney(tax));
+        appendSizedLine(builder, (presentation == null ? "Tax" : presentation.label(frozenUpdate ? "update_tax" : "tax")) + " (" + TaxCalculator.TAX_RATE_LABEL + "): " + formatMoney(tax));
         appendSizedLine(builder, (presentation == null ? "Total" : presentation.label("total")) + ": " + formatMoney(total));
         appendSizedLine(builder, "--------------------------------");
         if (order.submitted_at != null) {

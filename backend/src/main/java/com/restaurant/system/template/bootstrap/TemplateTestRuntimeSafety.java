@@ -3,6 +3,7 @@ package com.restaurant.system.template.bootstrap;
 import com.restaurant.system.common.auth.AuthorizationService;
 import com.restaurant.system.common.auth.Capability;
 import com.restaurant.system.printing.PrintingRuntimePolicyProperties;
+import com.restaurant.system.printing.AlloProductionPrintingPolicy;
 import java.util.*;
 import org.flywaydb.core.api.configuration.FluentConfiguration;
 import org.springframework.boot.autoconfigure.flyway.FlywayConfigurationCustomizer;
@@ -26,14 +27,19 @@ public class TemplateTestRuntimeSafety {
   Set<String> active=new HashSet<>(Arrays.asList(env.getActiveProfiles()));
   boolean allo=active.contains("allo-test");
   if(allo && active.contains("template-test"))throw new IllegalStateException("Independent Test profiles cannot be combined");
-  Set<String> urls=allo
+  boolean isolatedQa=active.equals(Set.of("allo-test","allo-qa"));
+  if(active.contains("allo-qa")&&!isolatedQa)throw new IllegalStateException("Allo QA requires its exact isolated profile set");
+  Set<String> urls=isolatedQa?Set.of("jdbc:postgresql://127.0.0.1:26512/restaurant_allo_nouilles_test"):allo
       ?Set.of("jdbc:postgresql://db:5432/restaurant_allo_nouilles_test","jdbc:postgresql://127.0.0.1:25442/restaurant_allo_nouilles_test")
       :Set.of("jdbc:postgresql://db:5432/restaurant_template_test","jdbc:postgresql://127.0.0.1:25432/restaurant_template_test");
-  if(!urls.contains(url) || !(allo?"allo_test":"template_test").equals(env.getProperty("spring.datasource.username"))
-     ||!"test".equals(env.getProperty("app.environment")))
+  if(!urls.contains(url) || !(allo?"allo_test":"template_test").equals(env.getProperty("spring.datasource.username")))
       throw new IllegalStateException("Test profile requires its independently isolated Test database");
-  if(!new HashSet<>(policy.getAllowedModes()).equals(Set.of("MOCK","DISABLED"))||policy.isEndpointConfigurationEnabled())
+  if(AlloProductionPrintingPolicy.productionPrintingRequested(env)) {
+      AlloProductionPrintingPolicy.validateProductionRuntime(env,policy);
+  } else if(!"test".equals(env.getProperty("app.environment"))
+      ||!new HashSet<>(policy.getAllowedModes()).equals(Set.of("MOCK","DISABLED"))||policy.isEndpointConfigurationEnabled()) {
       throw new IllegalStateException("Test runtime must be endpoint-free MOCK/DISABLED only");
+  }
   if(env.getProperty("UBER_EATS_ENABLED",Boolean.class,false)||env.getProperty("UBER_EATS_WORKER_ENABLED",Boolean.class,false))
       throw new IllegalStateException("Test runtime cannot enable external platform processing");
  }

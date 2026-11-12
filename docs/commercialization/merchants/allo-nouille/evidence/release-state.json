@@ -1,0 +1,51 @@
+{
+  "at_utc": "2026-11-12T09:12:10.120509+00:00",
+  "status": "NO_GO",
+  "deployed": false,
+  "target": "43.166.242.250",
+  "candidate_sha": "e7dde0a6e27adf3be00baa9972fee06cdcc5482c",
+  "candidate_images": {
+    "backend": {
+      "reference": "allo-nouilles-backend:e7dde0a6e27adf3be00baa9972fee06cdcc5482c",
+      "image_id": "sha256:06438f7ebaf408a3b921b9cd00028b8b4854a35471bff9231be42a5a4ac3c591",
+      "labels": {
+        "com.restaurant.compatibility-patch": "915e4ff4d8a6a0698c54ae70d2567e0919c50a49a59e48bdd03fbf902321c6e0",
+        "com.restaurant.release-kind": "controlled-production",
+        "com.restaurant.source-revision": "e7dde0a6e27adf3be00baa9972fee06cdcc5482c",
+        "org.opencontainers.image.revision": "e7dde0a6e27adf3be00baa9972fee06cdcc5482c",
+        "org.opencontainers.image.version": "22.04"
+      }
+    },
+    "frontend": {
+      "reference": "allo-nouilles-frontend:e7dde0a6e27adf3be00baa9972fee06cdcc5482c",
+      "image_id": "sha256:390cb0d0a6b565dbb58bbd9c98d30f3e9ae85e07dbdc2007a4592ba04132c81c",
+      "labels": {
+        "com.restaurant.compatibility-patch": "915e4ff4d8a6a0698c54ae70d2567e0919c50a49a59e48bdd03fbf902321c6e0",
+        "com.restaurant.release-kind": "controlled-production",
+        "com.restaurant.source-revision": "e7dde0a6e27adf3be00baa9972fee06cdcc5482c",
+        "maintainer": "NGINX Docker Maintainers <docker-maint@nginx.com>",
+        "org.opencontainers.image.revision": "e7dde0a6e27adf3be00baa9972fee06cdcc5482c"
+      }
+    }
+  },
+  "runtime_changed": false,
+  "blocker": "Supported browser input blocked by ordinary synthetic Finish confirmation; remaining real browser module/PrintCenter/Finish acceptance NOT RUN",
+  "backend_tests": {
+    "total": 1519,
+    "passed": 1402,
+    "skipped": 117,
+    "failures": 0,
+    "errors": 0
+  },
+  "frontend_tests": {
+    "passed": 481,
+    "files": 84
+  },
+  "update_amounts_actual_http": "PASS",
+  "independent_review": "PASS_CODE_AND_AMOUNTS",
+  "hardware": "NOT_TESTED",
+  "recovery_backup_sha256": "55dd0ddf0e8a4e4f6a7f1ed22cd298d6e9501fc7d850de485f784da9f5ca0008",
+  "recovery_restore_verification": "85 tables exact hashes and valid indexes/constraints, independent local socket-only recovery; NOT QA",
+  "rollback": "PREPARED_NOT_EXECUTED; preserve current DB; restore matching old compose/env/images only after stopping writes and draining new financial outbox/active jobs with new binary",
+  "next_step": "Finish browser acceptance, then refresh current backup/queue/runtime gates before activation; authorization already given"
+}

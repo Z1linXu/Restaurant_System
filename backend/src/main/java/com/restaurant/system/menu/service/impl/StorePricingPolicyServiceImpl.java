@@ -324,6 +324,7 @@ public class StorePricingPolicyServiceImpl implements StorePricingPolicyService 
         next.id = current.id;
         next.store_id = current.store_id;
         next.policy_revision = current.policy_revision;
+        next.category_bulk_pricing_enabled = current.category_bulk_pricing_enabled;
         next.created_at = current.created_at;
         next.updated_at = current.updated_at;
         next.size_small_delta = money(request.size_small_delta == null ? current.size_small_delta : request.size_small_delta);

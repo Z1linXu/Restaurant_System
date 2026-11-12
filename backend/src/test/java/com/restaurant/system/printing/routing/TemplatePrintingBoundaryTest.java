@@ -31,7 +31,8 @@ class TemplatePrintingBoundaryTest {
  private final PrinterConfigRepository printers=mock(PrinterConfigRepository.class);
  private final PrinterConfigService printing=mock(PrinterConfigService.class);
  private final StoreModuleAccessEvaluator modules=mock(StoreModuleAccessEvaluator.class);
- private final TemplateKitchenDispatchHandler handler=new TemplateKitchenDispatchHandler(menus,jobs,jobRepo,printers,printing,modules);
+ private final com.restaurant.system.printing.AlloProductionPrintingPolicy printingPolicy=mock(com.restaurant.system.printing.AlloProductionPrintingPolicy.class);
+ private final TemplateKitchenDispatchHandler handler=new TemplateKitchenDispatchHandler(menus,jobs,jobRepo,printers,printing,modules,printingPolicy);
  private final FrozenIntent intent=new FrozenIntent();
  private OrderDispatchOutbox event(){
   var e=new OrderDispatchOutbox();e.id=1L;e.storeId=2L;e.organizationId=3L;e.orderId=4L;e.eventType=TemplateRoutingService.EVENT;
@@ -79,6 +80,51 @@ class TemplatePrintingBoundaryTest {
   verify(jobs).markPrinted(eq(job),any(),eq("MOCK: inert transport, no printer bytes sent"));
   verify(jobs,never()).markPadDirectQueued(any(),any());
  }
+ @Test void controlledAlloPadUsesExistingQueueWithoutMockOrPhysicalExecution(){
+  var e=event();when(printing.getStorePrintingMode(2L)).thenReturn("PAD_DIRECT");when(printingPolicy.allowsPadDirect(2L)).thenReturn(true);
+  intent.execution_mode="PAD_DIRECT";
+  var job=new PrintJob();job.id=44L;job.status="PENDING";
+  when(jobs.createPendingJob(any(),any(),any(),any(),any(),any(),any(),any(),any(),eq(e.sourceKey))).thenReturn(job);
+  when(jobs.attachRenderedContent(job,5L,"Frozen ticket")).thenReturn(job);when(jobs.markPadDirectQueued(eq(job),any())).thenReturn(job);
+  // Old MOCK-only failure injection must never become a physical transport operation.
+  intent.mock_failure="UNCERTAIN";
+  assertEquals(PrintDispatchOutcome.DISPATCHED,handler.dispatch(e));assertEquals("PAD_DIRECT",job.executionMode);
+  verify(jobs).markPadDirectQueued(eq(job),any());verify(jobs,never()).markPrinting(any(),any());verify(jobs,never()).markPrinted(any(),any(),any());verify(jobs,never()).markFailed(any(),any(),any(),any());
+  when(jobRepo.findByDispatchSourceKey(e.sourceKey)).thenReturn(Optional.of(job));
+  assertEquals(PrintDispatchOutcome.DISPATCHED,handler.dispatch(e));
+  verify(jobs,times(1)).createPendingJob(any(),any(),any(),any(),any(),any(),any(),any(),any(),eq(e.sourceKey));
+  verify(jobs,times(1)).markPadDirectQueued(eq(job),any());
+ }
+ @Test void historicalMissingOrMockIntentsCannotBecomePhysicalAfterStoreSwitchesToPad(){
+  var e=event();when(printing.getStorePrintingMode(2L)).thenReturn("PAD_DIRECT");when(printingPolicy.allowsPadDirect(2L)).thenReturn(true);
+  for(String capturedMode:Arrays.asList(null,"MOCK","DISABLED")){
+   intent.execution_mode=capturedMode;
+   assertEquals(PrintDispatchOutcome.POLICY_BLOCKED,handler.dispatch(e));
+   assertTrue(e.lastError.startsWith("TEMPLATE_PAD_INTENT_REQUIRED"));verifyNoInteractions(jobs);
+  }
+ }
+ @Test void replayOfAnExistingPadJobCannotCreateAnotherJobOrReopenIt(){
+  var e=event();var existing=new PrintJob();existing.executionMode="PAD_DIRECT";existing.status="PRINTING";
+  when(jobRepo.findByDispatchSourceKey(e.sourceKey)).thenReturn(Optional.of(existing));
+  assertEquals(PrintDispatchOutcome.DISPATCHED,handler.dispatch(e));verifyNoInteractions(jobs);
+ }
+ @Test void routingSaveCanUsePadOnlyForTheExplicitAlloRuntime(){
+  var configs=mock(TemplateStoreConfigurationRepository.class);var revisions=mock(MenuRevisionService.class);
+  var routing=new TemplateRoutingService(menus,configs,mock(MenuItemRepository.class),mock(MenuItemOptionRepository.class),mock(MenuCategoryRepository.class),printers,revisions,mock(OrderDispatchOutboxRepository.class),printing,printingPolicy);
+  var config=new Configuration();when(printing.getStorePrintingMode(2L)).thenReturn("PAD_DIRECT");
+  assertThrows(com.restaurant.system.common.exception.BusinessException.class,()->routing.save(2L,config));
+  when(printingPolicy.allowsPadDirect(2L)).thenReturn(true);assertDoesNotThrow(()->routing.save(2L,config));
+  var group=new Group();group.group_code="A";group.name="Kitchen";group.mock_failure="FAILED";config.groups.add(group);
+  assertThrows(com.restaurant.system.common.exception.BusinessException.class,()->routing.save(2L,config));
+ }
+ @Test void diagnosticsReportActualPadProvenanceAndKeepUnknownHistoryMockOnly(){
+  var e=event();var events=mock(OrderDispatchOutboxRepository.class);
+  when(events.findTemplateIntents(eq(2L),isNull(),isNull(),any())).thenReturn(List.of(e));
+  var diagnostics=new TemplatePrintingDiagnostics(events,jobRepo,menus);
+  intent.execution_mode="PAD_DIRECT";
+  var rows=(List<Map<String,Object>>)diagnostics.list(2L,null,null).get("tickets");assertEquals("PAD_DIRECT",rows.get(0).get("execution_mode"));
+  intent.execution_mode=null;rows=(List<Map<String,Object>>)diagnostics.list(2L,null,null).get("tickets");assertEquals("MOCK",rows.get(0).get("execution_mode"));
+ }
  @Test void genericProcessorBranchDoesNotCallLegacyDispatcherOrAssignmentQuery(){
   var e=event();var repo=mock(OrderDispatchOutboxRepository.class);var assignments=mock(PrinterAssignmentRepository.class);var legacy=mock(PrintDispatcherService.class);
   var isolated=mock(TemplateKitchenDispatchHandler.class);when(isolated.handles(e)).thenReturn(true);when(isolated.serializationKey(e)).thenReturn("store:2|printer:5");
@@ -93,6 +139,7 @@ class TemplatePrintingBoundaryTest {
   verifyNoInteractions(legacy,assignments);assertEquals("FAILED",e.status);assertEquals("pre-job persistent reason",e.lastError);
  }
  @Test void customerGroupNamedUnassignedCannotCollideWithSystemDiagnostic() throws Exception {
+  when(printing.getStorePrintingMode(2L)).thenReturn("PAD_DIRECT");
   var configs=mock(TemplateStoreConfigurationRepository.class);var itemRepo=mock(MenuItemRepository.class);
   var optionRepo=mock(MenuItemOptionRepository.class);var categoryRepo=mock(MenuCategoryRepository.class);
   var revisions=mock(MenuRevisionService.class);var events=mock(OrderDispatchOutboxRepository.class);
@@ -107,13 +154,18 @@ class TemplatePrintingBoundaryTest {
   when(events.insertIfAbsent(any(),any(),any(),any(),any(),any(),any(),any(),any())).thenReturn(1);
   when(events.findBySourceKey(any())).thenAnswer(v->{var e=new OrderDispatchOutbox();e.sourceKey=v.getArgument(0);return Optional.of(e);});
   var mapper=new ObjectMapper();when(menus.write(any())).thenAnswer(v->mapper.writeValueAsString(v.getArgument(0)));
-  var routing=new TemplateRoutingService(menus,configs,itemRepo,optionRepo,categoryRepo,printers,revisions,events,printing);
+  var routing=new TemplateRoutingService(menus,configs,itemRepo,optionRepo,categoryRepo,printers,revisions,events,printing,printingPolicy);
   var order=new Order();order.id=9L;order.store_id=2L;order.order_no="SYNTHETIC";
   var lineA=new OrderItem();lineA.id=21L;lineA.menu_item_id=11L;lineA.item_name_snapshot_zh="A";lineA.quantity=1;
   var lineB=new OrderItem();lineB.id=22L;lineB.menu_item_id=12L;lineB.item_name_snapshot_zh="B";lineB.quantity=1;
-  routing.enqueue(order,null,List.of(lineA,lineB),List.of());
+  try(var origin=com.restaurant.system.printing.security.PrintOriginContext.dispatch(66L,2L,3L)){
+   routing.enqueue(order,null,List.of(lineA,lineB),List.of());
+  }
   var keys=ArgumentCaptor.forClass(String.class);
   verify(events,times(2)).insertIfAbsent(any(),any(),any(),any(),any(),any(),keys.capture(),any(),any());
   assertEquals(Set.of("template:submit:9:group:UNASSIGNED","template:submit:9:diagnostic:UNASSIGNED"),new HashSet<>(keys.getAllValues()));
+  verify(events,times(2)).insertIfAbsent(eq(3L),eq(2L),eq(9L),isNull(),any(),any(),any(),any(),eq(66L));
+  var frozen=ArgumentCaptor.forClass(OrderDispatchOutbox.class);verify(events,times(2)).save(frozen.capture());
+  for(var event:frozen.getAllValues())assertEquals("PAD_DIRECT",mapper.readTree(event.routingContext).path("execution_mode").asText());
  }
 }

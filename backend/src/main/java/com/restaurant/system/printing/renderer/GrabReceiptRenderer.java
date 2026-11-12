@@ -81,7 +81,7 @@ public class GrabReceiptRenderer implements ReceiptRenderer {
 
         List<KitchenTask> tasks = request.kitchen_tasks == null ? List.of() : request.kitchen_tasks.stream()
             .filter(task -> task != null && (presentation != null || GRAB_STATIONS.contains(task.station_code)))
-            .filter(task -> presentation == null || presentation.includesItem(task.order_item_id))
+            .filter(task -> presentation == null || presentation.includesKitchenItem(task.order_item_id))
             .filter(task -> !"cancelled".equals(task.status))
             .map(task -> {
                 if (presentation != null && !presentation.kitchen_station_codes.contains(task.station_code)) {

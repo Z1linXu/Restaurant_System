@@ -12,6 +12,7 @@ import com.restaurant.system.printing.dto.PadPrintJobStartPrintRequest;
 import com.restaurant.system.printing.dto.PrintJobResponse;
 import com.restaurant.system.printing.entity.PrintJob;
 import com.restaurant.system.printing.entity.StoreDevice;
+import com.restaurant.system.printing.AlloProductionPrintingPolicy;
 import com.restaurant.system.printing.service.PadPrintJobService;
 import com.restaurant.system.printing.service.PrintJobService;
 import com.restaurant.system.printing.service.StoreDeviceService;
@@ -40,17 +41,20 @@ public class PadPrintingController {
     private final PadPrintJobService padPrintJobService;
     private final StoreModuleAccessEvaluator moduleAccessEvaluator;
     private final PrintJobService printJobService;
+    private final AlloProductionPrintingPolicy printingPolicy;
 
     public PadPrintingController(
         StoreDeviceService storeDeviceService,
         PadPrintJobService padPrintJobService,
         StoreModuleAccessEvaluator moduleAccessEvaluator,
-        PrintJobService printJobService
+        PrintJobService printJobService,
+        AlloProductionPrintingPolicy printingPolicy
     ) {
         this.storeDeviceService = storeDeviceService;
         this.padPrintJobService = padPrintJobService;
         this.moduleAccessEvaluator = moduleAccessEvaluator;
         this.printJobService = printJobService;
+        this.printingPolicy = printingPolicy;
     }
 
     @GetMapping("/api/v1/stores/{storeId}/printing/jobs/pending")
@@ -109,7 +113,7 @@ public class PadPrintingController {
         @RequestBody PadPrintJobCompleteRequest request
     ) {
         StoreDevice device = storeDeviceService.authenticateDevice(deviceId, deviceToken);
-        requirePrinting(resolveDeviceOwnedPrintJobStoreId(device, jobId));
+        resolveDeviceOwnedPrintJobStoreId(device, jobId);
         return ApiResponse.success("Print job completed", padPrintJobService.completeJob(device, jobId, request));
     }
 
@@ -121,7 +125,7 @@ public class PadPrintingController {
         @RequestBody PadPrintJobFailRequest request
     ) {
         StoreDevice device = storeDeviceService.authenticateDevice(deviceId, deviceToken);
-        requirePrinting(resolveDeviceOwnedPrintJobStoreId(device, jobId));
+        resolveDeviceOwnedPrintJobStoreId(device, jobId);
         return ApiResponse.success("Print job failed", padPrintJobService.failJob(device, jobId, request));
     }
 
@@ -133,17 +137,23 @@ public class PadPrintingController {
         @RequestBody(required = false) PadPrintJobReleaseRequest request
     ) {
         StoreDevice device = storeDeviceService.authenticateDevice(deviceId, deviceToken);
-        requirePrinting(resolveDeviceOwnedPrintJobStoreId(device, jobId));
+        moduleAccessEvaluator.requireCapability(resolveDeviceOwnedPrintJobStoreId(device, jobId), ModuleKeys.PRINTING);
         return ApiResponse.success("Print job released", padPrintJobService.releaseJob(device, jobId, request));
     }
 
     private void requirePrinting(Long storeId) {
         moduleAccessEvaluator.requireCapability(storeId, ModuleKeys.PRINTING);
+        if (!printingPolicy.padDirectActive(storeId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "PAD_DIRECT is not active for this store runtime");
+        }
     }
 
     private Long resolveDeviceOwnedPrintJobStoreId(StoreDevice device, Long jobId) {
         PrintJob job = printJobService.requireJob(jobId);
         ensureDeviceStore(device, job.store_id);
+        if (!java.util.Objects.equals(device.organizationId, job.organization_id)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Device cannot access this organization");
+        }
         return job.store_id;
     }
 

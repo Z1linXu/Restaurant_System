@@ -49,11 +49,15 @@ import org.springframework.transaction.support.TransactionTemplate;
     "spring.datasource.driver-class-name=org.h2.Driver",
     "spring.datasource.username=sa",
     "spring.datasource.password=",
-    "spring.jpa.show-sql=false"
+    "spring.jpa.show-sql=false",
+    "app.template.enabled=true"
 })
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ContextConfiguration(classes = StoreAddonJpaIntegrationTest.JpaSliceConfiguration.class)
-@Import({StoreAddonService.class, MenuRevisionServiceImpl.class})
+@Import({StoreAddonService.class, StoreAddonOptionResolver.class,
+    com.restaurant.system.menu.remove.StoreRemoveOptionResolver.class,
+    com.restaurant.system.menu.template.TemplateMenuService.class,
+    com.restaurant.system.delivery.AlloMenuImporter.class, MenuRevisionServiceImpl.class})
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 class StoreAddonJpaIntegrationTest {
 
@@ -62,6 +66,10 @@ class StoreAddonJpaIntegrationTest {
     @EntityScan(basePackages = "com.restaurant.system")
     @EnableJpaRepositories(basePackages = "com.restaurant.system")
     static class JpaSliceConfiguration {
+        @org.springframework.context.annotation.Bean
+        com.fasterxml.jackson.databind.ObjectMapper objectMapper() {
+            return new com.fasterxml.jackson.databind.ObjectMapper();
+        }
     }
 
     @Autowired private StoreAddonService service;
@@ -74,6 +82,12 @@ class StoreAddonJpaIntegrationTest {
     @Autowired private JdbcTemplate jdbc;
     @Autowired private PlatformTransactionManager transactionManager;
     @MockBean private PrintingDisplayRuleService printing;
+    @MockBean private com.restaurant.system.menu.template.TemplateComboAdapter comboAdapter;
+    @MockBean private com.restaurant.system.menu.service.StorePricingPolicyService pricing;
+    @Autowired private com.restaurant.system.menu.template.TemplateMenuService templateMenus;
+    @Autowired private StoreAddonOptionResolver resolver;
+    @Autowired private com.restaurant.system.menu.repository.MenuCategoryRepository categories;
+    @Autowired private com.restaurant.system.delivery.AlloMenuImporter importer;
 
     private TransactionTemplate transaction;
     private Long organizationId;
@@ -183,6 +197,180 @@ class StoreAddonJpaIntegrationTest {
         assertThat(result.addon_eligible).isTrue();
         assertThat(result.sort_order).isEqualTo(80);
         assertThat(stores.findMenuRevisionById(storeId)).isEqualTo(3L);
+    }
+
+    @Test
+    void templateAddonReadsAndValidatesCurrentCatalogAndStaleSaveCannotRestoreOldValues() {
+        prepareTemplateCategory();
+        var request = new StoreAddonService.WriteRequest();
+        request.store_id=storeId;request.code="extra_beef";request.name_zh="加牛肉";request.name_en="Extra Beef";
+        request.price=new BigDecimal("2.00");request.active=true;
+        var canonical=service.create(request);
+        var definition=templateDefinition("ADD_ON",canonical.code(),"2.00");
+        definition.groups.get(0).options.get(0).store_addon_id=canonical.id();
+        definition.groups.get(0).options.get(0).name_fr="Bœuf supplémentaire";
+        var stale=templateMenus.saveItem(storeId,itemId,definition);
+        var oldSelection=selection(stale.groups.get(0).options.get(0));
+        request.name_zh="精选牛肉";request.name_en="Premium beef";request.price=new BigDecimal("3.25");
+        service.update(canonical.id(),request);
+        var current=templateMenus.getItem(storeId,itemId).groups.get(0).options.get(0);
+        assertThat(current.name_zh).isEqualTo("精选牛肉");
+        assertThat(current.name_en).isEqualTo("Premium beef");
+        assertThat(current.name_fr).isEqualTo("Bœuf supplémentaire");
+        assertThat(current.price_delta).isEqualByComparingTo("3.25");
+        assertThatThrownBy(()->templateMenus.validateSelection(storeId,oldSelection)).hasMessage("ADDON_CATALOG_CHANGED");
+        templateMenus.validateSelection(storeId,selection(current));
+
+        var saved=templateMenus.saveItem(storeId,itemId,stale).groups.get(0).options.get(0);
+        assertThat(saved.price_delta).isEqualByComparingTo("3.25");
+        assertThat(saved.name_zh).isEqualTo("精选牛肉");
+        assertThat(saved.name_fr).isEqualTo("Bœuf supplémentaire");
+        assertThat(service.getAddons(storeId).addons().get(0).price()).isEqualByComparingTo("3.25");
+        MenuItemOption raw=options.findById(saved.id).orElseThrow();
+        assertThat(raw.price_delta).isEqualByComparingTo("3.25");
+        assertThat(raw.addon_eligible).isTrue();
+
+        request.active=false;service.update(canonical.id(),request);
+        var inactive=templateMenus.getItem(storeId,itemId);
+        assertThat(inactive.groups.get(0).options.get(0).is_active).isFalse();
+        assertThat(inactive.groups.get(0).options.get(0).addon_eligible).isTrue();
+        templateMenus.saveItem(storeId,itemId,inactive);
+        assertThat(options.findById(saved.id).orElseThrow().addon_eligible).isTrue();
+        request.active=true;service.update(canonical.id(),request);
+        assertThat(templateMenus.getItem(storeId,itemId).groups.get(0).options.get(0).is_active).isTrue();
+    }
+
+    @Test
+    void eligibilityOnAnExplicitEmptyTemplateCreatesAVisibleCanonicalChoice() {
+        prepareTemplateCategory();
+        templateMenus.saveItem(storeId,itemId,new com.restaurant.system.menu.template.TemplateMenuModels.Groups());
+        var request=new StoreAddonService.WriteRequest();request.store_id=storeId;request.code="extra_egg";
+        request.name_zh="加蛋";request.name_en="Extra Egg";request.price=new BigDecimal("1.25");request.active=true;
+        var canonical=service.create(request);
+        service.setEligibility(itemId,canonical.id(),true);
+        var groups=templateMenus.getItem(storeId,itemId);
+        assertThat(groups.groups).hasSize(1);
+        var choice=groups.groups.get(0).options.get(0);
+        assertThat(choice.store_addon_id).isEqualTo(canonical.id());
+        assertThat(choice.price_delta).isEqualByComparingTo("1.25");
+        templateMenus.validateSelection(storeId,selection(choice));
+        service.setEligibility(itemId,canonical.id(),false);
+        assertThatThrownBy(()->templateMenus.validateSelection(storeId,selection(choice))).hasMessage("ADDON_ASSIGNMENT_UNAVAILABLE");
+    }
+
+    @Test
+    void customSpicyAndSizeChoicesWithMatchingCodesKeepIndependentPricesAndTranslations() {
+        prepareTemplateCategory();
+        var request=new StoreAddonService.WriteRequest();request.store_id=storeId;request.code="shared_code";
+        request.name_zh="共享加料";request.name_en="Catalog";request.price=new BigDecimal("9.25");request.active=true;
+        service.create(request);
+        for(String kind:java.util.List.of("CUSTOM","SPICY_LEVEL","SIZE")) {
+            var definition=templateDefinition(kind,"shared_code","0.50");
+            definition.groups.get(0).options.get(0).name_fr="Choix indépendant";
+            var choice=templateMenus.saveItem(storeId,itemId,definition).groups.get(0).options.get(0);
+            assertThat(choice.store_addon_id).isNull();
+            assertThat(choice.price_delta).isEqualByComparingTo("0.50");
+            assertThat(choice.name_fr).isEqualTo("Choix indépendant");
+            assertThat(resolver.requiresAssignment(storeId,kind,"shared_code")).isTrue();
+            assertThat(templateMenus.isIndependentChoice(storeId,itemId,options.findById(choice.id).orElseThrow())).isTrue();
+            templateMenus.validateSelection(storeId,selection(choice));
+        }
+    }
+
+    @Test
+    void ownerSaveCannotCreateAnUnlinkedPaidAddonOrUnlinkedLibraryDefinition() {
+        prepareTemplateCategory();
+        var definition=templateDefinition("ADD_ON","not_in_catalog","2.50");
+        long revision=stores.findMenuRevisionById(storeId);
+        assertThatThrownBy(()->templateMenus.saveItem(storeId,itemId,definition)).hasMessage("ADDON_ASSIGNMENT_REQUIRED");
+        assertThat(options.findAllByMenuItemIdOrdered(itemId)).isEmpty();
+        assertThat(templateMenus.getItem(storeId,itemId).groups).isEmpty();
+        assertThat(items.findById(itemId).orElseThrow().template_option_groups_enabled).isFalse();
+        assertThat(stores.findMenuRevisionById(storeId)).isEqualTo(revision);
+        assertThatThrownBy(()->templateMenus.saveLibrary(storeId,definition)).hasMessage("ADDON_ASSIGNMENT_REQUIRED");
+        assertThat(jdbc.queryForObject("select count(*) from template_store_configuration where store_id=?",Long.class,storeId)).isZero();
+        assertThat(service.getAddons(storeId).addons()).isEmpty();
+    }
+
+    @Test
+    void ownerSaveCannotConvertAnExistingUnlinkedCustomChoiceIntoAnAddon() {
+        prepareTemplateCategory();
+        var request=new StoreAddonService.WriteRequest();request.store_id=storeId;request.code="shared_code";
+        request.name_zh="加料";request.name_en="Catalog";request.price=new BigDecimal("3.25");request.active=true;
+        service.create(request);
+        var definition=templateMenus.saveItem(storeId,itemId,templateDefinition("CUSTOM","shared_code","0.50"));
+        long revision=stores.findMenuRevisionById(storeId);
+        var existing=definition.groups.get(0).options.get(0);
+        definition.groups.get(0).kind="ADD_ON";
+        assertThatThrownBy(()->templateMenus.saveItem(storeId,itemId,definition)).hasMessage("ADDON_ASSIGNMENT_REQUIRED");
+        var unchanged=templateMenus.getItem(storeId,itemId);
+        assertThat(unchanged.groups.get(0).kind).isEqualTo("CUSTOM");
+        assertThat(unchanged.groups.get(0).options.get(0).id).isEqualTo(existing.id);
+        assertThat(unchanged.groups.get(0).options.get(0).store_addon_id).isNull();
+        assertThat(unchanged.groups.get(0).options.get(0).price_delta).isEqualByComparingTo("0.50");
+        assertThat(stores.findMenuRevisionById(storeId)).isEqualTo(revision);
+    }
+
+    @Test
+    void actualAlloImportLinksCanonicalAddonsAndUnchangedReplayDoesNotWriteOrLoseOwnerPrices() {
+        jdbc.execute("create table if not exists merchant_menu_import_entries(store_id bigint,source_key varchar(160),entity_kind varchar(32),entity_id bigint,source_hash varchar(64),applied_hash varchar(64),imported_at timestamp default current_timestamp,primary key(store_id,source_key))");
+        jdbc.update("update stores set code='ALLO_NOUILLES_TEST' where id=?",storeId);
+        jdbc.update("insert into stations(store_id,code,name,is_active) values(?,'BACK_KITCHEN','Synthetic kitchen',true)",storeId);
+        var source=syntheticAlloSource();
+        assertThat(importer.apply(storeId,source).created()).isEqualTo(34);
+        assertThat(service.getAddons(storeId).addons()).hasSize(13);
+        assertThat(jdbc.queryForObject("select count(*) from menu_item_options o join menu_items i on i.id=o.menu_item_id where i.store_id=? and o.store_addon_id is not null and o.template_group_code='paid_addons'",Long.class,storeId)).isEqualTo(39L);
+        long revision=stores.findMenuRevisionById(storeId);
+        var ledger=jdbc.queryForList("select * from merchant_menu_import_entries where store_id=? order by source_key",storeId);
+        var repeat=importer.apply(storeId,source);
+        assertThat(repeat.unchanged()).isEqualTo(34);
+        assertThat(repeat.created()+repeat.updated()+repeat.ownerEditedPreserved()).isZero();
+        assertThat(stores.findMenuRevisionById(storeId)).isEqualTo(revision);
+        assertThat(jdbc.queryForList("select * from merchant_menu_import_entries where store_id=? order by source_key",storeId)).isEqualTo(ledger);
+        var addon=service.getAddons(storeId).addons().get(0);
+        var update=new StoreAddonService.WriteRequest();update.name_zh="店主名称";update.name_en="Owner label";update.price=new BigDecimal("4.25");update.active=true;
+        service.update(addon.id(),update);
+        revision=stores.findMenuRevisionById(storeId);
+        assertThat(importer.apply(storeId,source).ownerEditedPreserved()).isEqualTo(3);
+        assertThat(stores.findMenuRevisionById(storeId)).isEqualTo(revision);
+        assertThat(service.getAddons(storeId).addons().stream().filter(a->a.id().equals(addon.id())).findFirst().orElseThrow().price()).isEqualByComparingTo("4.25");
+    }
+
+    private com.fasterxml.jackson.databind.JsonNode syntheticAlloSource() {
+        var mapper=new com.fasterxml.jackson.databind.ObjectMapper();var source=mapper.createObjectNode();
+        source.put("schema_version","ALLO_NOUILLES_SOURCE_MENU_V1");source.put("currency","CAD");source.put("menu_version","synthetic");
+        var categories=source.putArray("categories");for(String code:java.util.List.of("NOODLE","RICE","CAT0","CAT1","CAT2"))categories.add(syntheticNames(mapper,code));
+        var items=source.putArray("items");for(int n=0;n<32;n++){var row=syntheticNames(mapper,"ITEM"+n);row.put("category_code","CAT0");row.put("base_price","10.00");if(n<3)row.putArray("addon_group_codes").add("PAID");items.add(row);}
+        var group=syntheticNames(mapper,"PAID");var references=group.putArray("addon_codes");var addons=source.putArray("addons");
+        for(int n=0;n<13;n++){String code="extra_"+n;var row=syntheticNames(mapper,code);row.put("addon_group_code","PAID");row.put("price","2.00");addons.add(row);references.add(code);}
+        source.putArray("addon_groups").add(group);source.putArray("option_groups");source.putArray("combo_offers");source.putObject("free_refills").put("cross_eligibility","SAME_CATEGORY_ONLY");return source;
+    }
+
+    private com.fasterxml.jackson.databind.node.ObjectNode syntheticNames(com.fasterxml.jackson.databind.ObjectMapper mapper,String code) {
+        var row=mapper.createObjectNode();row.put("code",code);row.put("name_zh","合成 "+code);row.put("name_en","Synthetic "+code);row.put("name_fr","Synthétique "+code);return row;
+    }
+
+    private void prepareTemplateCategory() {
+        transaction.executeWithoutResult(status->{
+            var category=new com.restaurant.system.menu.entity.MenuCategory();category.store_id=storeId;category.code="SYNTHETIC";
+            category.name_zh="测试";category.name_en="Test";category.is_active=true;category.sort_order=0;
+            category.created_at=LocalDateTime.now();category.updated_at=category.created_at;
+            category=categories.saveAndFlush(category);
+            var item=items.findById(itemId).orElseThrow();item.category_id=category.id;items.saveAndFlush(item);
+        });
+    }
+
+    private com.restaurant.system.menu.template.TemplateMenuModels.Groups templateDefinition(String kind,String code,String price) {
+        var definition=new com.restaurant.system.menu.template.TemplateMenuModels.Groups();
+        var group=new com.restaurant.system.menu.template.TemplateMenuModels.Group();group.group_instance_code="group_"+kind.toLowerCase(java.util.Locale.ROOT);group.kind=kind;group.name="Synthetic";group.selection_mode="MULTIPLE";
+        var choice=new com.restaurant.system.menu.template.TemplateMenuModels.Option();choice.option_code=code;choice.name_zh="原名称";choice.name_en="Original";choice.price_delta=new BigDecimal(price);
+        group.options.add(choice);definition.groups.add(group);return definition;
+    }
+
+    private com.restaurant.system.order.dto.CreateOrderItemRequest selection(com.restaurant.system.menu.template.TemplateMenuModels.Option choice) {
+        var line=new com.restaurant.system.order.dto.CreateOrderItemRequest();line.menu_item_id=itemId;line.quantity=1;line.unit_price_snapshot=new BigDecimal("10.00");
+        var selected=new com.restaurant.system.order.dto.CreateOrderItemOptionRequest();selected.option_id=choice.id;selected.option_code_snapshot=choice.option_code;selected.option_group_snapshot=choice.option_group;selected.option_price_snapshot=choice.price_delta;selected.quantity=1;
+        line.options=java.util.List.of(selected);return line;
     }
 
     @Test

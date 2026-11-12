@@ -1,3 +1,4 @@
+import { withMenuCode } from '../../../utils/menuCode'
 import { useEffect, useState } from 'react'
 import { Button } from '../../../components/ui/Button'
 import type { OrderLineItem } from '../../../types/ordering'
@@ -49,7 +50,7 @@ export function OrderLineItemRow({
     <div className={`bg-[var(--surface-container-lowest)] shadow-[0_12px_30px_rgba(26,28,25,0.05)] ${compact ? 'rounded-[20px] p-3.5' : 'rounded-[26px] p-5'}`}>
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
-          <h4 className={`${compact ? 'text-[1.15rem]' : 'text-[1.55rem]'} font-bold tracking-[-0.04em] text-[var(--on-surface)]`}>{label({ en: item.nameEn, zh: item.nameZh, fr: item.nameFr })}</h4>
+          <h4 className={`${compact ? 'text-[1.15rem]' : 'text-[1.55rem]'} font-bold tracking-[-0.04em] text-[var(--on-surface)]`}>{withMenuCode(item.skuSnapshot, label({ en: item.nameEn, zh: item.nameZh, fr: item.nameFr }))}</h4>
           {editingDisabled ? (
             <span className="inline-flex rounded-full bg-[rgba(92,82,74,0.10)] px-2.5 py-1 text-[0.72rem] font-bold text-[var(--muted)]">
               {item.locked ? t('order.locked') : t('order.pendingLocked')}

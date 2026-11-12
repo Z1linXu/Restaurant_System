@@ -1,0 +1,126 @@
+name: allo-nouilles
+
+# Load the exact exported Test images and verify their IDs before starting.
+# This package has no build instructions and cannot update the old host.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: '3'
+
+services:
+  db:
+    image: ${POSTGRES_IMAGE:?verified source image required}
+    pull_policy: never
+    restart: unless-stopped
+    mem_limit: 512m
+    cpus: 0.75
+    pids_limit: 150
+    environment:
+      POSTGRES_DB: restaurant_allo_nouilles_test
+      POSTGRES_USER: allo_test
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?fresh independent password required}
+      TZ: America/Toronto
+    command: [postgres, -c, shared_buffers=128MB, -c, max_connections=30, -c, work_mem=4MB, -c, maintenance_work_mem=32MB]
+    volumes:
+      - /srv/allo-nouilles/state/postgres:/var/lib/postgresql/data
+    networks: [internal]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U allo_test -d restaurant_allo_nouilles_test']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    logging: *logging
+
+  backend:
+    image: ${BACKEND_IMAGE:?verified source image required}
+    pull_policy: never
+    restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 1024m
+    cpus: 1.0
+    pids_limit: 200
+    tmpfs: ['/tmp:size=128m,mode=1777']
+    entrypoint: [java, -Xms128m, -Xmx512m, -XX:MaxMetaspaceSize=192m, -XX:ReservedCodeCacheSize=64m, -XX:MaxDirectMemorySize=32m, -XX:+UseSerialGC, -XX:ActiveProcessorCount=2, -Djava.io.tmpdir=/tmp, -Duser.timezone=America/Toronto, -jar, /app/app.jar]
+    environment:
+      TZ: America/Toronto
+      SPRING_PROFILES_ACTIVE: allo-test
+      APP_ENVIRONMENT: production
+      APP_DELIVERY_ALLO_PRODUCTION_PRINTING_ENABLED: 'true'
+      APP_PRINTING_ALLOWED_MODES: DISABLED,MOCK,PAD_DIRECT
+      APP_PRINTING_ENDPOINT_CONFIGURATION_ENABLED: 'true' 
+      APP_BUILD_SHA: ${APP_BUILD_SHA:?verified derived release identity required}
+      APP_REALTIME_AUTHENTICATED_STOMP_ENABLED: 'true'
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/restaurant_allo_nouilles_test
+      SPRING_DATASOURCE_USERNAME: allo_test
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:?fresh independent password required}
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: '6'
+      SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: '1'
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_FLYWAY_ENABLED: 'true'
+      SPRING_FLYWAY_VALIDATE_ON_MIGRATE: 'true'
+      SPRING_FLYWAY_BASELINE_ON_MIGRATE: 'false'
+      SPRING_FLYWAY_TARGET: '42'
+      APP_AUTH_JWT_SECRET: ${JWT_SECRET:?fresh independent secret required}
+      JWT_SECRET: ${JWT_SECRET:?fresh independent secret required}
+      APP_AUTH_X_USER_ID_FALLBACK_ENABLED: 'false'
+      APP_SEED_RUNTIME_ENABLED: 'false'
+      APP_SEED_SAFE_METADATA_ENABLED: 'false'
+      APP_SEED_DEFAULT_USERS_ENABLED: 'false'
+      APP_SEED_DEMO_DATA_ENABLED: 'false'
+      APP_SEED_MEMBERSHIP_SUPPLEMENT_ENABLED: 'false'
+      APP_SEED_PRODUCTION_BOOTSTRAP_ENABLED: 'false'
+      APP_DELIVERY_ALLO_BOOTSTRAP_ENABLED: 'false'
+      APP_TEMPLATE_TEST_BOOTSTRAP_ENABLED: 'false'
+      APP_DAILY_CLOSE_ENABLED: 'false'
+      TEMPLATE_TEST_ENABLED: 'true'
+      UBER_EATS_ENABLED: 'false'
+      UBER_EATS_WORKER_ENABLED: 'false'
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
+    volumes:
+      - /srv/allo-nouilles/private/menu.source.json:/run/merchant/menu.source.json:ro
+    depends_on:
+      db: {condition: service_healthy}
+    networks: [internal]
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, --max-time, '5', 'http://127.0.0.1:8080/api/v1/system/health']
+      start_period: 90s
+      interval: 30s
+      timeout: 8s
+      retries: 5
+    logging: *logging
+
+  frontend:
+    image: ${FRONTEND_IMAGE:?verified source image required}
+    pull_policy: never
+    restart: unless-stopped
+    read_only: true
+    user: '101:101'
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 64m
+    cpus: 0.25
+    pids_limit: 50
+    tmpfs: ['/tmp:size=32m,mode=1777']
+    ports: ['80:8080', '443:8443']
+    volumes:
+      - /srv/allo-nouilles/config/nginx.conf:/etc/nginx/nginx.conf:ro
+      - /srv/allo-nouilles/state/acme:/var/www/certbot:ro
+      - /srv/allo-nouilles/private/tls:/etc/nginx/tls:ro
+    depends_on:
+      backend: {condition: service_healthy}
+    networks: [internal, ingress]
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, 'http://127.0.0.1:8080/healthz']
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    logging: *logging
+
+networks:
+  internal:
+    internal: true
+  ingress: {}

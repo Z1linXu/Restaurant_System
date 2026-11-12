@@ -1,3 +1,4 @@
+import { withMenuCode } from '../../../utils/menuCode'
 import { useLocale } from '../../../i18n/useLocale'
 import type { BackendOrderResponse, OrderPrintOption } from '../../../types/ordering'
 import { orderLocationDisplay } from '../../../utils/tableDisplay'
@@ -54,7 +55,7 @@ export function OrderHistoryDetail({
           <div key={item.id} className="rounded-[18px] bg-stone-50 px-4 py-3">
             <div className="flex justify-between gap-4">
               <div>
-                <p className="text-lg font-bold">{label({ en: item.item_name_snapshot_en, zh: item.item_name_snapshot_zh, fr: item.item_name_snapshot_fr })}</p>
+                <p className="text-lg font-bold">{withMenuCode(item.item_sku_snapshot, label({ en: item.item_name_snapshot_en, zh: item.item_name_snapshot_zh, fr: item.item_name_snapshot_fr }))}</p>
                 {item.options.length ? (
                   <p className="mt-1 text-sm text-[var(--muted)]">
                     {item.options.map((option) => label({ en: option.option_name_snapshot_en, zh: option.option_name_snapshot_zh, fr: option.option_name_snapshot_fr })).join(' · ')}

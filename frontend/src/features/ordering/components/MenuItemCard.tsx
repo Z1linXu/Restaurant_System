@@ -1,3 +1,4 @@
+import { withMenuCode } from '../../../utils/menuCode'
 import { Card } from '../../../components/ui/Card'
 import type { MenuItem } from '../../../types/ordering'
 import { useLocale } from '../../../i18n/useLocale'
@@ -29,7 +30,7 @@ export function MenuItemCard({
   compact = false,
 }: MenuItemCardProps) {
   const { t, label, locale } = useLocale()
-  const itemName = label({ en: item.nameEn, zh: item.nameZh, fr: item.nameFr })
+  const itemName = withMenuCode(item.sku, label({ en: item.nameEn, zh: item.nameZh, fr: item.nameFr }))
   const addLabel = quickAddState === 'adding' ? '...' : quickAddState === 'added' ? t('menu.added') : '+'
   const stepperAddLabel = quickAddState === 'adding' ? '...' : '+'
 

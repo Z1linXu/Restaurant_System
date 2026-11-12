@@ -1154,8 +1154,10 @@ public class OrderServiceImpl implements OrderService {
                 orderItemOption.option_name_snapshot_en = menuItemOption.name_en;
                 orderItemOption.option_name_snapshot_fr = menuItemOption.name_fr;
                 orderItemOption.price_delta = menuItemOption.price_delta;
-            } else if ((menuItemOption != null && addonResolver.requiresAssignment(storeId, menuItemOption.option_group, menuItemOption.option_code))
-                || addonResolver.requiresAssignment(storeId, orderItemOption.option_group_snapshot, orderItemOption.option_code_snapshot)) {
+            } else if (((menuItemOption != null && addonResolver.requiresAssignment(storeId, menuItemOption.option_group, menuItemOption.option_code))
+                || addonResolver.requiresAssignment(storeId, orderItemOption.option_group_snapshot, orderItemOption.option_code_snapshot))
+                && !isVerifiedIndependentTemplateChoice(storeId, menuItemId, menuItemOption,
+                    orderItemOption.option_code_snapshot, orderItemOption.option_group_snapshot)) {
                 throw new BusinessException("ADDON_ASSIGNMENT_REQUIRED: refresh menu and select the Store Add-on");
             }
             if (menuItemOption != null && menuItemOption.store_remove_id != null) {
@@ -1201,11 +1203,21 @@ public class OrderServiceImpl implements OrderService {
                     || !Objects.equals(snapshot.option_code_snapshot, option.option_code)) {
                     throw new BusinessException("ADDON_CATALOG_CHANGED: refresh menu and confirm the current Add-on price");
                 }
-            } else if ((option != null && addonResolver.requiresAssignment(storeId, option.option_group, option.option_code))
-                || addonResolver.requiresAssignment(storeId, snapshot.option_group_snapshot, snapshot.option_code_snapshot)) {
+            } else if (((option != null && addonResolver.requiresAssignment(storeId, option.option_group, option.option_code))
+                || addonResolver.requiresAssignment(storeId, snapshot.option_group_snapshot, snapshot.option_code_snapshot))
+                && !isVerifiedIndependentTemplateChoice(storeId, itemIds.get(snapshot.order_item_id), option,
+                    snapshot.option_code_snapshot, snapshot.option_group_snapshot)) {
                 throw new BusinessException("ADDON_ASSIGNMENT_REQUIRED: refresh menu and select the Store Add-on");
             }
         }
+    }
+
+    private boolean isVerifiedIndependentTemplateChoice(Long storeId, Long itemId, MenuItemOption option,
+                                                       String snapshotCode, String snapshotGroup) {
+        return templateMenus != null && option != null
+            && Objects.equals(snapshotCode, option.option_code)
+            && Objects.equals(snapshotGroup, option.option_group)
+            && templateMenus.isIndependentChoice(storeId, itemId, option);
     }
 
     private Map<Long, MenuItemOption> loadRequestedMenuItemOptions(List<CreateOrderItemOptionRequest> optionRequests) {

@@ -1,6 +1,8 @@
 package com.restaurant.system.printing.service.impl;
 
 import com.restaurant.system.common.exception.BusinessException;
+import com.restaurant.system.delivery.ReceiptArtifact;
+import com.restaurant.system.printing.AlloProductionPrintingPolicy;
 import com.restaurant.system.printing.PrintJobStatus;
 import com.restaurant.system.printing.dto.PrintJobResponse;
 import com.restaurant.system.printing.entity.PrintJob;
@@ -32,15 +34,18 @@ public class PrintJobServiceImpl implements PrintJobService {
     private final PrintJobRepository printJobRepository;
     private final PrintJobAttemptRepository printJobAttemptRepository;
     private final PrinterConfigRepository printerConfigRepository;
+    private final AlloProductionPrintingPolicy alloPrintingPolicy;
 
     public PrintJobServiceImpl(
         PrintJobRepository printJobRepository,
         PrintJobAttemptRepository printJobAttemptRepository,
-        PrinterConfigRepository printerConfigRepository
+        PrinterConfigRepository printerConfigRepository,
+        AlloProductionPrintingPolicy alloPrintingPolicy
     ) {
         this.printJobRepository = printJobRepository;
         this.printJobAttemptRepository = printJobAttemptRepository;
         this.printerConfigRepository = printerConfigRepository;
+        this.alloPrintingPolicy = alloPrintingPolicy;
     }
 
     @Override
@@ -155,6 +160,15 @@ public class PrintJobServiceImpl implements PrintJobService {
         String printingRuleFingerprint
     ) {
         PrintJob target = requireJob(job.id);
+        boolean receiptContext = com.restaurant.system.delivery.ReceiptContextService.hasContext(target);
+        boolean protectedArtifact = receiptContext || ReceiptArtifact.isTemplateJob(target);
+        boolean padActive = protectedArtifact && alloPrintingPolicy.padDirectActive(target.store_id);
+        if (padActive && target.reprintSourceJobId == null) ReceiptArtifact.requirePadIntent(target);
+        if (protectedArtifact && (!PrintJobStatus.PENDING.equals(target.status)
+                || target.reprintSourceJobId == null && ReceiptArtifact.present(target))) {
+            // Replays and old MOCK jobs retain their existing frozen text, bytes and metadata.
+            throw new BusinessException("RECEIPT_ARTIFACT_ALREADY_FROZEN");
+        }
         target.printer_id = printerId;
         target.rendered_text_snapshot = renderedTextSnapshot;
         if (printingRuleRevisionId != null) {
@@ -163,37 +177,30 @@ public class PrintJobServiceImpl implements PrintJobService {
         if (printingRuleFingerprint != null && !printingRuleFingerprint.isBlank()) {
             target.printingRuleFingerprint = printingRuleFingerprint;
         }
-        if (com.restaurant.system.delivery.ReceiptContextService.hasContext(target) && renderedTextSnapshot != null) {
-            // This approved seam is MOCK-only. Freeze UTF-8 proof bytes, never send them to a physical device.
+        if (protectedArtifact && renderedTextSnapshot != null) {
             if (target.reprintSourceJobId != null) {
                 PrintJob source = requireJob(target.reprintSourceJobId);
-                if (!target.store_id.equals(source.store_id) || !target.module_code.equals(source.module_code)
-                        || !renderedTextSnapshot.equals(source.rendered_text_snapshot)
-                        || source.escposPayloadBase64 == null || source.escposPayloadBase64.isBlank())
+                if (!target.store_id.equals(source.store_id) || !java.util.Objects.equals(target.organization_id, source.organization_id)
+                        || !java.util.Objects.equals(target.order_id, source.order_id)
+                        || !java.util.Objects.equals(target.order_update_batch_id, source.order_update_batch_id)
+                        || !target.module_code.equals(source.module_code)
+                        || !renderedTextSnapshot.equals(source.rendered_text_snapshot))
                     throw new BusinessException("RECEIPT_ORIGINAL_ARTIFACT_MISSING");
-                validateOriginalArtifact(source);
+                if (padActive) ReceiptArtifact.requirePadSourceJob(source);
+                if (receiptContext || ReceiptArtifact.present(source)) {
+                    if (source.escposPayloadBase64 == null || source.escposPayloadBase64.isBlank())
+                        throw new BusinessException("RECEIPT_ORIGINAL_ARTIFACT_MISSING");
+                    ReceiptArtifact.validate(source);
+                }
                 target.escposPayloadBase64 = source.escposPayloadBase64;
-            } else {
+                // Copy the original provenance as well as its bytes, never reconstruct it from live settings.
+                target.payload_snapshot = source.payload_snapshot;
+            } else if (!padActive || "MOCK".equals(target.executionMode)) {
                 PrinterConfig proofPrinter = new PrinterConfig();
                 proofPrinter.text_encoding = "UTF-8"; proofPrinter.paper_width_mm = 80; proofPrinter.font_size = com.restaurant.system.printing.transport.EscPosFontSizeMode.DEFAULT_CODE;
-                try {
-                    java.nio.charset.StandardCharsets.UTF_8.newEncoder()
-                        .onMalformedInput(java.nio.charset.CodingErrorAction.REPORT)
-                        .onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT)
-                        .encode(java.nio.CharBuffer.wrap(renderedTextSnapshot));
-                } catch (java.nio.charset.CharacterCodingException e) { throw new BusinessException("RECEIPT_ENCODING_UNSUPPORTED"); }
+                ReceiptArtifact.requireEncodable(renderedTextSnapshot, StandardCharsets.UTF_8);
                 target.escposPayloadBase64 = buildEscPosPayloadBase64(renderedTextSnapshot, proofPrinter, com.restaurant.system.printing.transport.EscPosFontSizeMode.DEFAULT_CODE);
-                try {
-                    var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                    var node = (com.fasterxml.jackson.databind.node.ObjectNode)mapper.readTree(target.payload_snapshot);
-                    var artifact = node.putObject("receipt_artifact");
-                    artifact.put("encoding", "UTF-8"); artifact.put("paper_width_mm", 80); artifact.put("font", com.restaurant.system.printing.transport.EscPosFontSizeMode.DEFAULT_CODE);
-                    artifact.put("transport", "MOCK_ONLY_NOT_PHYSICAL_PROOF");
-                    var digest = java.security.MessageDigest.getInstance("SHA-256");
-                    artifact.put("text_sha256", java.util.HexFormat.of().formatHex(digest.digest(renderedTextSnapshot.getBytes(StandardCharsets.UTF_8))));
-                    artifact.put("bytes_sha256", java.util.HexFormat.of().formatHex(digest.digest(Base64.getDecoder().decode(target.escposPayloadBase64))));
-                    target.payload_snapshot = mapper.writeValueAsString(node);
-                } catch (Exception e) { throw new BusinessException("RECEIPT_ARTIFACT_INVALID"); }
+                ReceiptArtifact.freeze(target, ReceiptArtifact.MOCK_TRANSPORT, proofPrinter, EscPosFontSizeMode.DEFAULT_CODE);
             }
         }
         target.updated_at = LocalDateTime.now();
@@ -210,8 +217,25 @@ public class PrintJobServiceImpl implements PrintJobService {
     @Transactional
     public PrintJob markPadDirectQueued(PrintJob job, PrinterConfig printer, String fontSize) {
         PrintJob target = requireJob(job.id);
-        if (com.restaurant.system.delivery.ReceiptContextService.hasContext(target)) throw new BusinessException("ALLO_RECEIPT_TEST_MOCK_ONLY");
         if (!PrintJobStatus.PENDING.equals(target.status)) throw new BusinessException("An existing active or terminal job cannot be requeued; create a new manual reprint");
+        boolean receiptContext = com.restaurant.system.delivery.ReceiptContextService.hasContext(target);
+        boolean protectedArtifact = receiptContext || ReceiptArtifact.isTemplateJob(target);
+        if (!receiptContext && ("GRAB".equals(target.module_code) || "FRONTDESK_RECEIPT".equals(target.module_code))
+                && alloPrintingPolicy.allowsPadDirect(target.store_id)) throw new BusinessException("RECEIPT_PAD_INTENT_REQUIRED");
+        if (protectedArtifact) {
+            if (!alloPrintingPolicy.padDirectActive(target.store_id)) throw new BusinessException("ALLO_PAD_DIRECT_RUNTIME_NOT_ALLOWED");
+            if (printer != null && !target.store_id.equals(printer.store_id)) throw new BusinessException("RECEIPT_STORE_MISMATCH");
+            ReceiptArtifact.requirePadIntent(target);
+            if (target.reprintSourceJobId != null) {
+                ReceiptArtifact.requirePadSourceJob(requireJob(target.reprintSourceJobId));
+                ReceiptArtifact.requireCompatiblePadArtifact(target, printer, fontSize);
+            } else {
+                if ("MOCK".equals(target.executionMode) || ReceiptArtifact.present(target) || target.escposPayloadBase64 != null) {
+                    throw new BusinessException("RECEIPT_MOCK_ARTIFACT_NOT_PHYSICAL");
+                }
+                ReceiptArtifact.requireEncodable(target.rendered_text_snapshot, ReceiptArtifact.physicalCharset(printer));
+            }
+        }
         target.executionMode = "PAD_DIRECT";
         target.status = PrintJobStatus.PENDING;
         if (target.preferredDeviceId != null && target.preferredDeviceUntil == null) {
@@ -223,7 +247,10 @@ public class PrintJobServiceImpl implements PrintJobService {
         target.claimExpiresAt = null;
         target.printedByDeviceId = null;
         target.clientAttemptToken = null;
-        target.escposPayloadBase64 = buildEscPosPayloadBase64(target.rendered_text_snapshot, printer, fontSize);
+        if (!protectedArtifact || target.reprintSourceJobId == null) {
+            target.escposPayloadBase64 = buildEscPosPayloadBase64(target.rendered_text_snapshot, printer, fontSize);
+            if (protectedArtifact) ReceiptArtifact.freeze(target, ReceiptArtifact.PAD_TRANSPORT, printer, fontSize);
+        }
         target.printed_at = null;
         target.failed_at = null;
         target.error_code = null;
@@ -433,19 +460,6 @@ public class PrintJobServiceImpl implements PrintJobService {
             return value;
         }
         return value.substring(0, maxLength);
-    }
-
-    private void validateOriginalArtifact(PrintJob source) {
-        try {
-            var artifact = new com.fasterxml.jackson.databind.ObjectMapper().readTree(source.payload_snapshot).path("receipt_artifact");
-            var digest = java.security.MessageDigest.getInstance("SHA-256");
-            String textHash = java.util.HexFormat.of().formatHex(digest.digest(source.rendered_text_snapshot.getBytes(StandardCharsets.UTF_8)));
-            String bytesHash = java.util.HexFormat.of().formatHex(digest.digest(Base64.getDecoder().decode(source.escposPayloadBase64)));
-            if (!"UTF-8".equals(artifact.path("encoding").asText())
-                    || !"MOCK_ONLY_NOT_PHYSICAL_PROOF".equals(artifact.path("transport").asText())
-                    || !textHash.equals(artifact.path("text_sha256").asText()) || !bytesHash.equals(artifact.path("bytes_sha256").asText()))
-                throw new BusinessException("RECEIPT_ORIGINAL_ARTIFACT_INVALID");
-        } catch (Exception e) { throw new BusinessException("RECEIPT_ORIGINAL_ARTIFACT_INVALID"); }
     }
 
     private String buildEscPosPayloadBase64(String renderedTextSnapshot, PrinterConfig printer) {

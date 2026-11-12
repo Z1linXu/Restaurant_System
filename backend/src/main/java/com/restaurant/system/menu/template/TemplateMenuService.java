@@ -15,7 +15,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** New group metadata; existing item Option leaves remain the single runtime price authority. */
+/** Group metadata and item-owned choices; linked ADD_ON values belong to the Store catalog. */
 @Service
 public class TemplateMenuService {
  private final MenuItemRepository items;
@@ -32,6 +32,12 @@ public class TemplateMenuService {
  private com.restaurant.system.menu.service.StorePricingPolicyService pricing;
  @org.springframework.beans.factory.annotation.Autowired
  public void setPricing(com.restaurant.system.menu.service.StorePricingPolicyService value){this.pricing=value;}
+ private com.restaurant.system.menu.addon.StoreAddonOptionResolver addonResolver;
+ private com.restaurant.system.menu.addon.StoreAddonService addons;
+ @org.springframework.beans.factory.annotation.Autowired
+ public void setAddonResolver(com.restaurant.system.menu.addon.StoreAddonOptionResolver value){this.addonResolver=value;}
+ @org.springframework.beans.factory.annotation.Autowired
+ public void setAddons(com.restaurant.system.menu.addon.StoreAddonService value){this.addons=value;}
  public TemplateMenuService(MenuItemRepository items,MenuItemOptionRepository options,
   TemplateItemOptionGroupRepository groups,TemplateStoreConfigurationRepository configs,
   MenuRevisionService revisions,ObjectMapper mapper,Environment env,MenuCategoryRepository categories) {
@@ -41,10 +47,25 @@ public class TemplateMenuService {
  public boolean enabled(){return enabled;}
  public void lockMenuIfEnabled(Long storeId){if(enabled)revisions.lockStoresInOrder(List.of(storeId));}
  public boolean manages(MenuItem item){return enabled && item!=null && item.template_option_groups_enabled;}
+ /** Only server-loaded, currently bound independent choices may share a canonical Add-on code. */
+ @Transactional(readOnly=true)
+ public boolean isIndependentChoice(Long storeId,Long itemId,MenuItemOption option){
+  if(!enabled || option==null || option.id==null || itemId==null)return false;
+  var item=items.findById(itemId).orElse(null);
+  if(!manages(item) || !Objects.equals(storeId,item.store_id))return false;
+  var leaf=options.findById(option.id).orElse(null);
+  if(leaf==null || !Objects.equals(itemId,leaf.menu_item_id) || leaf.store_addon_id!=null || leaf.store_remove_id!=null
+   || !Boolean.TRUE.equals(leaf.is_active) || leaf.template_group_code==null || leaf.option_group==null
+   || !Set.of("CUSTOM","SPICY_LEVEL","SIZE").contains(leaf.option_group)
+   || !Objects.equals(option.option_code,leaf.option_code) || !Objects.equals(option.option_group,leaf.option_group))return false;
+  return groups.forItem(itemId).stream().anyMatch(group->Objects.equals(storeId,group.store_id)
+   && Objects.equals(itemId,group.menu_item_id) && group.is_active
+   && Objects.equals(leaf.template_group_code,group.group_code) && Objects.equals(leaf.option_group,group.kind));
+ }
  @Transactional(readOnly=true)
  public Groups getItem(Long storeId,Long itemId) {
   requireItem(storeId,itemId);Groups out=new Groups();out.menu_revision=revisions.getRevision(storeId).menu_revision;
-  List<MenuItemOption> leaves=options.findAllByMenuItemIdOrdered(itemId);
+  List<MenuItemOption> leaves=currentOptions(itemId);
   for(var row:groups.forItem(itemId)) {
    Group g=new Group();g.group_instance_code=row.group_code;g.name=row.name;g.kind=row.kind;
    g.selection_mode=row.selection_mode;g.required=row.required;g.is_active=row.is_active;
@@ -56,12 +77,21 @@ public class TemplateMenuService {
     o.option_group=leaf.option_group;o.parent_option_id=leaf.parent_option_id;o.sort_order=leaf.sort_order==null?0:leaf.sort_order;
     o.name_zh=leaf.name_zh;o.name_en=leaf.name_en;o.name_fr=leaf.name_fr;o.price_delta=leaf.price_delta;
     o.is_active=Boolean.TRUE.equals(leaf.is_active);o.is_default=leaf.template_default;
+    o.store_addon_id=leaf.store_addon_id;o.addon_eligible=leaf.addon_eligible;
     g.options.add(o);if(o.is_default)g.default_option_ids.add(o.id);
    }out.groups.add(g);
   }return out;
  }
  @Transactional
  public Groups saveItem(Long storeId,Long itemId,Groups request) {
+  return saveItem(storeId,itemId,request,false);
+ }
+ /** Internal Allo importer seam. No HTTP controller exposes unlinked Add-on creation. */
+ @Transactional
+ public Groups saveImportedItem(Long storeId,Long itemId,Groups request) {
+  return saveItem(storeId,itemId,request,true);
+ }
+ private Groups saveItem(Long storeId,Long itemId,Groups request,boolean importLegacyAddons) {
   requireEnabled();revisions.lockStoresInOrder(List.of(storeId));MenuItem item=requireItem(storeId,itemId);validate(request);
   Map<String,TemplateItemOptionGroup> before=new HashMap<>();groups.forItem(itemId).forEach(g->before.put(g.group_code,g));
   // Absent metadata preserves older clients; explicit JSON null removes the optional limit.
@@ -71,6 +101,9 @@ public class TemplateMenuService {
   }}
   validate(request);
   Map<Long,MenuItemOption> leaves=new HashMap<>();options.findAllByMenuItemIdOrdered(itemId).forEach(o->leaves.put(o.id,o));
+  Map<Long,com.restaurant.system.menu.addon.StoreAddonService.Addon> catalog=new HashMap<>();
+  if(addons!=null && (request.groups.stream().anyMatch(g->"ADD_ON".equals(g.kind)) || leaves.values().stream().anyMatch(o->o.store_addon_id!=null)))
+   addons.getAddons(storeId).addons().forEach(a->catalog.put(a.id(),a));
   Set<Long> retained=new HashSet<>();Set<String> retainedGroups=new HashSet<>();
   for(Group g:request.groups) {
    String code=code(g.group_instance_code);g.group_instance_code=code;retainedGroups.add(code);
@@ -91,17 +124,39 @@ public class TemplateMenuService {
      requireItem(storeId,source.menu_item_id);
      leaf.store_addon_id=source.store_addon_id;leaf.store_addon_store_id=source.store_addon_store_id;leaf.addon_eligible=source.addon_eligible;
      leaf.store_remove_id=source.store_remove_id;leaf.store_remove_store_id=source.store_remove_store_id;leaf.option_code=source.option_code;
+     leaf.name_fr=source.name_fr;
+    }
+    boolean legacyAddon=leaf.id!=null && leaf.store_addon_id==null && com.restaurant.system.menu.addon.StoreAddonService.isAddon(leaf.option_group,leaf.option_type,leaf.option_code,leaf.name_zh,leaf.name_en);
+    if(legacyAddon && !importLegacyAddons && (!"ADD_ON".equals(g.kind) || o.store_addon_id!=null))throw failure("ADDON_RECONCILE_REQUIRED");
+    if(legacyAddon && !importLegacyAddons && (!Objects.equals(leaf.name_zh,o.name_zh.trim()) || !Objects.equals(leaf.name_en,o.name_en)
+      || leaf.price_delta.compareTo(o.price_delta)!=0 || !Objects.equals(leaf.option_code,o.option_code)))throw failure("ADDON_RECONCILE_REQUIRED");
+    if(leaf.store_addon_id!=null && !"ADD_ON".equals(g.kind))throw failure("ADDON_GROUP_IMMUTABLE");
+    if(o.store_addon_id!=null && leaf.store_addon_id!=null && !Objects.equals(o.store_addon_id,leaf.store_addon_id))throw failure("ADDON_IDENTITY_IMMUTABLE");
+    if("ADD_ON".equals(g.kind) && leaf.store_addon_id==null && o.id!=null && !legacyAddon)throw failure("ADDON_ASSIGNMENT_REQUIRED");
+    if("ADD_ON".equals(g.kind) && leaf.store_addon_id==null && o.id==null) {
+     var canonical=o.store_addon_id==null?catalog.values().stream().filter(a->Objects.equals(a.code(),o.option_code)).findFirst().orElse(null):catalog.get(o.store_addon_id);
+     if(o.store_addon_id!=null && canonical==null)throw failure("ADDON_STORE_MISMATCH");
+     if(canonical==null && !importLegacyAddons)throw failure("ADDON_ASSIGNMENT_REQUIRED");
+     if(canonical!=null){leaf.store_addon_id=canonical.id();leaf.store_addon_store_id=storeId;}
     }
     leaf.menu_item_id=itemId;leaf.template_group_code=code;leaf.option_type=type(g.kind);leaf.option_group=g.kind;
     if(leaf.option_code==null)leaf.option_code=o.option_code==null || o.option_code.isBlank()?"tpl_"+UUID.randomUUID().toString().replace("-",""):o.option_code;
     leaf.name_zh=o.name_zh.trim();leaf.name_en=o.name_en;if(o.name_fr!=null)leaf.name_fr=o.name_fr.trim();leaf.price_delta=o.price_delta;
     leaf.sort_order=o.sort_order;leaf.is_active=o.is_active;leaf.template_default=o.is_default || (o.id!=null && g.default_option_ids.contains(o.id));
+    if(leaf.store_addon_id!=null) {
+     var canonical=catalog.get(leaf.store_addon_id);
+     if(canonical==null || !Objects.equals(storeId,leaf.store_addon_store_id))throw failure("ADDON_STORE_MISMATCH");
+     leaf.addon_eligible=o.addon_eligible==null?o.is_active:o.addon_eligible;
+     leaf.option_code=canonical.code();leaf.name_zh=canonical.name_zh();leaf.name_en=canonical.name_en();leaf.price_delta=canonical.price();
+     leaf.is_active=canonical.active() && Boolean.TRUE.equals(leaf.addon_eligible);
+     if(leaf.template_default && !leaf.is_active)throw failure("TEMPLATE_DEFAULT_INVALID");
+    }
     leaf.updated_at=LocalDateTime.now();if(leaf.created_at==null)leaf.created_at=leaf.updated_at;
     leaf=options.save(leaf);retained.add(leaf.id);
    }
   }
   boolean combo=request.groups.stream().anyMatch(g->g.is_active && "COMBO".equals(g.kind));
-  for(var old:leaves.values())if(!retained.contains(old.id) && (!isCombo(old)||!combo)){old.is_active=false;old.template_default=false;options.save(old);}
+  for(var old:leaves.values())if(!retained.contains(old.id) && (!isCombo(old)||!combo)){old.is_active=false;old.template_default=false;if(old.store_addon_id!=null)old.addon_eligible=false;options.save(old);}
   for(var old:before.values())if(!retainedGroups.contains(old.group_code))groups.delete(old);
   item.template_option_groups_enabled=true;items.save(item);
   if(pricing!=null){var policy=new com.restaurant.system.menu.dto.MenuItemComboPolicyRequest();policy.combo_allowed=combo;pricing.updateComboPolicy(itemId,policy);}
@@ -109,7 +164,7 @@ public class TemplateMenuService {
  }
  @Transactional(readOnly=true)
  public Groups library(Long storeId) {
-  requireEnabled();var c=configs.findById(storeId).orElse(null);if(c!=null)return read(c.library_json,Groups.class);
+  requireEnabled();var c=configs.findById(storeId).orElse(null);if(c!=null)return currentLibrary(storeId,read(c.library_json,Groups.class));
   Groups initial=new Groups();
   for(String kind:List.of("SPICY_LEVEL","ADD_ON","REMOVE","SIZE","COMBO")){
    Group g=new Group();g.group_instance_code="preset_"+kind.toLowerCase(Locale.ROOT);g.name=switch(kind){case "SPICY_LEVEL"->"Spicy Level";case "ADD_ON"->"Add-on";case "REMOVE"->"Remove";case "SIZE"->"Size";default->"Combo";};
@@ -119,6 +174,9 @@ public class TemplateMenuService {
  @Transactional
  public Groups saveLibrary(Long storeId,Groups request){
   requireEnabled();revisions.lockStoresInOrder(List.of(storeId));validate(request);
+  currentLibrary(storeId,request);
+  if(request.groups.stream().filter(g->"ADD_ON".equals(g.kind)).flatMap(g->g.options.stream()).anyMatch(o->o.store_addon_id==null))throw failure("ADDON_ASSIGNMENT_REQUIRED");
+  validate(request);
   for(Group g:request.groups){g.group_instance_code=code(g.group_instance_code);for(Option o:g.options){o.is_default=o.is_default||(o.id!=null&&g.default_option_ids.contains(o.id));o.id=null;o.source_option_id=null;}g.default_option_ids.clear();}
   var c=configs.findById(storeId).orElseGet(TemplateStoreConfiguration::new);c.store_id=storeId;c.library_json=write(request);configs.save(c);return library(storeId);
  }
@@ -136,7 +194,7 @@ public class TemplateMenuService {
   if(request.station_id_snapshot!=null && !Objects.equals(request.station_id_snapshot,item.station_id))throw failure("TEMPLATE_STATION_MISMATCH");
   if(request.unit_price_snapshot!=null && request.unit_price_snapshot.compareTo(item.base_price)!=0)throw failure("MENU_PRICE_CHANGED: refresh menu and retain draft");
   var selected=request.options==null?List.<com.restaurant.system.order.dto.CreateOrderItemOptionRequest>of():request.options;
-  Set<Long> ids=new HashSet<>();Map<Long,MenuItemOption> all=new HashMap<>();options.findAllByMenuItemIdOrdered(item.id).forEach(o->all.put(o.id,o));
+  Set<Long> ids=new HashSet<>();Map<Long,MenuItemOption> all=new HashMap<>();currentOptions(item.id).forEach(o->all.put(o.id,o));
   boolean hasCombo=groups.forItem(item.id).stream().anyMatch(g->g.is_active && "COMBO".equals(g.kind));
   for(var o:selected){
    if(o==null||o.option_id==null||o.quantity==null||o.quantity<1||o.quantity>999||!ids.add(o.option_id))throw failure("TEMPLATE_OPTION_INVALID");
@@ -157,9 +215,9 @@ public class TemplateMenuService {
    }
    if(leaf.template_group_code==null && !(hasCombo && leaf.option_group!=null && leaf.option_group.startsWith("COMBO")))
       throw failure("TEMPLATE_OPTION_NOT_BOUND");
-   if(!Boolean.TRUE.equals(leaf.is_active))throw failure("TEMPLATE_OPTION_UNAVAILABLE");
+   if(!Boolean.TRUE.equals(leaf.is_active))throw failure(leaf.store_addon_id==null?"TEMPLATE_OPTION_UNAVAILABLE":"ADDON_ASSIGNMENT_UNAVAILABLE");
    if(o.parent_option_id_snapshot!=null&&!Objects.equals(o.parent_option_id_snapshot,leaf.parent_option_id))throw failure("TEMPLATE_OPTION_PARENT_MISMATCH");
-   if(o.option_price_snapshot!=null && o.option_price_snapshot.compareTo(leaf.price_delta)!=0)throw failure("TEMPLATE_OPTION_PRICE_CHANGED");
+   if(o.option_price_snapshot!=null && o.option_price_snapshot.compareTo(leaf.price_delta)!=0)throw failure(leaf.store_addon_id==null?"TEMPLATE_OPTION_PRICE_CHANGED":"ADDON_CATALOG_CHANGED");
    if(leaf.template_group_code!=null && o.option_code_snapshot!=null && !o.option_code_snapshot.equals(leaf.option_code))throw failure("TEMPLATE_OPTION_CODE_CHANGED");
   }
   boolean comboSelected=selected.stream().anyMatch(o->all.containsKey(o.option_id) && "COMBO".equals(all.get(o.option_id).option_group));
@@ -246,5 +304,15 @@ public class TemplateMenuService {
  private String code(String v){if(v==null||v.isBlank())return UUID.randomUUID().toString();if(!v.matches("[A-Za-z0-9_-]{1,64}"))throw failure("TEMPLATE_CODE_INVALID");return v;}
  private String type(String k){return switch(k){case "SPICY_LEVEL"->"spicy_level";case "REMOVE"->"remove";case "SIZE"->"size";default->"addon";};}
  private boolean isCombo(MenuItemOption o){return o.option_group!=null&&o.option_group.startsWith("COMBO");}
+ private List<MenuItemOption> currentOptions(Long itemId){var rows=options.findAllByMenuItemIdOrdered(itemId);return addonResolver==null?rows:addonResolver.resolve(rows);}
+ private Groups currentLibrary(Long storeId,Groups definition){
+  if(addons==null || definition.groups.stream().noneMatch(g->"ADD_ON".equals(g.kind)))return definition;
+  var catalog=addons.getAddons(storeId).addons();
+  for(Group group:definition.groups)if("ADD_ON".equals(group.kind))for(Option option:group.options){
+   var canonical=catalog.stream().filter(a->option.store_addon_id==null?Objects.equals(a.code(),option.option_code):Objects.equals(a.id(),option.store_addon_id)).findFirst().orElse(null);
+   if(option.store_addon_id!=null && canonical==null)throw failure("ADDON_STORE_MISMATCH");
+   if(canonical!=null){option.store_addon_id=canonical.id();option.option_code=canonical.code();option.name_zh=canonical.name_zh();option.name_en=canonical.name_en();option.price_delta=canonical.price();option.addon_eligible=option.addon_eligible==null?option.is_active:option.addon_eligible;option.is_active=canonical.active()&&option.addon_eligible;}
+  }return definition;
+ }
  private BusinessException failure(String code){return new BusinessException(code);}
 }

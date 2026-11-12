@@ -4,6 +4,7 @@ import { subscribeToFrontdeskOrders } from './orderService'
 interface FakeFrame { body: string }
 interface FakeSubscription { unsubscribe: ReturnType<typeof vi.fn> }
 interface FakeClientConfig {
+  beforeConnect?: () => void
   webSocketFactory: () => unknown
   reconnectDelay: number
   connectionTimeout: number
@@ -11,6 +12,7 @@ interface FakeClientConfig {
   heartbeatOutgoing: number
 }
 interface FakeClient {
+  connectHeaders?: Record<string, string>
   config: FakeClientConfig
   activate: ReturnType<typeof vi.fn>
   deactivate: ReturnType<typeof vi.fn>
@@ -77,6 +79,27 @@ describe('frontdesk SockJS/STOMP lifecycle', () => {
     expect(client.deactivate).toHaveBeenCalledTimes(1)
     expect(lifecycle).toHaveBeenLastCalledWith(expect.objectContaining({ phase: 'CANCELLED' }))
     await Promise.resolve()
+  })
+
+  it('takes the current bearer token on each reconnect without putting it in the URL', () => {
+    let token: string | null = 'first-token'
+    vi.stubGlobal('window', {
+      location: { href: 'https://pos.allonouilles.com/stores/1/frontdesk' },
+      localStorage: { getItem: () => token },
+    })
+    const cancel = subscribeToFrontdeskOrders(1, vi.fn())
+    const client = stomp.instances[0]
+    client.config.beforeConnect?.()
+    expect(client.connectHeaders).toEqual({ Authorization: 'Bearer first-token' })
+    token = 'rotated-token'
+    client.config.beforeConnect?.()
+    expect(client.connectHeaders).toEqual({ Authorization: 'Bearer rotated-token' })
+    client.config.webSocketFactory()
+    expect(sock.constructor).toHaveBeenCalledWith('https://pos.allonouilles.com/ws')
+    token = null
+    client.config.beforeConnect?.()
+    expect(client.connectHeaders).toEqual({})
+    cancel()
   })
 
   it('reports reconnect/error phases and replaces the old topic subscription after reconnect', () => {

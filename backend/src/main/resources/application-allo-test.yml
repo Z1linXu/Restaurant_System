@@ -31,7 +31,7 @@
     }
   },
   "app": {
-    "environment": "test",
+    "environment": "${APP_ENVIRONMENT:test}",
     "template": {
       "enabled": true,
       "mock-only": true,
@@ -59,11 +59,8 @@
       "enabled": false
     },
     "printing": {
-      "allowed-modes": [
-        "MOCK",
-        "DISABLED"
-      ],
-      "endpoint-configuration-enabled": false
+      "allowed-modes": "${APP_PRINTING_ALLOWED_MODES:MOCK,DISABLED}",
+      "endpoint-configuration-enabled": "${APP_PRINTING_ENDPOINT_CONFIGURATION_ENABLED:false}"
     },
     "features": {
       "core-pos": true,
@@ -75,7 +72,8 @@
       "developer-tools": false
     },
     "delivery": {
-      "allo-bootstrap-enabled": true,
+      "allo-bootstrap-enabled": "${APP_DELIVERY_ALLO_BOOTSTRAP_ENABLED:true}",
+      "allo-production-printing-enabled": "${APP_DELIVERY_ALLO_PRODUCTION_PRINTING_ENABLED:false}",
       "menu-file": "${ALLO_MENU_FILE:/run/merchant/menu.source.json}"
     }
   },

@@ -1,0 +1,469 @@
+diff --git a/backend/src/main/java/com/restaurant/system/common/config/AuthenticatedStompInterceptor.java b/backend/src/main/java/com/restaurant/system/common/config/AuthenticatedStompInterceptor.java
+new file mode 100644
+--- /dev/null
++++ b/backend/src/main/java/com/restaurant/system/common/config/AuthenticatedStompInterceptor.java
+@@ -0,0 +1,138 @@
++package com.restaurant.system.common.config;
++
++import com.restaurant.system.auth.service.TokenService;
++import com.restaurant.system.common.auth.AuthenticatedUser;
++import com.restaurant.system.common.auth.Capability;
++import com.restaurant.system.common.auth.RoleCapabilityRegistry;
++import com.restaurant.system.common.auth.StoreAccessService;
++import com.restaurant.system.modules.ModuleKeys;
++import com.restaurant.system.modules.StoreModuleAccessEvaluator;
++import com.restaurant.system.user.repository.RoleRepository;
++import com.restaurant.system.user.repository.StoreRepository;
++import com.restaurant.system.user.repository.UserRepository;
++import java.security.Principal;
++import java.time.Clock;
++import java.util.Locale;
++import java.util.Map;
++import java.util.concurrent.ConcurrentHashMap;
++import java.util.regex.Pattern;
++import org.springframework.messaging.Message;
++import org.springframework.messaging.MessageChannel;
++import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
++import org.springframework.messaging.simp.SimpMessageType;
++import org.springframework.messaging.simp.stomp.StompCommand;
++import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
++import org.springframework.messaging.support.ChannelInterceptor;
++import org.springframework.messaging.support.MessageHeaderAccessor;
++
++/** Frontdesk-only migration adapter; denies publishing and all unapproved topics. */
++final class AuthenticatedStompInterceptor implements ChannelInterceptor {
++    private static final Pattern TOPIC = Pattern.compile("^/topic/stores/([1-9][0-9]*)/frontdesk/orders$");
++    private final TokenService tokens;
++    private final UserRepository users;
++    private final RoleRepository roles;
++    private final StoreAccessService stores;
++    private final StoreRepository storeRepository;
++    private final RoleCapabilityRegistry capabilities;
++    private final StoreModuleAccessEvaluator modules;
++    private final Clock clock;
++    private final Map<String, SessionUser> sessions = new ConcurrentHashMap<>();
++
++    AuthenticatedStompInterceptor(TokenService tokens, UserRepository users, RoleRepository roles,
++        StoreAccessService stores, StoreRepository storeRepository, RoleCapabilityRegistry capabilities,
++        StoreModuleAccessEvaluator modules, Clock clock) {
++        this.tokens = tokens;
++        this.users = users;
++        this.roles = roles;
++        this.stores = stores;
++        this.storeRepository = storeRepository;
++        this.capabilities = capabilities;
++        this.modules = modules;
++        this.clock = clock;
++    }
++
++    @Override
++    public Message<?> preSend(Message<?> message, MessageChannel channel) {
++        var accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
++        if (accessor == null || accessor.getSessionId() == null) throw denied();
++        var command = accessor.getCommand();
++        var authorization = accessor.getNativeHeader("Authorization");
++        // Never leave credentials in a message that an error handler could log/echo.
++        // Framework-generated DISCONNECT frames can already be immutable.
++        if (authorization != null) accessor.removeNativeHeader("Authorization");
++        String sessionId = accessor.getSessionId();
++        if (command == StompCommand.DISCONNECT) {
++            sessions.remove(sessionId);
++            return message;
++        }
++        if (command == StompCommand.CONNECT || command == StompCommand.STOMP) {
++            try {
++                if (authorization == null || authorization.size() != 1
++                    || !authorization.get(0).startsWith("Bearer ")) throw denied();
++                var claims = tokens.parseAccessToken(authorization.get(0).substring(7).trim());
++                var principal = new SessionUser(claims.userId(), claims.expiresAt());
++                requireCurrentUser(principal);
++                if (sessions.putIfAbsent(sessionId, principal) != null) throw denied();
++                accessor.setUser(principal);
++                return message;
++            } catch (RuntimeException exception) {
++                throw denied();
++            }
++        }
++        var principal = sessions.get(sessionId);
++        if (principal == null || principal.expiresAt() <= clock.instant().getEpochSecond()) throw denied();
++        if (command == StompCommand.SUBSCRIBE) {
++            requireTopic(principal, accessor.getDestination());
++        } else if (command != StompCommand.UNSUBSCRIBE && accessor.getMessageType() != SimpMessageType.HEARTBEAT) {
++            // In particular, clients cannot SEND to broker /topic destinations.
++            throw denied();
++        }
++        return message;
++    }
++
++    Message<?> filterOutbound(Message<?> message) {
++        var accessor = SimpMessageHeaderAccessor.wrap(message);
++        if (accessor.getMessageType() != SimpMessageType.MESSAGE) return message;
++        try {
++            requireTopic(sessions.get(accessor.getSessionId()), accessor.getDestination());
++            return message;
++        } catch (RuntimeException exception) {
++            return null;
++        }
++    }
++
++    private void requireTopic(SessionUser principal, String destination) {
++        var matcher = TOPIC.matcher(destination == null ? "" : destination);
++        if (!matcher.matches()) throw denied();
++        try {
++            long storeId = Long.parseLong(matcher.group(1));
++            var user = requireCurrentUser(principal);
++            var store = storeRepository.findById(storeId).orElseThrow(AuthenticatedStompInterceptor::denied);
++            if (!stores.canAccessStore(user, storeId)
++                || !capabilities.hasCapability(stores.roleCodeForStore(user, store), Capability.ORDER_VIEW_ACTIVE)) {
++                throw denied();
++            }
++            modules.requireOperationalCapability(storeId, ModuleKeys.ORDERING_POS);
++        } catch (RuntimeException exception) {
++            throw denied();
++        }
++    }
++
++    private AuthenticatedUser requireCurrentUser(SessionUser principal) {
++        if (principal == null || principal.expiresAt() <= clock.instant().getEpochSecond()) throw denied();
++        var user = users.findById(principal.userId()).orElseThrow(AuthenticatedStompInterceptor::denied);
++        if (!"active".equalsIgnoreCase(user.getStatus()) || user.getRole_id() == null) throw denied();
++        var role = roles.findById(user.getRole_id()).orElseThrow(AuthenticatedStompInterceptor::denied);
++        if (role.getCode() == null) throw denied();
++        return new AuthenticatedUser(user.getId(), user.getStore_id(), user.getRole_id(),
++            user.getUsername(), user.getFull_name(), role.getCode().toUpperCase(Locale.ROOT));
++    }
++
++    private static IllegalArgumentException denied() {
++        return new IllegalArgumentException("Realtime access denied");
++    }
++
++    private record SessionUser(Long userId, long expiresAt) implements Principal {
++        @Override public String getName() { return userId.toString(); }
++    }
++}
+diff --git a/backend/src/main/java/com/restaurant/system/common/config/AuthenticatedStompConfiguration.java b/backend/src/main/java/com/restaurant/system/common/config/AuthenticatedStompConfiguration.java
+new file mode 100644
+--- /dev/null
++++ b/backend/src/main/java/com/restaurant/system/common/config/AuthenticatedStompConfiguration.java
+@@ -0,0 +1,46 @@
++package com.restaurant.system.common.config;
++
++import com.restaurant.system.auth.service.TokenService;
++import com.restaurant.system.common.auth.RoleCapabilityRegistry;
++import com.restaurant.system.common.auth.StoreAccessService;
++import com.restaurant.system.modules.StoreModuleAccessEvaluator;
++import com.restaurant.system.user.repository.RoleRepository;
++import com.restaurant.system.user.repository.StoreRepository;
++import com.restaurant.system.user.repository.UserRepository;
++import java.time.Clock;
++import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
++import org.springframework.context.annotation.Configuration;
++import org.springframework.context.annotation.Profile;
++import org.springframework.messaging.Message;
++import org.springframework.messaging.MessageChannel;
++import org.springframework.messaging.simp.config.ChannelRegistration;
++import org.springframework.messaging.support.ChannelInterceptor;
++import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
++
++@Configuration
++@Profile("allo-test")
++@ConditionalOnProperty(name = "app.realtime.authenticated-stomp-enabled", havingValue = "true")
++public class AuthenticatedStompConfiguration implements WebSocketMessageBrokerConfigurer {
++    private final AuthenticatedStompInterceptor interceptor;
++
++    public AuthenticatedStompConfiguration(TokenService tokens, UserRepository users,
++        RoleRepository roles, StoreAccessService stores, StoreRepository storeRepository, RoleCapabilityRegistry capabilities,
++        StoreModuleAccessEvaluator modules) {
++        interceptor = new AuthenticatedStompInterceptor(tokens, users, roles, stores, storeRepository,
++            capabilities, modules, Clock.systemUTC());
++    }
++
++    @Override
++    public void configureClientInboundChannel(ChannelRegistration registration) {
++        registration.interceptors(interceptor);
++    }
++
++    @Override
++    public void configureClientOutboundChannel(ChannelRegistration registration) {
++        registration.interceptors(new ChannelInterceptor() {
++            @Override public Message<?> preSend(Message<?> message, MessageChannel channel) {
++                return interceptor.filterOutbound(message);
++            }
++        });
++    }
++}
+diff --git a/backend/src/main/java/com/restaurant/system/template/bootstrap/TemplateTestCorsConfig.java b/backend/src/main/java/com/restaurant/system/template/bootstrap/TemplateTestCorsConfig.java
+--- a/backend/src/main/java/com/restaurant/system/template/bootstrap/TemplateTestCorsConfig.java
++++ b/backend/src/main/java/com/restaurant/system/template/bootstrap/TemplateTestCorsConfig.java
+@@ -6,7 +6,7 @@
+ public class TemplateTestCorsConfig implements WebMvcConfigurer {
+  public void addCorsMappings(CorsRegistry registry){
+   registry.addMapping("/api/**")
+-   .allowedOrigins("http://127.0.0.1:28080","https://test.lanzhounoodlesmtl.com","http://127.0.0.1:28180","http://localhost:28180")
++   .allowedOrigins("http://127.0.0.1:28080","https://test.lanzhounoodlesmtl.com","https://pos.allonouilles.com","http://127.0.0.1:28180","http://localhost:28180")
+    .allowedMethods("GET","POST","PUT","PATCH","DELETE","OPTIONS")
+    .allowedHeaders("Content-Type","Authorization","Accept","X-Print-Device-Id","X-Print-Timestamp","X-Print-Signature")
+    .allowCredentials(false).maxAge(3600);
+diff --git a/backend/src/test/java/com/restaurant/system/common/config/AuthenticatedStompInterceptorTest.java b/backend/src/test/java/com/restaurant/system/common/config/AuthenticatedStompInterceptorTest.java
+new file mode 100644
+--- /dev/null
++++ b/backend/src/test/java/com/restaurant/system/common/config/AuthenticatedStompInterceptorTest.java
+@@ -0,0 +1,176 @@
++package com.restaurant.system.common.config;
++
++import static org.junit.jupiter.api.Assertions.*;
++import static org.mockito.ArgumentMatchers.*;
++import static org.mockito.Mockito.*;
++
++import com.restaurant.system.auth.service.TokenService;
++import com.restaurant.system.common.auth.RoleCapabilityRegistry;
++import com.restaurant.system.common.auth.StoreAccessService;
++import com.restaurant.system.modules.StoreModuleAccessEvaluator;
++import com.restaurant.system.user.entity.Role;
++import com.restaurant.system.user.entity.User;
++import com.restaurant.system.user.entity.Store;
++import com.restaurant.system.user.repository.RoleRepository;
++import com.restaurant.system.user.repository.UserRepository;
++import com.restaurant.system.user.repository.StoreRepository;
++import java.time.Clock;
++import java.time.Instant;
++import java.util.Optional;
++import org.junit.jupiter.api.BeforeEach;
++import org.junit.jupiter.api.Test;
++import org.junit.jupiter.params.ParameterizedTest;
++import org.junit.jupiter.params.provider.ValueSource;
++import org.springframework.messaging.Message;
++import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
++import org.springframework.messaging.simp.SimpMessageType;
++import org.springframework.messaging.simp.stomp.StompCommand;
++import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
++import org.springframework.messaging.support.MessageBuilder;
++import org.springframework.messaging.support.MessageHeaderAccessor;
++
++class AuthenticatedStompInterceptorTest {
++    private final TokenService tokens = mock(TokenService.class);
++    private final UserRepository users = mock(UserRepository.class);
++    private final RoleRepository roles = mock(RoleRepository.class);
++    private final StoreAccessService stores = mock(StoreAccessService.class);
++    private final StoreRepository storeRepository = mock(StoreRepository.class);
++    private final Store store = new Store();
++    private final StoreModuleAccessEvaluator modules = mock(StoreModuleAccessEvaluator.class);
++    private final Clock clock = mock(Clock.class);
++    private final User user = new User();
++    private AuthenticatedStompInterceptor guard;
++
++    @BeforeEach void setup() {
++        when(clock.instant()).thenReturn(Instant.ofEpochSecond(1000));
++        when(tokens.parseAccessToken("valid")).thenReturn(new TokenService.AccessTokenClaims(1L, 1L, 1L, 1L, "OWNER", 900, 2000));
++        user.setId(1L); user.setRole_id(1L); user.setStore_id(1L); user.setStatus("active");
++        user.setUsername("owner"); user.setFull_name("Owner");
++        Role role = new Role(); role.setId(1L); role.setCode("OWNER");
++        when(users.findById(1L)).thenReturn(Optional.of(user));
++        when(roles.findById(1L)).thenReturn(Optional.of(role));
++        when(stores.canAccessStore(any(), eq(1L))).thenReturn(true);
++        store.id = 1L;
++        when(storeRepository.findById(1L)).thenReturn(Optional.of(store));
++        when(stores.roleCodeForStore(any(), eq(store))).thenReturn("OWNER");
++        guard = new AuthenticatedStompInterceptor(tokens, users, roles, stores, storeRepository,
++            new RoleCapabilityRegistry(), modules, clock);
++    }
++
++    private Message<byte[]> frame(StompCommand command, String destination, String authorization) {
++        var headers = StompHeaderAccessor.create(command);
++        headers.setSessionId("session-1");
++        if (destination != null) headers.setDestination(destination);
++        if (authorization != null) headers.setNativeHeader("Authorization", authorization);
++        headers.setLeaveMutable(true);
++        return MessageBuilder.createMessage(new byte[0], headers.getMessageHeaders());
++    }
++
++    private Message<byte[]> outbound(String destination) {
++        var headers = SimpMessageHeaderAccessor.create(SimpMessageType.MESSAGE);
++        headers.setSessionId("session-1"); headers.setDestination(destination);
++        return MessageBuilder.createMessage(new byte[0], headers.getMessageHeaders());
++    }
++
++    private void connect() { guard.preSend(frame(StompCommand.CONNECT, null, "Bearer valid"), null); }
++
++    @Test void connectsWithVerifiedIdentityAndRemovesTokenHeader() {
++        var message = frame(StompCommand.CONNECT, null, "Bearer valid");
++        assertSame(message, guard.preSend(message, null));
++        var headers = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
++        assertEquals("1", headers.getUser().getName());
++        assertNull(headers.getNativeHeader("Authorization"));
++        verify(tokens).parseAccessToken("valid");
++    }
++
++    @Test void rejectsAnonymousConnectionAndSubscription() {
++        assertThrows(IllegalArgumentException.class, () -> guard.preSend(frame(StompCommand.CONNECT, null, null), null));
++        assertThrows(IllegalArgumentException.class, () -> guard.preSend(frame(StompCommand.SUBSCRIBE, "/topic/stores/1/frontdesk/orders", null), null));
++    }
++
++    @Test void rejectsInvalidTokenWithoutLeavingItInErrorFrame() {
++        when(tokens.parseAccessToken("bad")).thenThrow(new IllegalArgumentException("signature invalid"));
++        var message = frame(StompCommand.CONNECT, null, "Bearer bad");
++        var exception = assertThrows(IllegalArgumentException.class, () -> guard.preSend(message, null));
++        assertEquals("Realtime access denied", exception.getMessage());
++        assertNull(MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class).getNativeHeader("Authorization"));
++    }
++
++    @Test void rejectsInactiveUserAndExpiredToken() {
++        user.setStatus("disabled");
++        assertThrows(IllegalArgumentException.class, this::connect);
++        user.setStatus("active"); when(clock.instant()).thenReturn(Instant.ofEpochSecond(2000));
++        assertThrows(IllegalArgumentException.class, this::connect);
++    }
++
++    @Test void permitsOnlyAuthorizedOwnStoreOperationalTopic() {
++        connect();
++        var message = frame(StompCommand.SUBSCRIBE, "/topic/stores/1/frontdesk/orders", null);
++        assertSame(message, guard.preSend(message, null));
++        verify(modules).requireOperationalCapability(eq(1L), anyString());
++        assertNotNull(guard.filterOutbound(outbound("/topic/stores/1/frontdesk/orders")));
++    }
++
++    @ParameterizedTest
++    @ValueSource(strings = {"/topic/stores/2/frontdesk/orders", "/topic/stores/*/frontdesk/orders",
++        "/topic/stores/1/**", "/topic/stores/1/kds/noodle-display", "/topic/stores/1/frontdesk/orders/extra",
++        "/topic/stores/01/frontdesk/orders", "/topic/stores/99999999999999999999999/frontdesk/orders", "/topic/global"})
++    void rejectsCrossStoreAndUnexpectedTopics(String destination) {
++        connect();
++        assertThrows(IllegalArgumentException.class, () -> guard.preSend(frame(StompCommand.SUBSCRIBE, destination, null), null));
++        assertNull(guard.filterOutbound(outbound(destination)));
++    }
++
++    @Test void deniesPublishingEvenToAuthorizedTopic() {
++        connect();
++        assertThrows(IllegalArgumentException.class, () -> guard.preSend(frame(StompCommand.SEND, "/topic/stores/1/frontdesk/orders", null), null));
++    }
++
++    @Test void stopsDeliveryAfterExpiryOrMembershipRevocationOrDeactivation() {
++        connect();
++        assertNotNull(guard.filterOutbound(outbound("/topic/stores/1/frontdesk/orders")));
++        when(clock.instant()).thenReturn(Instant.ofEpochSecond(2000));
++        assertNull(guard.filterOutbound(outbound("/topic/stores/1/frontdesk/orders")));
++        when(clock.instant()).thenReturn(Instant.ofEpochSecond(1000));
++        when(stores.canAccessStore(any(), eq(1L))).thenReturn(false);
++        assertNull(guard.filterOutbound(outbound("/topic/stores/1/frontdesk/orders")));
++        when(stores.canAccessStore(any(), eq(1L))).thenReturn(true);
++        user.setStatus("disabled");
++        assertNull(guard.filterOutbound(outbound("/topic/stores/1/frontdesk/orders")));
++    }
++
++    @Test void honorsStoreRoleAndModuleRestrictions() {
++        connect();
++        when(stores.roleCodeForStore(any(), eq(store))).thenReturn("HOT_KITCHEN");
++        assertThrows(IllegalArgumentException.class, () -> guard.preSend(frame(StompCommand.SUBSCRIBE, "/topic/stores/1/frontdesk/orders", null), null));
++        when(stores.roleCodeForStore(any(), eq(store))).thenReturn("OWNER");
++        doThrow(new IllegalArgumentException("module disabled")).when(modules).requireOperationalCapability(eq(1L), anyString());
++        assertNull(guard.filterOutbound(outbound("/topic/stores/1/frontdesk/orders")));
++    }
++
++    @Test void frameworkGeneratedImmutableDisconnectStillClearsSession() {
++        connect();
++        var headers = StompHeaderAccessor.create(StompCommand.DISCONNECT);
++        headers.setSessionId("session-1");
++        var message = MessageBuilder.createMessage(new byte[0], headers.getMessageHeaders());
++        assertFalse(MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class).isMutable());
++        assertSame(message, guard.preSend(message, null));
++        assertNull(guard.filterOutbound(outbound("/topic/stores/1/frontdesk/orders")));
++        assertSame(message, guard.preSend(message, null));
++    }
++
++    @Test void immutableHeartbeatDoesNotAttemptToMutateNativeHeaders() {
++        connect();
++        var headers = StompHeaderAccessor.createForHeartbeat();
++        headers.setSessionId("session-1");
++        var message = MessageBuilder.createMessage(new byte[] {'\n'}, headers.getMessageHeaders());
++        assertFalse(MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class).isMutable());
++        assertSame(message, guard.preSend(message, null));
++    }
++
++    @Test void disconnectIsIdempotentAndForgetsAuthorization() {
++        connect(); guard.preSend(frame(StompCommand.DISCONNECT, null, null), null);
++        guard.preSend(frame(StompCommand.DISCONNECT, null, null), null);
++        assertNull(guard.filterOutbound(outbound("/topic/stores/1/frontdesk/orders")));
++    }
++}
+diff --git a/backend/src/test/java/com/restaurant/system/common/config/AlloCorsConfigTest.java b/backend/src/test/java/com/restaurant/system/common/config/AlloCorsConfigTest.java
+--- a/backend/src/test/java/com/restaurant/system/common/config/AlloCorsConfigTest.java
++++ b/backend/src/test/java/com/restaurant/system/common/config/AlloCorsConfigTest.java
+@@ -13,6 +13,8 @@
+    assertThat(c.getBeansOfType(RestCorsConfig.class)).isEmpty();
+    var r=new Registry(); c.getBean(TemplateTestCorsConfig.class).addCorsMappings(r);
+    assertThat(r.api().checkOrigin("https://test.lanzhounoodlesmtl.com")).isEqualTo("https://test.lanzhounoodlesmtl.com");
++   assertThat(r.api().checkOrigin("https://pos.allonouilles.com")).isEqualTo("https://pos.allonouilles.com");
++   assertThat(r.api().checkOrigin("http://pos.allonouilles.com")).isNull();
+    assertThat(r.api().checkOrigin("https://attacker.invalid")).isNull();
+    assertThat(r.api().checkOrigin("https://test.lanzhounoodlesmtl.com:444")).isNull();
+   }
+diff --git a/frontend/src/services/orderService.ts b/frontend/src/services/orderService.ts
+--- a/frontend/src/services/orderService.ts
++++ b/frontend/src/services/orderService.ts
+@@ -9,7 +9,7 @@
+ } from '../types/ordering'
+ import type { RealtimeUpdateMessage } from '../types/kds'
+ import type { PrintJobRecord } from './printingAdminService'
+-import { ApiRequestError, apiRequest } from './apiClient'
++import { ApiRequestError, apiRequest, getAccessToken } from './apiClient'
+ import { manualReprint } from './manualReprintService'
+ import { buildOptionSnapshots, mapOptions } from '../utils/orderPricing'
+ export { mapOptions } from '../utils/orderPricing'
+@@ -284,6 +284,10 @@
+   lifecycle('BOOTSTRAP_STARTED')
+   try {
+     client = new Client({
++      beforeConnect: () => {
++        const token = getAccessToken()
++        if (client) client.connectHeaders = token ? { Authorization: `Bearer ${token}` } : {}
++      },
+       webSocketFactory: () => {
+         lifecycle('SOCKET_FACTORY_CALLED')
+         return new SockJS(frontdeskRealtimeEndpoint())
+diff --git a/frontend/src/services/orderService.realtime.test.ts b/frontend/src/services/orderService.realtime.test.ts
+--- a/frontend/src/services/orderService.realtime.test.ts
++++ b/frontend/src/services/orderService.realtime.test.ts
+@@ -4,6 +4,7 @@
+ interface FakeFrame { body: string }
+ interface FakeSubscription { unsubscribe: ReturnType<typeof vi.fn> }
+ interface FakeClientConfig {
++  beforeConnect?: () => void
+   webSocketFactory: () => unknown
+   reconnectDelay: number
+   connectionTimeout: number
+@@ -11,6 +12,7 @@
+   heartbeatOutgoing: number
+ }
+ interface FakeClient {
++  connectHeaders?: Record<string, string>
+   config: FakeClientConfig
+   activate: ReturnType<typeof vi.fn>
+   deactivate: ReturnType<typeof vi.fn>
+@@ -79,6 +81,27 @@
+     await Promise.resolve()
+   })
+ 
++  it('takes the current bearer token on each reconnect without putting it in the URL', () => {
++    let token: string | null = 'first-token'
++    vi.stubGlobal('window', {
++      location: { href: 'https://pos.allonouilles.com/stores/1/frontdesk' },
++      localStorage: { getItem: () => token },
++    })
++    const cancel = subscribeToFrontdeskOrders(1, vi.fn())
++    const client = stomp.instances[0]
++    client.config.beforeConnect?.()
++    expect(client.connectHeaders).toEqual({ Authorization: 'Bearer first-token' })
++    token = 'rotated-token'
++    client.config.beforeConnect?.()
++    expect(client.connectHeaders).toEqual({ Authorization: 'Bearer rotated-token' })
++    client.config.webSocketFactory()
++    expect(sock.constructor).toHaveBeenCalledWith('https://pos.allonouilles.com/ws')
++    token = null
++    client.config.beforeConnect?.()
++    expect(client.connectHeaders).toEqual({})
++    cancel()
++  })
++
+   it('reports reconnect/error phases and replaces the old topic subscription after reconnect', () => {
+     const lifecycle = vi.fn()
+     subscribeToFrontdeskOrders(21, vi.fn(), { onLifecycle: lifecycle })

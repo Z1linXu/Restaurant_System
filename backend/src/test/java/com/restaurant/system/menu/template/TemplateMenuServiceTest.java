@@ -185,7 +185,7 @@ class TemplateMenuServiceTest {
     void ordinaryMultipleSelectionHasNoNewBusinessMaximum() {
         List<Option> definitions = new ArrayList<>();
         for (int index = 0; index < 35; index++) definitions.add(option("extra_" + index, "Extra " + index, "0.25", false));
-        Groups saved = service.saveItem(1L, 10L, definition("extras", "ADD_ON", "MULTIPLE", true, definitions.toArray(Option[]::new)));
+        Groups saved = service.saveItem(1L, 10L, canonicalAddons(definition("extras", "ADD_ON", "MULTIPLE", true, definitions.toArray(Option[]::new))));
         CreateOrderItemRequest request = request(10L);
         saved.groups.get(0).options.forEach(option -> request.options.add(selected(option, 2)));
         assertDoesNotThrow(() -> service.validateSelection(1L, request));
@@ -194,8 +194,8 @@ class TemplateMenuServiceTest {
 
     @Test
     void technicalQuantityAndDuplicateIdentityProtectionRemain() {
-        Groups saved = service.saveItem(1L, 10L, definition("extras", "ADD_ON", "MULTIPLE", false,
-            option("extra", "Extra", "0.25", false)));
+        Groups saved = service.saveItem(1L, 10L, canonicalAddons(definition("extras", "ADD_ON", "MULTIPLE", false,
+            option("extra", "Extra", "0.25", false))));
         Option option = saved.groups.get(0).options.get(0);
         assertCode("TEMPLATE_OPTION_INVALID", () -> service.validateSelection(1L, request(10L, selected(option, 1000))));
         assertCode("TEMPLATE_OPTION_INVALID", () -> service.validateSelection(1L, request(10L, selected(option, 1), selected(option, 1))));
@@ -203,12 +203,12 @@ class TemplateMenuServiceTest {
 
     @Test
     void staleOrForgedOptionAndBasePriceAreRejectedByServerLeaves() {
-        Groups saved = service.saveItem(1L, 10L, definition("extras", "ADD_ON", "MULTIPLE", false,
-            option("extra", "Extra", "2.00", false)));
+        Groups saved = service.saveItem(1L, 10L, canonicalAddons(definition("extras", "ADD_ON", "MULTIPLE", false,
+            option("extra", "Extra", "2.00", false))));
         Option leaf = saved.groups.get(0).options.get(0);
         CreateOrderItemOptionRequest stale = selected(leaf, 1);
         stale.option_price_snapshot = new BigDecimal("0.01");
-        assertCode("TEMPLATE_OPTION_PRICE_CHANGED", () -> service.validateSelection(1L, request(10L, stale)));
+        assertCode("ADDON_CATALOG_CHANGED", () -> service.validateSelection(1L, request(10L, stale)));
         CreateOrderItemRequest base = request(10L, selected(leaf, 1));
         base.unit_price_snapshot = new BigDecimal("0.01");
         assertCode("MENU_PRICE_CHANGED", () -> service.validateSelection(1L, base));
@@ -408,6 +408,15 @@ class TemplateMenuServiceTest {
         group.options = new ArrayList<>(List.of(options));
         request.groups.add(group);
         return request;
+    }
+
+    private Groups canonicalAddons(Groups definition) {
+        var addons=mock(com.restaurant.system.menu.addon.StoreAddonService.class);
+        List<com.restaurant.system.menu.addon.StoreAddonService.Addon> entries=new ArrayList<>();
+        for(Option option:definition.groups.get(0).options)entries.add(new com.restaurant.system.menu.addon.StoreAddonService.Addon(
+            1000L+entries.size(),1L,option.option_code,option.name_zh,option.name_en,option.price_delta,true,false));
+        when(addons.getAddons(1L)).thenReturn(new com.restaurant.system.menu.addon.StoreAddonService.AddonList(entries,List.of()));
+        service.setAddons(addons);return definition;
     }
 
     private Option option(String code, String name, String price, boolean selected) {

@@ -37,16 +37,20 @@ class PadPrintingControllerTest {
     private StoreModuleAccessEvaluator moduleAccessEvaluator;
     @Mock
     private PrintJobService printJobService;
+    @Mock
+    private com.restaurant.system.printing.AlloProductionPrintingPolicy printingPolicy;
 
     private PadPrintingController controller;
 
     @BeforeEach
     void setUp() {
+        org.mockito.Mockito.lenient().when(printingPolicy.padDirectActive(any())).thenReturn(true);
         controller = new PadPrintingController(
             storeDeviceService,
             padPrintJobService,
             moduleAccessEvaluator,
-            printJobService
+            printJobService,
+            printingPolicy
         );
     }
 
@@ -127,6 +131,27 @@ class PadPrintingControllerTest {
             .header("X-Device-Id", 10).header("X-Device-Token", "fixture-token"))
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isConflict())
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.message").value("Assigned printer is missing host"));
+    }
+
+    @Test
+    void stoppedRuntimeBlocksPendingBeforeQueueService() {
+        StoreDevice device = device(1L, 10L);
+        when(storeDeviceService.authenticateDevice(10L, "token")).thenReturn(device);
+        when(printingPolicy.padDirectActive(1L)).thenReturn(false);
+        assertThrows(ResponseStatusException.class, () -> controller.listPendingJobs(1L, 10L, "token", 25));
+        verifyNoInteractions(padPrintJobService);
+    }
+
+    @Test
+    void ownedInFlightResultsRemainReportableAfterModeOrModuleIsDisabled() {
+        StoreDevice device = device(1L, 10L); PrintJob job = new PrintJob(); job.id = 77L; job.store_id = 1L;
+        when(storeDeviceService.authenticateDevice(10L, "token")).thenReturn(device);
+        when(printJobService.requireJob(77L)).thenReturn(job);
+        controller.completeJob(77L, 10L, "token", new com.restaurant.system.printing.dto.PadPrintJobCompleteRequest());
+        controller.failJob(77L, 10L, "token", new com.restaurant.system.printing.dto.PadPrintJobFailRequest());
+        verifyNoInteractions(moduleAccessEvaluator, printingPolicy);
+        verify(padPrintJobService).completeJob(any(), anyLong(), any());
+        verify(padPrintJobService).failJob(any(), anyLong(), any());
     }
 
     private StoreDevice device(Long storeId, Long deviceId) {

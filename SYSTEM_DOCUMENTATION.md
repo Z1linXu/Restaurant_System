@@ -2298,7 +2298,7 @@ Submitted order editing now uses immutable old lines plus transactional update b
 - `is_modified_after_submit` remains a UI/KDS indicator only; it is not used to select update ticket lines.
 - GRAB update jobs use receipt type `GRAB_UPDATE`, retain `order_update_batch_id`, and render only items tagged with that exact batch.
 - FRONTDESK update jobs use receipt type `FRONTDESK_RECEIPT_UPDATE`, retain `order_update_batch_id`, and render only items tagged with that exact batch.
-- FRONTDESK update receipts are marked `UPDATED` / `Added items only`; their subtotal, tax, and total are calculated from the added batch lines rather than the full order.
+- FRONTDESK update receipts are marked `UPDATED` / `Added items only`; legacy contexts calculate subtotal, tax, and total independently from the added batch lines. New Allô contexts freeze the added subtotal and rounded whole-order total difference, so successive receipts reconcile to the unchanged authoritative order amount (see the Allô receipt amount contract below).
 - FRONTDESK receipts display combo side dishes under the combo main item, including combo side remove instructions such as `走花生`, so staff can pack takeout combo sides correctly.
 - Order-level manual reprint renders the complete current order from persisted item/option snapshots and the captured historical rule revision when available. Print-job reprint instead copies the source job's nonblank `rendered_text_snapshot`; it does not add newly configured wording to an old ticket.
 
@@ -9801,3 +9801,101 @@ Menu cache integrity uses the same conditional French-name markers and ordered o
 A successful submitted-order Update awaits persistence of its confirmed server snapshot and locked server items before navigation. Hook-local saves are serialized so a prior autosave cannot restore temp additions after acknowledgment. A stale update draft whose server revision/items have advanced retains its local content and fails closed for review; it is not deduplicated by labels/prices or silently discarded. The historical server modification flag does not represent unsent local additions.
 
 Configured template option groups reuse the legacy customization ChoiceButton, CheckboxRow and AddOnQuantityRow with responsive choice grids, bilingual business labels and modifier cards. Ordinary controls precede modifier cards; configured COMBO placement is preserved. English/Chinese labels are shown together, with French/Chinese when App locale is French. Selection, defaults, cardinality, prices and submit payloads remain data-driven; no legacy noodle identifiers or modifier rules are copied into template data.
+
+## 2026-11-12 Allô controlled improvements — execution in progress
+
+This release branch starts from the actual Allô deployed source plus its recorded
+WSS compatibility patch, excluding unrelated dirty main work. Target is only
+43.166.242.250 / pos.allonouilles.com. The original Lanzhou production remains
+out of scope. Menu/category/Add-on/PAD_DIRECT and bulk-price work, synthetic QA,
+review and release gates are tracked in
+`docs/commercialization/merchants/allo-nouille/EXECUTION_CHECKLIST.md`.
+No production test orders, bulk price changes, physical printing or queue replay
+are authorized as testing. Hardware status is explicitly separate from API proof.
+
+
+### Allô 2026-11-12 implementation contract
+
+The release now includes explicit opt-in Allô PAD_DIRECT policy with no backend
+REAL transport, immutable execution provenance for new receipt/template intents,
+closed historical MOCK conversion, current-mode claim/start/payload gates and
+owned in-flight reporting. Existing native device authentication, attestation,
+leases, source-key idempotency and PRINTING no-reclaim remain intact.
+
+The32 approved AN_ item codes derive only from stable SKU/order snapshots, with
+no record rename/price rewrite. GRAB-only frozen category exclusions use existing
+receipt settings and printer assignments; drinks remain direct-serve, Desserts
+are independently configurable and default included, all sold items remain on
+FRONTDESK_RECEIPT. Canonical Add-ons now govern linked template choices through
+catalog and server validation, with checked repeatable reconciliation. Generic
+client group spoofing stays blocked; independent template choices require
+verified same-Store persisted option/item/group bindings.
+
+`OwnerMenuOptionServiceImpl.getOptions` wraps JPA reads and the canonical JDBC
+projection in one read-only transaction. With OSIV enabled, both use the same
+transaction-bound connection instead of each request retaining one connection
+while waiting for another. Pool limits, authorization, response fields and all
+write/revision semantics are unchanged.
+
+V42 adds an opt-in category-bulk-price capability, previews and idempotency
+ledger. Bulk applies base prices under the existing Store lock with server
+preview/revision/fingerprint validation and strict transactional audit; free
+refills, fixed offers, option prices, old orders and PrintJobs remain unchanged.
+The new high-impact batch endpoints use the existing Manager/Owner/Admin price
+management role policy; the shared FRONTDESK registry is unchanged. Legacy Size
+and Combo engines remain available according to actual Store capabilities.
+
+Synthetic QA is a new loopback-only PG26512/backend18512/frontend28182, explicit
+allo-test,allo-qa profiles, independent credentials and no production recovery
+data. Existing local PG25442/frontend28180 were discovered and left intact.
+Production recovery backup was separately restored/hash-verified (85 tables)
+and that recovery cluster was removed before synthetic QA. Production is not
+used for writes, test orders, repricing, reprints or physical print proof.
+
+### Allô receipt amount contract — human-browser regression repair
+
+Actual synthetic browser submit/update exposed independent batch rounding:
+initial25.48+3.82=29.30 plus update5.98+0.90=6.88 totals36.18 while the authoritative
+whole order31.46+4.71=36.17. The order amount is correct; new Allô update receipts
+now freeze `update_subtotal` and `update_total` in the existing locked outbox
+enqueue. They allocate the difference between the rounded current whole total
+and the rounded previous active subtotal's total: this case prints5.98+0.89=6.87.
+The tax label explicitly describes order rounding. No order amount, tax rate,
+per-item cent allocation, source key, state transition or other Store renderer
+contract changes.
+
+This bounded path requires the current zero-discount, fixed-rate add-only
+contract and consistent active line/whole amounts; it does not claim historical
+discount or old tax-rate support. Partial/invalid new monetary fields or a
+rendered batch subtotal mismatch fail closed. Both fields absent keep the exact
+legacy update semantics, including already saved historical Allô Jobs. Physical
+printing is never inferred from a renderer or protocol result. The latest test,
+review and activation status belongs in the merchant release reports.
+
+### Allô 2026-11-12 validation and release state
+
+Sealed app source is `e7dde0a6e27adf3be00baa9972fee06cdcc5482c`. Backend:
+191 report files,1519 tests total =1402 passed +117 skipped,0 failures/errors.
+Unchanged frontend source:84 files/481 tests passed, TypeScript/Vite builds pass.
+Fresh PostgreSQL V42, five renderer groups with12 original snapshots, device
+HTTP safety and new update-amount/idempotency/history preservation acceptance
+passed. Independent code/amount review passed. Hosted CI was not run; this
+checkout has no configured `.github` workflow. These are local/isolated results.
+
+Real browser testing operated Owner login, item edit/code persistence, category
+routing,14-item multi-category increase/decrease, canonical Add-on current
+price, POS draft/submit/append Update, and inspected desktop/1024/768 layouts.
+The ordinary Finish `window.confirm` blocked supported browser controls; Finish,
+Print Center and remaining representative module interactions are incomplete.
+The release remains NO-GO until this browser gate is completed. Android Worker
+and physical printing are NOT TESTED.
+
+Candidate e7dde0a images and an exact old Compose/env/image rollback tuple are
+staged on43.166.242.250. The running old2b44+915e WSS application, V41, StoreMOCK,
+34 prices, ten historical orders and30 Jobs remain unchanged. No candidate
+activation, V42 Production migration, canonical reconciliation, capability
+enable or production test write occurred. Old-binary rollback after a future
+activation also requires pausing writes and draining all new monetary outbox
+intents with the new binary first; an old renderer must not reinterpret them.
+See the [release report](docs/commercialization/merchants/allo-nouille/ALLO_PRODUCTION_DEPLOYMENT_REPORT.md)
+for exact hashes, restored85-table recovery evidence and remaining steps.

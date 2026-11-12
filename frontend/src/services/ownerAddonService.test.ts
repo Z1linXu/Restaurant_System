@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { apiRequest } from './apiClient'
-import { createStoreAddon, fetchItemAddons, fetchStoreAddons, updateItemAddon, updateStoreAddon } from './ownerAddonService'
+import { applyAddonReconciliation, createStoreAddon, fetchItemAddons, fetchStoreAddons, previewAddonReconciliation, updateItemAddon, updateStoreAddon } from './ownerAddonService'
 import { updateOwnerMenuItemComboEggDefault } from './ownerMenuOptionService'
 
 vi.mock('./apiClient', () => ({ apiRequest: vi.fn() }))
@@ -30,5 +30,12 @@ describe('menu simplification API contracts', () => {
     expect(apiRequest).toHaveBeenLastCalledWith('/api/v1/admin/menu/items/123/combo-egg-default', {
       method: 'PUT', body: '{"default_combo_egg_component_code":null}',
     })
+  })
+
+  it('uses a read-only reconciliation preview and sends its exact guards for apply without price decisions', async () => {
+    await previewAddonReconciliation(7)
+    await applyAddonReconciliation({ store_id: 7, dry_run: true, linked_groups: 1, linked_options: 3, conflicts: [], menu_revision: 8, fingerprint: 'abc' })
+    expect(apiRequest).toHaveBeenNthCalledWith(1, '/api/v1/admin/menu/addons/reconcile', { method: 'POST', body: '{"store_id":7,"dry_run":true}' })
+    expect(apiRequest).toHaveBeenNthCalledWith(2, '/api/v1/admin/menu/addons/reconcile', { method: 'POST', body: '{"store_id":7,"dry_run":false,"expected_menu_revision":8,"expected_fingerprint":"abc"}' })
   })
 })

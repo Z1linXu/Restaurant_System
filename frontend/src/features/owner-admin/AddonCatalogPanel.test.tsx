@@ -65,6 +65,17 @@ afterEach(async () => {
 })
 
 describe('AddonCatalogPanel', () => {
+  it('notifies menu refresh only after the canonical catalog save succeeds', async () => {
+    const onChanged = vi.fn()
+    vi.mocked(updateStoreAddon).mockResolvedValue({ ...teaEgg, price: 2.25 })
+    await act(async () => { view = create(<AddonCatalogPanel storeId={3} onChanged={onChanged} />) })
+    await act(async () => view!.root.findByProps({ 'aria-label': 'Edit Add-on tea_egg' }).props.onClick())
+    await change('Add-on price', '2.25')
+    expect(onChanged).not.toHaveBeenCalled()
+    await submit()
+    expect(onChanged).toHaveBeenCalledTimes(1)
+  })
+
   it('switches system text through three languages without discarding an edited catalog value or saving it', async () => {
     await mount()
     await act(async () => view!.root.findByProps({ 'aria-label': 'Edit Add-on tea_egg' }).props.onClick())

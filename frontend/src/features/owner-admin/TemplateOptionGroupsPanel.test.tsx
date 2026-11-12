@@ -4,8 +4,10 @@ import { TemplateOptionGroupsPanel } from './TemplateOptionGroupsPanel'
 import { copyTemplateGroup } from '../../utils/templateOptionGroups'
 import { fetchItemOptionGroups, fetchOptionLibrary, saveItemOptionGroups, saveOptionLibrary } from '../../services/templatePlatformService'
 import type { TemplateOptionGroup } from '../../services/templatePlatformService'
+import { fetchStoreAddons } from '../../services/ownerAddonService'
 
 vi.mock('../../services/templatePlatformService', () => ({ fetchItemOptionGroups: vi.fn(), fetchOptionLibrary: vi.fn(), saveItemOptionGroups: vi.fn(), saveOptionLibrary: vi.fn() }))
+vi.mock('../../services/ownerAddonService', () => ({ fetchStoreAddons: vi.fn() }))
 vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
 const source: TemplateOptionGroup = { group_instance_code: 'spicy', name: 'Spicy', kind: 'SPICY_LEVEL', selection_mode: 'SINGLE', required: true, is_active: true, sort_order: 0, default_option_ids: [5], options: [{ id: 5, option_type: 'spicy_level', option_code: 'mild', option_group: 'SPICY_LEVEL', parent_option_id: null, sort_order: 0, name_zh: '微辣', name_en: 'Mild', price_delta: 0, is_active: true }] }
 let view: ReactTestRenderer | undefined
@@ -15,6 +17,7 @@ const button = (label: string) => view!.root.findAllByType('button').find((node)
 beforeEach(() => {
   vi.clearAllMocks(); vi.stubGlobal('window', { confirm: vi.fn(() => true) })
   vi.mocked(fetchOptionLibrary).mockResolvedValue({ groups: [structuredClone(source)] })
+  vi.mocked(fetchStoreAddons).mockResolvedValue({ addons: [{ id: 99, store_id: 2, code: 'extra_beef', name_zh: '加牛肉', name_en: 'Extra Beef', price: 3.25, active: true, printing_configured: false }], conflicts: [] })
   vi.mocked(fetchItemOptionGroups).mockResolvedValue({ groups: [] })
   vi.mocked(saveOptionLibrary).mockImplementation(async (_store, payload) => payload)
   vi.mocked(saveItemOptionGroups).mockImplementation(async (_store, _item, payload) => ({ ...payload, groups: payload.groups.map((group) => ({ ...group, options: group.options.map((option, i) => ({ ...option, id: option.id ?? 100 + i })) })) }))
@@ -96,5 +99,27 @@ describe('independent option group copies', () => {
     expect(button('Save option groups').props.disabled).toBe(true)
     await act(async () => button('Save option groups').props.onClick())
     expect(saveItemOptionGroups).not.toHaveBeenCalled()
+  })
+
+  it('selects shared Add-ons from the catalog and keeps their bilingual names and price read-only', async () => {
+    vi.mocked(fetchItemOptionGroups).mockResolvedValue({ groups: [{ ...structuredClone(source), kind: 'ADD_ON', group_instance_code: 'paid_addons', selection_mode: 'MULTIPLE', required: false, default_option_ids: [], options: [] }] })
+    await act(async () => { view = create(<TemplateOptionGroupsPanel storeId={2} itemId={20} />) })
+    await act(async () => view!.root.findByProps({ 'aria-label': 'Add-on catalog 1' }).props.onChange({ target: { value: '99' } }))
+    expect(view!.root.findByProps({ 'aria-label': 'Option price 1-1' }).props).toMatchObject({ value: 3.25, readOnly: true })
+    expect(view!.root.findByProps({ 'aria-label': 'Option Chinese name 1-1' }).props).toMatchObject({ value: '加牛肉', readOnly: true })
+    expect(view!.root.findByProps({ 'aria-label': 'Option English name 1-1' }).props.readOnly).toBe(true)
+    expect(view!.root.findByProps({ href: '/stores/2/admin/menu/items?section=addons' })).toBeTruthy()
+    await act(async () => view!.root.findByProps({ 'aria-label': 'Option French name 1-1' }).props.onChange({ target: { value: 'Bœuf supplémentaire' } }))
+    await act(async () => button('Save option groups').props.onClick())
+    expect(saveItemOptionGroups).toHaveBeenCalledWith(2, 20, { groups: [expect.objectContaining({ options: [expect.objectContaining({ store_addon_id: 99, addon_eligible: true, option_code: 'extra_beef', price_delta: 3.25, name_fr: 'Bœuf supplémentaire' })] })] })
+  })
+
+  it('preserves item eligibility while a catalog entry is unavailable', async () => {
+    const linked = { ...structuredClone(source.options[0]), store_addon_id: 99, addon_eligible: true, is_active: false, is_default: false }
+    vi.mocked(fetchItemOptionGroups).mockResolvedValue({ groups: [{ ...structuredClone(source), kind: 'ADD_ON', required: false, default_option_ids: [], options: [linked] }] })
+    await act(async () => { view = create(<TemplateOptionGroupsPanel storeId={2} itemId={20} />) })
+    expect(view!.root.findByProps({ 'aria-label': 'Enabled option 1-1' }).props.checked).toBe(true)
+    await act(async () => button('Save option groups').props.onClick())
+    expect(vi.mocked(saveItemOptionGroups).mock.calls[0][2].groups[0].options[0]).toMatchObject({ addon_eligible: true, is_active: false })
   })
 })

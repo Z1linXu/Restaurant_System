@@ -188,6 +188,7 @@ class StorePricingPolicyServiceImplTest {
     @Test
     void updatingPricingPolicyMirrorsCompatibilityBridgeAndBumpsMenuRevision() {
         StorePricingPolicy policy = policy(3L);
+        policy.category_bulk_pricing_enabled = true;
         when(storeRepository.existsById(3L)).thenReturn(true);
         when(storePricingPolicyRepository.findByStoreId(3L)).thenReturn(Optional.of(policy));
         when(storePricingPolicyRepository.save(any(StorePricingPolicy.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -204,6 +205,7 @@ class StorePricingPolicyServiceImplTest {
         assertEquals(new BigDecimal("3.25").setScale(2), response.size_large_delta);
         assertEquals(new BigDecimal("6.00").setScale(2), response.combo_delta);
         assertEquals(8L, response.policy_revision);
+        verify(storePricingPolicyRepository).save(org.mockito.ArgumentMatchers.argThat(saved -> saved.category_bulk_pricing_enabled));
         verify(menuRevisionService).lockStoresInOrder(List.of(3L));
         verify(storePricingPolicyRepository).mirrorPolicyToSizeAndComboOptions(3L);
         verify(menuRevisionService).incrementRevision(3L);

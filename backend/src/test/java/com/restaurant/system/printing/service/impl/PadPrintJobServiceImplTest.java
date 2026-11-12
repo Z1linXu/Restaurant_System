@@ -48,11 +48,14 @@ class PadPrintJobServiceImplTest {
     private PrinterConfigRepository printerConfigRepository;
     @Mock
     private PrintJobService printJobService;
+    @Mock
+    private com.restaurant.system.printing.AlloProductionPrintingPolicy printingPolicy;
 
     private PadPrintJobServiceImpl service;
 
     @BeforeEach
     void setUp() {
+        org.mockito.Mockito.lenient().when(printingPolicy.padDirectActive(any())).thenReturn(true);
         org.mockito.Mockito.lenient().when(printJobRepository.findLockedById(any())).thenAnswer(call ->
             Optional.ofNullable(printJobService.requireJob(call.getArgument(0))));
         org.mockito.Mockito.lenient().when(printJobRepository.startPadPrint(any(), any(), any(), any(), any(), any())).thenAnswer(call -> {
@@ -65,7 +68,8 @@ class PadPrintJobServiceImplTest {
             printJobRepository,
             printJobAttemptRepository,
             printerConfigRepository,
-            printJobService
+            printJobService,
+            printingPolicy
         );
     }
 
@@ -275,6 +279,7 @@ class PadPrintJobServiceImplTest {
 
     @Test
     void completeWorksFromPrinting() {
+        org.mockito.Mockito.lenient().when(printingPolicy.padDirectActive(any())).thenReturn(false);
         StoreDevice device = device();
         PrintJob job = claimedPadJob(PrintJobStatus.PRINTING, device.id, "attempt-1");
         job.printer_id = null;
@@ -341,6 +346,7 @@ class PadPrintJobServiceImplTest {
 
     @Test
     void failWorksFromPrinting() {
+        org.mockito.Mockito.lenient().when(printingPolicy.padDirectActive(any())).thenReturn(false);
         StoreDevice device = device();
         PrintJob job = claimedPadJob(PrintJobStatus.PRINTING, device.id, "attempt-1");
         PrinterConfig printer = printer(job.printer_id, "Store Printer", "192.168.1.101", 9100);
@@ -418,6 +424,61 @@ class PadPrintJobServiceImplTest {
             .thenReturn(0);
 
         assertThrows(ResponseStatusException.class, () -> service.claimJob(device, job.id, request));
+    }
+
+    @Test
+    void storeModeOrRuntimeDisabledStopsPendingClaimStartAndPayloadBeforeMutation() {
+        StoreDevice device = device();
+        PrintJob job = claimedPadJob(PrintJobStatus.CLAIMED, device.id, "attempt-1");
+        when(printingPolicy.padDirectActive(1L)).thenReturn(false);
+        when(printJobService.requireJob(job.id)).thenReturn(job);
+        assertThrows(ResponseStatusException.class, () -> service.listPendingJobs(device, 1L, 25));
+        assertThrows(ResponseStatusException.class, () -> service.claimJob(device, job.id, new PadPrintJobClaimRequest()));
+        assertThrows(ResponseStatusException.class, () -> service.startPrint(device, job.id, new PadPrintJobStartPrintRequest()));
+        assertThrows(ResponseStatusException.class, () -> service.getPayload(device, job.id));
+        verify(printJobRepository, never()).findPendingPadDirectJobs(any(), any(), any(), any());
+        verify(printJobRepository, never()).claimPadDirectJob(any(), any(), any(), any(), any(), any());
+        verify(printJobRepository, never()).startPadPrint(any(), any(), any(), any(), any(), any());
+        verify(printJobRepository, never()).save(any());
+        assertEquals(PrintJobStatus.CLAIMED, job.status);
+    }
+
+    @Test
+    void organizationMismatchCannotAccessADeviceJob() {
+        StoreDevice device = device(); device.organizationId = 7L;
+        PrintJob job = claimedPadJob(PrintJobStatus.PRINTING, device.id, "attempt-1"); job.organization_id = 8L;
+        when(printJobService.requireJob(job.id)).thenReturn(job);
+        PadPrintJobCompleteRequest request = new PadPrintJobCompleteRequest(); request.client_attempt_token = "attempt-1";
+        assertThrows(ResponseStatusException.class, () -> service.completeJob(device, job.id, request));
+        verify(printJobRepository, never()).save(any());
+    }
+
+    @Test
+    void mockProofCannotBeReturnedAsPadPayload() {
+        StoreDevice device = device(); PrintJob job = claimedPadJob(PrintJobStatus.PRINTING, device.id, "attempt-1");
+        job.payload_snapshot = "{\"receipt_context\":{\"version\":\"ALLO_RECEIPT_V1\"}}";
+        job.rendered_text_snapshot = "Frozen MOCK"; job.escposPayloadBase64 = "TU9DSw==";
+        PrinterConfig printer = printer(job.printer_id, "Synthetic", "192.0.2.10", 9100);
+        printer.text_encoding = "UTF-8";
+        com.restaurant.system.delivery.ReceiptArtifact.freeze(job, com.restaurant.system.delivery.ReceiptArtifact.MOCK_TRANSPORT, printer, "MEDIUM");
+        when(printJobService.requireJob(job.id)).thenReturn(job);
+        when(printerConfigRepository.findById(printer.id)).thenReturn(Optional.of(printer));
+        assertThrows(ResponseStatusException.class, () -> service.getPayload(device, job.id));
+    }
+
+    @Test
+    void templatePayloadRequiresExplicitPadIntentAndPhysicalArtifact() {
+        StoreDevice device = device(); PrintJob job = claimedPadJob(PrintJobStatus.PRINTING, device.id, "attempt-1");
+        job.module_code = "TEMPLATE_KITCHEN"; job.payload_snapshot = "{\"group_code\":\"A\"}";
+        job.rendered_text_snapshot = "Frozen template"; job.escposPayloadBase64 = "G0BGcm96ZW4K";
+        PrinterConfig printer = printer(job.printer_id, "Synthetic", "192.0.2.10", 9100);
+        printer.text_encoding = "UTF-8";
+        when(printJobService.requireJob(job.id)).thenReturn(job);
+        when(printerConfigRepository.findById(printer.id)).thenReturn(Optional.of(printer));
+        assertThrows(ResponseStatusException.class, () -> service.getPayload(device, job.id));
+        job.payload_snapshot = "{\"group_code\":\"A\",\"execution_mode\":\"PAD_DIRECT\"}";
+        com.restaurant.system.delivery.ReceiptArtifact.freeze(job, com.restaurant.system.delivery.ReceiptArtifact.PAD_TRANSPORT, printer, "MEDIUM");
+        assertEquals(job.escposPayloadBase64, service.getPayload(device, job.id).escpos_payload_base64);
     }
 
     private StoreDevice device() {

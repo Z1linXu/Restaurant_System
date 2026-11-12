@@ -4,10 +4,11 @@ import com.restaurant.system.printing.entity.*;
 import com.restaurant.system.printing.repository.*;
 import com.restaurant.system.printing.service.*;
 import com.restaurant.system.printing.routing.TemplateRoutingModels.FrozenIntent;
+import com.restaurant.system.printing.AlloProductionPrintingPolicy;
 import java.util.*;
 import org.springframework.stereotype.Service;
 
-/** Executes only inert MOCK via the existing JobService. All physical transports remain unreachable. */
+/** Reuses the existing MOCK/PAD queue. This handler never invokes a physical transport. */
 @Service
 public class TemplateKitchenDispatchHandler {
  private final TemplateMenuService menus;
@@ -16,8 +17,10 @@ public class TemplateKitchenDispatchHandler {
  private final PrinterConfigRepository printers;
  private final PrinterConfigService printing;
  private final com.restaurant.system.modules.StoreModuleAccessEvaluator modules;
- public TemplateKitchenDispatchHandler(TemplateMenuService menus,PrintJobService jobs,PrintJobRepository repository,PrinterConfigRepository printers,PrinterConfigService printing,com.restaurant.system.modules.StoreModuleAccessEvaluator modules){
+ private final AlloProductionPrintingPolicy printingPolicy;
+ public TemplateKitchenDispatchHandler(TemplateMenuService menus,PrintJobService jobs,PrintJobRepository repository,PrinterConfigRepository printers,PrinterConfigService printing,com.restaurant.system.modules.StoreModuleAccessEvaluator modules,AlloProductionPrintingPolicy printingPolicy){
   this.menus=menus;this.jobs=jobs;this.repository=repository;this.printers=printers;this.printing=printing;this.modules=modules;
+  this.printingPolicy=printingPolicy;
  }
  public boolean handles(OrderDispatchOutbox event){return TemplateRoutingService.EVENT.equals(event.eventType);}
  public String serializationKey(OrderDispatchOutbox event){
@@ -30,11 +33,17 @@ public class TemplateKitchenDispatchHandler {
   var existing=repository.findByDispatchSourceKey(event.sourceKey).orElse(null);
   if(existing!=null){
    event.lastError=existing.error_message;
-   return "PRINTED".equals(existing.status)?PrintDispatchOutcome.MOCK_RENDERED:
+   return "PRINTED".equals(existing.status)?("MOCK".equals(existing.executionMode)?PrintDispatchOutcome.MOCK_RENDERED:PrintDispatchOutcome.DISPATCHED):
     "FAILED".equals(existing.status)||"CANCELLED".equals(existing.status)?PrintDispatchOutcome.FAILED:PrintDispatchOutcome.DISPATCHED;
   }
-  if(!"MOCK".equals(printing.getStorePrintingMode(event.storeId))){
+  String mode=printing.getStorePrintingMode(event.storeId);
+  boolean pad="PAD_DIRECT".equals(mode)&&printingPolicy.allowsPadDirect(event.storeId);
+  if(!"MOCK".equals(mode)&&!pad){
    event.lastError="MOCK_ONLY: template kitchen transport is inert outside MOCK";return PrintDispatchOutcome.POLICY_BLOCKED;
+  }
+  if(pad&&!"PAD_DIRECT".equals(f.execution_mode)){
+   event.lastError="TEMPLATE_PAD_INTENT_REQUIRED: historical MOCK or unknown intent cannot enter a physical queue";
+   return PrintDispatchOutcome.POLICY_BLOCKED;
   }
   try {modules.evaluateCapability(event.storeId,com.restaurant.system.modules.ModuleKeys.PRINTING).requireAllowed();}
   catch(com.restaurant.system.common.exception.BusinessException denied){
@@ -45,8 +54,13 @@ public class TemplateKitchenDispatchHandler {
   if(printer==null){event.lastError="MOCK printer is not configured or no longer available";return PrintDispatchOutcome.FAILED;}
   PrintJob job=jobs.createPendingJob(event.organizationId,event.storeId,event.orderId,event.orderUpdateBatchId,f.printer_id,
    TemplateRoutingService.EVENT,TemplateRoutingService.EVENT,null,event.routingContext,event.sourceKey);
-  job.executionMode="MOCK";repository.save(job);
+  job.executionMode=mode;repository.save(job);
   job=jobs.attachRenderedContent(job,f.printer_id,f.rendered_text);
+  if(pad){
+   job=jobs.markPadDirectQueued(job,printer);
+   event.lastError=job.error_message;
+   return "FAILED".equals(job.status)?PrintDispatchOutcome.FAILED:PrintDispatchOutcome.DISPATCHED;
+  }
   job=jobs.markPrinting(job,printer);
   if("FAILED".equals(f.mock_failure)||"UNCERTAIN".equals(f.mock_failure)){
    String code="UNCERTAIN".equals(f.mock_failure)?"PRINT_RESULT_UNCERTAIN":"MOCK_EXECUTION_FAILED";

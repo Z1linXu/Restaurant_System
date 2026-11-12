@@ -12,15 +12,22 @@ import java.util.Set;
 
 /** Frozen, server-owned presentation data for the explicitly enabled merchant receipt. */
 public class ReceiptPresentation {
+    /** Server-frozen intent. Missing historical values may only use inert MOCK printing. */
+    public String execution_mode;
     public String language;
     public String restaurant_name;
     public Long settings_revision;
     public List<String> kitchen_station_codes = new ArrayList<>();
     public List<Long> order_item_ids = new ArrayList<>();
+    /** GRAB-only frozen exclusions. Receipt retains every sold item. Missing legacy field means include. */
+    public List<Long> kitchen_excluded_item_ids = new ArrayList<>();
     public Map<String, String> item_names = new LinkedHashMap<>();
     public Map<String, String> option_names = new LinkedHashMap<>();
     public BigDecimal subtotal;
     public BigDecimal total;
+    /** New Allô updates allocate tax from the rounded order delta. Absent on historical contexts. */
+    public BigDecimal update_subtotal;
+    public BigDecimal update_total;
     public String version = "ALLO_RECEIPT_V1";
 
     public void requireValid() {
@@ -31,10 +38,32 @@ public class ReceiptPresentation {
                 || kitchen_station_codes == null || item_names == null || option_names == null) {
             throw new BusinessException("RECEIPT_PRESENTATION_INVALID");
         }
+        if (hasFrozenUpdateAmounts() && (update_subtotal == null || update_total == null
+                || !exactCents(update_subtotal) || !exactCents(update_total)
+                || update_subtotal.signum() < 0 || update_total.compareTo(update_subtotal) < 0)) {
+            throw new BusinessException("RECEIPT_UPDATE_TOTALS_INVALID");
+        }
+    }
+
+    public boolean hasFrozenUpdateAmounts() {
+        return update_subtotal != null || update_total != null;
+    }
+
+    private boolean exactCents(BigDecimal value) {
+        try {
+            value.setScale(2, java.math.RoundingMode.UNNECESSARY);
+            return true;
+        } catch (ArithmeticException error) {
+            return false;
+        }
     }
 
     public boolean includesItem(Long id) {
         return id != null && order_item_ids.contains(id);
+    }
+
+    public boolean includesKitchenItem(Long id) {
+        return includesItem(id) && (kitchen_excluded_item_ids == null || !kitchen_excluded_item_ids.contains(id));
     }
 
     public String itemName(OrderItem item) {
@@ -70,6 +99,7 @@ public class ReceiptPresentation {
             case "notes" -> words("备注", "Notes", "Notes");
             case "subtotal" -> words("小计", "Subtotal", "Sous-total");
             case "tax" -> words("税", "Tax", "Taxes");
+            case "update_tax" -> words("税（整单舍入）", "Tax (order rounding)", "Taxes (arrondi global)");
             case "total" -> words("合计", "Total", "Total");
             case "submitted" -> words("提交时间", "Submitted", "Envoyée");
             case "printed" -> words("打印时间", "Printed", "Imprimée");

@@ -302,7 +302,7 @@ function OrderingWorkspace({
       items.filter((item) => {
         const search = searchableText(menuSearch)
         const matchesCategory = search.length > 0 || item.categoryId === activeCategoryId
-        const haystack = searchableText(item.nameEn, item.nameZh, item.nameFr, item.descriptionEn, item.descriptionZh)
+        const haystack = searchableText(item.sku, item.nameEn, item.nameZh, item.nameFr, item.descriptionEn, item.descriptionZh)
         return matchesCategory && haystack.includes(search) && canShowRefill(item, orderType, session?.items)
       }),
     [activeCategoryId, items, menuSearch, orderType, session?.items],

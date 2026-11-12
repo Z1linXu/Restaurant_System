@@ -38,6 +38,9 @@ public class StorePricingPolicy {
     @Column(name = "policy_revision", nullable = false)
     public Long policy_revision;
 
+    @Column(name = "category_bulk_pricing_enabled", nullable = false)
+    public boolean category_bulk_pricing_enabled;
+
     @Column(name = "created_at", nullable = false)
     public LocalDateTime created_at;
 

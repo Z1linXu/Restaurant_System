@@ -451,6 +451,67 @@ class OrderServiceImplTest {
         assertTrue(orderItemOptions.isEmpty());
     }
 
+    @Test
+    void verifiedIndependentTemplateChoicesCanShareCanonicalCodesAndFreezeTheirOwnSnapshots() {
+        org.mockito.Mockito.doReturn(true).when(addonResolver).hasCanonicalCode(store.id,"extra_meat");
+        long id=991L;
+        for(String kind:List.of("CUSTOM","SPICY_LEVEL","SIZE")) {
+            var choice=menuOption(id++,"CUSTOM".equals(kind)?"addon":kind.toLowerCase(java.util.Locale.ROOT),
+                "extra_meat",kind,"独立选择","Independent choice",new BigDecimal("0.50"));
+            choice.name_fr="Choix indépendant";
+            installIndependentTemplateChoice(choice);
+            var selected=optionRequest(choice.id,1);selected.option_code_snapshot=choice.option_code;
+            selected.option_group_snapshot=kind;selected.option_price_snapshot=new BigDecimal("0.50");
+            selected.option_name_snapshot_zh="Client label";
+            var order=orderService.createOrder(canonicalAddonRequest(selected));
+            var frozen=orderItemOptions.values().stream().filter(o->choice.id.equals(o.option_id)).findFirst().orElseThrow();
+            assertEquals(kind,frozen.option_group_snapshot);
+            assertEquals("独立选择",frozen.option_name_snapshot_zh);
+            assertEquals("Choix indépendant",frozen.option_name_snapshot_fr);
+            assertEquals(0,new BigDecimal("0.50").compareTo(frozen.price_delta));
+            orderService.submitOrder(order.id);
+            assertEquals("preparing",orders.get(order.id).status);
+            assertTrue(kitchenTasks.values().stream().anyMatch(task->order.id.equals(task.order_id)));
+        }
+    }
+
+    @Test
+    void templateChoiceExceptionRequiresCurrentSameStoreGroupBindingOnCreateAndDraftSubmit() {
+        org.mockito.Mockito.doReturn(true).when(addonResolver).hasCanonicalCode(store.id,"extra_meat");
+        var choice=menuOption(994L,"addon","extra_meat","CUSTOM","独立选择","Independent choice",BigDecimal.ZERO);
+        var bindings=installIndependentTemplateChoice(choice);
+        var selected=optionRequest(choice.id,1);selected.option_code_snapshot="extra_meat";selected.option_group_snapshot="CUSTOM";
+        selected.option_price_snapshot=BigDecimal.ZERO;
+        var group=bindings.forItem(menuItem.id).get(0);
+        group.store_id=store.id+1;
+        assertTrue(assertThrows(BusinessException.class,()->orderService.createOrder(canonicalAddonRequest(selected)))
+            .getMessage().contains("ADDON_ASSIGNMENT_REQUIRED"));
+        assertTrue(orderItemOptions.isEmpty());
+        group.store_id=store.id;
+        var draft=orderService.createOrder(canonicalAddonRequest(selected));
+        when(bindings.forItem(menuItem.id)).thenReturn(List.of());
+        assertTrue(assertThrows(BusinessException.class,()->orderService.submitOrder(draft.id))
+            .getMessage().contains("ADDON_ASSIGNMENT_REQUIRED"));
+        assertEquals("draft",orders.get(draft.id).status);
+        assertTrue(kitchenTasks.isEmpty());
+    }
+
+    private com.restaurant.system.menu.template.TemplateItemOptionGroupRepository installIndependentTemplateChoice(MenuItemOption choice) {
+        menuItem.template_option_groups_enabled=true;menuItem.is_active=true;menuItem.is_sold_out=false;
+        choice.template_group_code="independent";
+        when(menuItemOptionRepository.findById(choice.id)).thenReturn(Optional.of(choice));
+        when(menuItemOptionRepository.findAllByMenuItemIdOrdered(menuItem.id)).thenReturn(List.of(choice));
+        var bindings=org.mockito.Mockito.mock(com.restaurant.system.menu.template.TemplateItemOptionGroupRepository.class);
+        var group=new com.restaurant.system.menu.template.TemplateItemOptionGroup();group.store_id=store.id;group.menu_item_id=menuItem.id;
+        group.group_code=choice.template_group_code;group.name="Independent";group.kind=choice.option_group;group.selection_mode="SINGLE";group.is_active=true;
+        when(bindings.forItem(menuItem.id)).thenReturn(List.of(group));
+        var template=new com.restaurant.system.menu.template.TemplateMenuService(menuItemRepository,menuItemOptionRepository,bindings,
+            org.mockito.Mockito.mock(com.restaurant.system.menu.template.TemplateStoreConfigurationRepository.class),
+            org.mockito.Mockito.mock(com.restaurant.system.menu.service.MenuRevisionService.class),new com.fasterxml.jackson.databind.ObjectMapper(),
+            new org.springframework.mock.env.MockEnvironment().withProperty("app.template.enabled","true"),menuCategoryRepository);
+        orderService.setTemplateMenus(template);return bindings;
+    }
+
     private CreateOrderRequest canonicalAddonRequest(CreateOrderItemOptionRequest selected) {
         var item=new CreateOrderItemRequest(); item.menu_item_id=menuItem.id; item.quantity=1; item.options=List.of(selected);
         var request=new CreateOrderRequest(); request.store_id=store.id; request.created_by=1L;

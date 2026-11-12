@@ -8,10 +8,12 @@ export interface ReceiptPresentationSettings {
   frontdesk_language?: 'zh-CN' | 'en' | 'fr-CA' | null
   kitchen_station_codes: string[]
   revision: number
+  expected_revision?: number | null
+  kitchen_category_enabled?: Record<string, boolean> | null
 }
 
 export const fetchReceiptPresentation = (storeId: number) => apiRequest<ReceiptPresentationSettings>(`/api/v1/stores/${storeId}/receipt-presentation`)
-export const saveReceiptPresentation = (storeId: number, settings: ReceiptPresentationSettings) => apiRequest<ReceiptPresentationSettings>(`/api/v1/stores/${storeId}/receipt-presentation`, { method: 'PUT', body: JSON.stringify(settings) })
+export const saveReceiptPresentation = (storeId: number, settings: ReceiptPresentationSettings) => apiRequest<ReceiptPresentationSettings>(`/api/v1/stores/${storeId}/receipt-presentation`, { method: 'PUT', body: JSON.stringify({ ...settings, expected_revision: settings.revision }) })
 
 export interface PrinterConfigRecord {
   id?: number

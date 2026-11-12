@@ -696,6 +696,110 @@ class PrintDispatcherServiceImplTest {
         verifyNoInteractions(printerTransport);
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"MOCK_ONLY_NOT_PHYSICAL_PROOF", "PAD_DIRECT_ESCPOS_V1"})
+    void alloPadOriginalCopyRequiresPhysicalArtifactAndNeverInvokesBackendTransport(String transport) {
+        PrintJob source = new PrintJob(); source.id = 77L; source.store_id = 1L; source.order_id = 123L;
+        source.module_code = PrintModuleCode.GRAB; source.printer_id = 10L; source.status = PrintJobStatus.PRINTED;
+        source.rendered_text_snapshot = "Frozen original\n"; source.escposPayloadBase64 = "G0BGcm96ZW4K";
+        source.payload_snapshot = "{\"receipt_context\":{\"version\":\"ALLO_RECEIPT_V1\",\"execution_mode\":\"PAD_DIRECT\"}}";
+        source.executionMode = "PAD_DIRECT";
+        PrinterConfig printer = new PrinterConfig(); printer.id = 10L; printer.store_id = 1L;
+        printer.enabled = true; printer.text_encoding = "UTF-8"; printer.paper_width_mm = 80; printer.font_size = "MEDIUM";
+        com.restaurant.system.delivery.ReceiptArtifact.freeze(source, transport, printer, "MEDIUM");
+        PrintJob fresh = new PrintJob(); fresh.id = 78L; fresh.store_id = 1L; fresh.order_id = 123L;
+        fresh.module_code = PrintModuleCode.GRAB; fresh.status = PrintJobStatus.PENDING;
+        when(printJobService.requireJob(source.id)).thenReturn(source);
+        when(printerConfigService.getStorePrintingMode(1L)).thenReturn("PAD_DIRECT");
+        when(printerConfigRepository.findById(10L)).thenReturn(Optional.of(printer));
+        when(printJobService.createPendingJob(any(), any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(fresh);
+        when(printJobService.markPadDirectQueued(fresh, printer, "MEDIUM")).thenReturn(fresh);
+        when(printJobService.markFailed(any(), any(), any(), any())).thenReturn(fresh);
+
+        service.reprintJob(source.id, 5L);
+
+        if (com.restaurant.system.delivery.ReceiptArtifact.MOCK_TRANSPORT.equals(transport)) {
+            verify(printJobService, never()).attachRenderedContent(any(), any(), any());
+            verify(printJobService, never()).markPadDirectQueued(any(), any(), any());
+            verify(printJobService).markFailed(fresh, printer, "REPRINT_FAILED", "RECEIPT_MOCK_ARTIFACT_NOT_PHYSICAL");
+        } else {
+            verify(printJobService).attachRenderedContent(fresh, printer.id, source.rendered_text_snapshot);
+            verify(printJobService).markPadDirectQueued(fresh, printer, "MEDIUM");
+            verify(printJobService, never()).markPrinting(any(), any());
+        }
+        assertEquals(PrintJobStatus.PRINTED, source.status);
+        verifyNoInteractions(printerTransport);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"MOCK", "UNKNOWN", "PAD_DIRECT", "PAD_PROOF_WITH_MOCK_JOB"})
+    void templateOriginalReprintCannotPromoteMockOrUnknownHistoryToPad(String provenance) {
+        PrintJob source = new PrintJob(); source.id = 77L; source.store_id = 1L; source.order_id = 123L;
+        source.module_code = "TEMPLATE_KITCHEN"; source.printer_id = 10L; source.status = PrintJobStatus.PRINTED;
+        source.rendered_text_snapshot = "Frozen template original\n";
+        boolean physicalProof = provenance.startsWith("PAD");
+        source.payload_snapshot = physicalProof ? "{\"group_code\":\"A\",\"execution_mode\":\"PAD_DIRECT\"}" : "{\"group_code\":\"A\"}";
+        source.executionMode = "UNKNOWN".equals(provenance) ? null : "PAD_DIRECT".equals(provenance) ? "PAD_DIRECT" : "MOCK";
+        PrinterConfig printer = new PrinterConfig(); printer.id = 10L; printer.store_id = 1L;
+        printer.enabled = true; printer.text_encoding = "UTF-8"; printer.paper_width_mm = 80; printer.font_size = "MEDIUM";
+        if (physicalProof) {
+            source.escposPayloadBase64 = "G0BGcm96ZW4K";
+            com.restaurant.system.delivery.ReceiptArtifact.freeze(source, com.restaurant.system.delivery.ReceiptArtifact.PAD_TRANSPORT, printer, "MEDIUM");
+        }
+        String originalPayload = source.payload_snapshot;
+        PrintJob fresh = new PrintJob(); fresh.id = 78L; fresh.store_id = 1L; fresh.order_id = 123L;
+        fresh.module_code = "TEMPLATE_KITCHEN"; fresh.status = PrintJobStatus.PENDING;
+        when(printJobService.requireJob(source.id)).thenReturn(source);
+        when(printerConfigService.getStorePrintingMode(1L)).thenReturn("PAD_DIRECT");
+        when(printerConfigRepository.findById(10L)).thenReturn(Optional.of(printer));
+        when(printJobService.createPendingJob(any(), any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(fresh);
+        when(printJobService.markPadDirectQueued(fresh, printer, "MEDIUM")).thenReturn(fresh);
+        when(printJobService.markFailed(any(), any(), any(), any())).thenReturn(fresh);
+
+        service.reprintJob(source.id, 5L);
+
+        if ("PAD_DIRECT".equals(provenance)) {
+            verify(printJobService).attachRenderedContent(fresh, printer.id, source.rendered_text_snapshot);
+            verify(printJobService).markPadDirectQueued(fresh, printer, "MEDIUM");
+        } else {
+            verify(printJobService, never()).attachRenderedContent(any(), any(), any());
+            verify(printJobService, never()).markPadDirectQueued(any(), any(), any());
+            verify(printJobService).markFailed(eq(fresh), eq(printer), eq("REPRINT_FAILED"), anyString());
+        }
+        assertEquals(PrintJobStatus.PRINTED, source.status); assertEquals(originalPayload, source.payload_snapshot);
+        verifyNoInteractions(printerTransport);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"GRAB", "FRONTDESK_RECEIPT"})
+    void historicalPendingReceiptOutboxCannotCreateAnyJobAfterStoreSwitchesToPad(String module) {
+        Store store = new Store(); store.id = 1L; store.code = "ALLO_NOUILLES_TEST"; store.printing_mode = "PAD_DIRECT";
+        Order order = new Order(); order.id = 123L; order.store_id = 1L;
+        var events = org.mockito.Mockito.mock(com.restaurant.system.printing.repository.OrderDispatchOutboxRepository.class);
+        var policy = org.mockito.Mockito.mock(com.restaurant.system.printing.AlloProductionPrintingPolicy.class);
+        when(policy.allowsPadDirect(store)).thenReturn(true);
+        var contexts = new com.restaurant.system.delivery.ReceiptContextService(
+            org.mockito.Mockito.mock(com.restaurant.system.delivery.StorePresentationService.class),
+            orderRepository, orderItemRepository, orderItemOptionRepository, events,
+            new com.fasterxml.jackson.databind.ObjectMapper(), policy);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "receiptContexts", contexts);
+        when(storeRepository.findById(1L)).thenReturn(Optional.of(store));
+        when(orderRepository.findById(123L)).thenReturn(Optional.of(order));
+        when(printerConfigService.getStorePrintingMode(1L)).thenReturn("PAD_DIRECT");
+        var event = new com.restaurant.system.printing.entity.OrderDispatchOutbox();
+        event.storeId = 1L; event.orderId = 123L; event.moduleCode = module;
+        String key = "submit:123:" + module;
+        when(events.findBySourceKey(key)).thenReturn(Optional.of(event));
+        for (String historicalContext : java.util.Arrays.asList(null,
+                "{\"version\":\"ALLO_RECEIPT_V1\"}",
+                "{\"version\":\"ALLO_RECEIPT_V1\",\"execution_mode\":\"MOCK\"}")) {
+            event.routingContext = historicalContext;
+            assertThrows(BusinessException.class, () -> service.dispatchPersistedEvent(module, 1L, 123L, null, key));
+            assertEquals(historicalContext, event.routingContext);
+        }
+        verifyNoInteractions(printJobService, printerTransport);
+    }
+
     @Test
     void cloudProfileBlocksPrivatePrinterBeforeTransport() {
         MockEnvironment environment = new MockEnvironment();
