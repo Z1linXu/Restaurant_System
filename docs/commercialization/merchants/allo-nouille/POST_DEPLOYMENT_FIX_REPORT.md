@@ -66,7 +66,7 @@ Finish 再次遇到原生确认工具阻塞，不能标作桌台释放成功。�
 
 ## 浏览器覆盖限制
 
-Finish确认、Frontdesk角色浏览器登录、组选项库完整Save为NOT_RUN_TOOL_LIMIT；
+Finish在18:25UTC经Owner协助确认后，实际浏览器核验completed、4张堂食桌空闲及历史金额36.17不变，现为PASS_OWNER_ASSISTED。Frontdesk角色浏览器登录、组选项库完整Save仍为NOT_RUN_TOOL_LIMIT；
 无配置的Remove/固定Offer为NOT_CONFIGURED。独立审查按原始§8.6/§11.1及实际
 依赖图接受为非阻断覆盖限制：Finish/auth未改，8次正常API完成已有证明；Library
 还有实际JPA/事务回滚/当前Canonical值与前端scoped-payload回归。没有将工具限制
@@ -183,3 +183,14 @@ REPAIR_TIME_ESCALATION：SMALL连接事务修复在15:28:22UTC已提交，通过
 约10分钟、浏览器恢复与复核约20分钟（部分并行）。产品工作已停止；剩余仅证据/PR
 归档，无新架构、全局OSIV/pool改造、原生确认UI重写或P3清理。两处helper修正均
 未导致应用重建/重部署，沿用已审路径后停止。
+
+## 18:25 UTC 补充核验
+
+Owner接受此前QA原生确认后，实际浏览器读回TEST1completed、4idle/0occupied、
+历史B1/D1/E1和CAD36.17不变。补充[证据](evidence/qa-finish-owner-assisted.json)明确
+区分人工确认与Agent读取，无新的订单写API、代码变更、应用重建或Production操作。
+这是纯证据更新，按AGENTS风险比例采用文档例外，无需再做Agent6或部署。
+
+本次补充 Execution Time Breakdown：Implementation（证据/文档）约2分钟；
+Validation（实际浏览器与文档断言）约2分钟；Total约7分钟（18:25–18:32UTC，
+包含正常准备与同步）。未运行构建、应用测试或部署，因为没有可执行代码变更。

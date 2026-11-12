@@ -51,7 +51,6 @@
   "candidate_archive_sha256": "f12e133270db93bb913071c7e60bab4c3c04ad58014a5e37d961c4f93ff04fb1",
   "menu_option_concurrency": "PASS 2x34 actualHTTP,4connections,20tables378rows unchanged",
   "browser_unexecuted": [
-    "Finish confirmation/table release retry",
     "Frontdesk role browser login",
     "Option Library full Save"
   ],
@@ -71,5 +70,14 @@
   "post_deploy_smoke": "PASS_HTTPS_LOGIN_AUTH_API_WSS_HEALTH",
   "database_container_unchanged": true,
   "staging_mutated": false,
-  "production_mutation": "ALLO_ONLY_APP_V42_STORE1_CAPABILITY_AND_CANONICAL_METADATA"
+  "production_mutation": "ALLO_ONLY_APP_V42_STORE1_CAPABILITY_AND_CANONICAL_METADATA",
+  "qa_finish_followup": {
+    "observed_at_utc": "2026-11-12T18:27:25.821Z",
+    "result": "PASS_OWNER_ASSISTED_NATIVE_CONFIRM_THEN_BROWSER_READBACK",
+    "status": "completed",
+    "idle_tables": 4,
+    "occupied_tables": 0,
+    "history_total_cad": "36.17",
+    "production_mutated": false
+  }
 }

@@ -43,7 +43,7 @@ release evidence directory; committed images are unchanged browser JPEG bytes.
 | Dine-in Submit | Submit TEST1 draft. Table returned occupied, with Edit/Print/Finish controls. Backend accepted synthetic order | PASS |
 | Append Update | Edit submitted order; submitted B1 fields locked. Add D1 water and E1 ice cream, Update Order. Returned confirmed occupied table; original item remained frozen | PASS |
 | Reprint guard | Open Print, choose FRONTDESK_RECEIPT. UI rejected whole-order reprint of an updated order and directed the user to original tickets in Print Center, preventing omitted additions | PASS |
-| Finish | Click Finish. A synchronous ordinary confirmation blocked browser control; no completed status/table release was observed | NOT RUN TO COMPLETION |
+| Finish | Initial synchronous confirmation blocked browser control; later Owner accepted it and18:25follow-up observed completed/history36.17 and4free/0occupied | PASS_OWNER_ASSISTED; see follow-up below |
 
 All price/configuration writes above were synthetic QA writes. No Production
 sale, price change, test order or reprint was made. The later narrowly scoped
@@ -110,8 +110,7 @@ unsupported OS automation was attempted. An asynchronous user question requests
 only dismissal/acceptance of the ordinary QA dialog to recover browser control.
 It is not another release approval request.
 
-Remaining browser-dependent cases are Finish/table release, completed status
-readback, Frontdesk-role normal browser login/scope checks and full library Save.
+Remaining browser-dependent coverage gaps are Frontdesk-role normal browser login/scope checks and full library Save. Finish/table-release and completed history were subsequently verified after Owner confirmation, as recorded below.
 There are no configured fixed offers/Remove selections/free Add-on records to
 exercise; this is reported as NOT_CONFIGURED, not a fabricated PASS. Actual CLI
 role/device/isolation tests remain separate evidence. Independent risk review classified these remaining cases as non-blocking
@@ -139,7 +138,28 @@ Orders/old Jobs are not rewritten.
 Backend follow-up:1519 tests total,1402 passed/117 skipped/0failures; actual
 new-JAR HTTP/renderer acceptance and independent review PASS. The new test
 orders were created by API and are explicitly **not** additional browser cases.
-All original Orders1–8 and Jobs1–18 remained byte/row-hash identical; Order8
-remains active until the browser handoff is resolved. See
+All original Orders1–8 and Jobs1–18 remained byte/row-hash identical; At this earlier point Order8
+remained active; the18:25Owner-assisted confirmation follow-up below closes that gap. See
 [actual update amount proof](UPDATE_RECEIPT_AMOUNT_REGRESSION.md).
-Print Center was completed during the resume above; Finish remains blocked by the native confirmation.
+Print Center was completed during the resume above; Finish subsequently completed with Owner-assisted native confirmation.
+
+## Owner-assisted Finish follow-up — 18:25 UTC
+
+Owner reported clicking the pending native confirm. The same browser2/tab4 was
+readable again. Actual frontdesk AX/DOM showed `TEST 1订单已完成。`, all4dine-in
+Tables idle and0occupied. Opening Order History and selecting `TEST 1 completed
+堂食` showed已完成, the same B1/D1/E1 snapshots and totalCAD36.17. No new Finish,
+order submit/update/reprint or database write was issued by the Agent in this
+follow-up. The existing takeoutOrder11 remains preparing and is independent of
+the dine-in table count; no claim of all QAorders completed is made.
+
+Result: **PASS_OWNER_ASSISTED_NATIVE_CONFIRM_AND_BROWSER_READBACK**. This was
+not fully automated confirmation. Full AX/DOM evidence is retained privately;
+the native screenshot surface captured only the sidebar, so no full visual
+screenshot certification is claimed for this follow-up. The previous viewport
+override was successfully reset. Concise identifiers/proof digest are in
+[the follow-up evidence](evidence/qa-finish-owner-assisted.json).
+
+Only Frontdesk-roleUIlogin and LibraryfullSave remain NOT_RUN_TOOL_LIMIT.
+Production was already deployed; this follow-up did not query, restart,
+redeploy or mutate Production. No code or test implementation changed.

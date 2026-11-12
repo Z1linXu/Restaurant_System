@@ -1,5 +1,10 @@
 # Allô 独立安全审查
 
+协调者补充（18:25UTC后）：Owner已接受此前QA确认；主Agent实际浏览器核验
+TEST1completed、4idle/0occupied和CAD36.17历史不变。Finish现为PASS_OWNER_ASSISTED，
+余下2项工具覆盖限制保留。此为后续验收事实，未重写下方独立审查当时的判断；未改变
+应用源码或Production运行，文档按风险比例例外无需新增Agent6审查。
+
 最新审查结论：23f3代码、并发证明、最终固定批次/激活与Canonical/Smoke脚本PASS；
 剩余Finish/角色UI登录/Library完整Save明确NOT_RUN_TOOL_LIMIT，依原始§8.6/§11.1和
 未变依赖图判为非阻断覆盖限制。以下保留各轮审查过程；早期仅工具受限的NO-GO解释

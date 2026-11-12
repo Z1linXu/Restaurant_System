@@ -1,0 +1,17 @@
+{
+  "observed_at_utc": "2026-11-12T18:27:25.821Z",
+  "environment": "ISOLATED_SYNTHETIC_QA_NOT_PRODUCTION",
+  "source_sha": "23f3e804713ad633f1d95f10d1b0cfebfcf31edf",
+  "result": "PASS_OWNER_ASSISTED_NATIVE_CONFIRM_THEN_BROWSER_READBACK",
+  "order_id": 8,
+  "table": "TEST 1",
+  "status": "completed",
+  "idle_tables": 4,
+  "occupied_tables": 0,
+  "history_total_cad": "36.17",
+  "original_frozen_items_and_print_records_visible": true,
+  "agent_order_write_calls_in_followup": 0,
+  "production_mutated": false,
+  "raw_browser_proof_sha256": "f986597d1245908f175f1a659cc3dc04bb2bf4a2785820767af8ca8612d0b3fa",
+  "screenshot_limitation": "Native screenshot surface captured sidebar only; completion proof is actual full AX/DOM readback, not a claimed full visual screenshot"
+}

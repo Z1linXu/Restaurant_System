@@ -33,3 +33,5 @@ Worktree excludes unrelated dirty main work. Lanzhou Production is out of scope.
 Only reviewed Allôruntime/V42/Store1capability/canonical metadata changed. No Productiontest orders, priceadjustments,reprints or devicepairing.
 Store remains MOCK with0 paired devices. Android worker and physical printing are NOT TESTED.
 The earlier c242548/e7dde0a staged candidates are superseded by23f3e804 and must not be activated.
+
+- [x] 18:25UTC Owner-assisted native Finish confirmation; actual browser TEST1completed/4idle0occupied/history36.17; no Production change.

@@ -206,3 +206,12 @@ Two helper-only corrections were bounded (printertable name during prepare;
 categoryGET path during readonlysmoke); no application rebuild/redeploy followed.
 Current execution authority is only CURRENT_STATE.yml. Deployment is complete;
 no main merge, real hardware pairing/printing or nextPhase is implied.
+
+## Later QA confirmation evidence
+
+At18:25UTC Owner accepted the pending synthetic QA native Finish confirmation.
+Actual browser readback verifiedTEST1completed,4idle/0occupiedtables and unchanged
+CAD36.17history. This closes Finish's browser gap asPASS_OWNER_ASSISTED; only
+Frontdesk-roleUIlogin and LibraryfullSave retain their documented limits.
+No new code/artifact, Production access/redeploy or migration was performed.
+[Supplemental proof](evidence/qa-finish-owner-assisted.json).
