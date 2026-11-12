@@ -15,6 +15,7 @@ class AlloCorsConfigTest {
    assertThat(r.api().checkOrigin("https://test.lanzhounoodlesmtl.com")).isEqualTo("https://test.lanzhounoodlesmtl.com");
    assertThat(r.api().checkOrigin("https://pos.allonouilles.com")).isEqualTo("https://pos.allonouilles.com");
    assertThat(r.api().checkOrigin("http://pos.allonouilles.com")).isNull();
+   assertThat(r.api().checkOrigin("http://127.0.0.1:28182")).isNull();
    assertThat(r.api().checkOrigin("https://attacker.invalid")).isNull();
    assertThat(r.api().checkOrigin("https://test.lanzhounoodlesmtl.com:444")).isNull();
   }
@@ -23,6 +24,14 @@ class AlloCorsConfigTest {
   try(var c=new AnnotationConfigApplicationContext()) {
    c.getEnvironment().setActiveProfiles("prod"); c.register(RestCorsConfig.class,TemplateTestCorsConfig.class); c.refresh();
    assertThat(c.getBeansOfType(TemplateTestCorsConfig.class)).isEmpty(); assertThat(c.getBeansOfType(RestCorsConfig.class)).hasSize(1);
+  }
+ }
+ @Test void isolatedQaOriginRequiresExplicitQaProfile() {
+  try(var c=new AnnotationConfigApplicationContext()) {
+   c.getEnvironment().setActiveProfiles("allo-test","allo-qa");c.register(TemplateTestCorsConfig.class);c.refresh();
+   var r=new Registry();c.getBean(TemplateTestCorsConfig.class).addCorsMappings(r);
+   assertThat(r.api().checkOrigin("http://127.0.0.1:28182")).isEqualTo("http://127.0.0.1:28182");
+   assertThat(r.api().checkOrigin("https://attacker.invalid")).isNull();
   }
  }
 }

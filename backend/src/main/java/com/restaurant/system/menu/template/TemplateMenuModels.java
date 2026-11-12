@@ -43,5 +43,7 @@ public final class TemplateMenuModels {
         public boolean is_active = true;
         public boolean is_default;
         public Long source_option_id;
+        public Long store_addon_id;
+        public Boolean addon_eligible;
     }
 }

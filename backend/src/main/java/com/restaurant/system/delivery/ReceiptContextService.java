@@ -6,13 +6,15 @@ import com.restaurant.system.common.exception.BusinessException;
 import com.restaurant.system.order.entity.*;
 import com.restaurant.system.order.repository.*;
 import com.restaurant.system.printing.dto.ReceiptPresentation;
+import com.restaurant.system.menu.display.MenuCodeFormatter;
 import com.restaurant.system.printing.entity.PrintJob;
+import com.restaurant.system.printing.AlloProductionPrintingPolicy;
 import com.restaurant.system.printing.repository.OrderDispatchOutboxRepository;
 import com.restaurant.system.user.entity.Store;
 import java.util.*;
 import org.springframework.stereotype.Service;
 
-/** Closed Allô MOCK seam. Existing events without a context keep their legacy interpretation. */
+/** Closed Allô receipt seam. Existing events without a context keep their legacy interpretation. */
 @Service
 public class ReceiptContextService {
     private final StorePresentationService presentation;
@@ -21,10 +23,12 @@ public class ReceiptContextService {
     private final OrderItemOptionRepository options;
     private final OrderDispatchOutboxRepository events;
     private final ObjectMapper mapper;
+    private final AlloProductionPrintingPolicy printingPolicy;
     public ReceiptContextService(StorePresentationService presentation, OrderRepository orders,
             OrderItemRepository items, OrderItemOptionRepository options,
-            OrderDispatchOutboxRepository events, ObjectMapper mapper) {
+            OrderDispatchOutboxRepository events, ObjectMapper mapper, AlloProductionPrintingPolicy printingPolicy) {
         this.presentation=presentation;this.orders=orders;this.items=items;this.options=options;this.events=events;this.mapper=mapper;
+        this.printingPolicy=printingPolicy;
     }
     public static String sourceKey(String module,Long order,Long batch) {
         return (batch==null?"submit:"+order:"update:"+order+":"+batch)+":"+module;
@@ -35,11 +39,12 @@ public class ReceiptContextService {
     }
     public ReceiptPresentation freeze(Store store,String module,Long orderId,Long batch) {
         if(!enabled(store,module))return null;
-        if(!Set.of("MOCK","DISABLED").contains(store.printing_mode))throw fail("ALLO_RECEIPT_TEST_MOCK_ONLY");
+        requireAllowedMode(store);
         Order order=orders.findById(orderId).orElseThrow(()->fail("ORDER_NOT_FOUND"));
         if(!store.id.equals(order.store_id))throw fail("RECEIPT_STORE_MISMATCH");
         var settings=presentation.receipts(store);
         ReceiptPresentation context=new ReceiptPresentation();
+        context.execution_mode=store.printing_mode;
         context.language="GRAB".equals(module)?settings.kitchen_language:settings.frontdesk_language;
         if(context.language==null)context.language=settings.default_language;
         if(!StorePresentationService.LOCALES.contains(context.language))throw fail("RECEIPT_LANGUAGE_INVALID");
@@ -48,8 +53,10 @@ public class ReceiptContextService {
         context.restaurant_name=String.valueOf(presentation.publicView(store).getOrDefault("display_name",store.name));
         var lines=items.findAllByOrderId(orderId).stream().filter(i->batch==null||batch.equals(i.order_update_batch_id)).toList();
         context.order_item_ids=lines.stream().map(i->i.id).toList();
+        if("GRAB".equals(module))context.kitchen_excluded_item_ids=lines.stream()
+            .filter(i->!settings.kitchenEnabled(i.category_code_snapshot)).map(i->i.id).toList();
         context.item_names=new LinkedHashMap<>();context.option_names=new LinkedHashMap<>();
-        for(var item:lines)context.item_names.put(String.valueOf(item.id),resolve(context.language,item.item_name_snapshot_zh,item.item_name_snapshot_en,item.item_name_snapshot_fr));
+        for(var item:lines)context.item_names.put(String.valueOf(item.id),MenuCodeFormatter.display(item.item_sku_snapshot,resolve(context.language,item.item_name_snapshot_zh,item.item_name_snapshot_en,item.item_name_snapshot_fr)));
         if(!lines.isEmpty())for(var option:options.findAllByOrderItemIds(context.order_item_ids))
             context.option_names.put(String.valueOf(option.id),resolve(context.language,option.option_name_snapshot_zh,option.option_name_snapshot_en,option.option_name_snapshot_fr));
         context.subtotal=order.subtotal_amount;context.total=order.total_amount;
@@ -62,10 +69,13 @@ public class ReceiptContextService {
             var context = deserialize(event.routingContext);
             if(context==null && event.routingContext!=null && !event.routingContext.isBlank()
                     && "ALLO_NOUILLES_TEST".equals(store.code))throw fail("RECEIPT_CONTEXT_INVALID");
-            if(context!=null&&!Set.of("MOCK","DISABLED").contains(store.printing_mode))throw fail("ALLO_RECEIPT_TEST_MOCK_ONLY");
+            if(context!=null)requireAllowedMode(store);
+            requireFrozenPadIntent(store,module,context);
             return context;
         }
-        return freeze(store,module,orderId,batch);
+        ReceiptPresentation context=freeze(store,module,orderId,batch);
+        requireFrozenPadIntent(store,module,context);
+        return context;
     }
     public String serialize(ReceiptPresentation context) {
         if(context==null)return null;
@@ -97,6 +107,18 @@ public class ReceiptContextService {
         String preferred="zh-CN".equals(locale)?zh:"fr-CA".equals(locale)?fr:en;
         for(String name:new String[]{preferred,en,zh,fr})if(name!=null&&!name.isBlank())return name;
         return "[missing name]";
+    }
+    private void requireAllowedMode(Store store) {
+        if(Set.of("MOCK","DISABLED").contains(store.printing_mode))return;
+        if("PAD_DIRECT".equals(store.printing_mode)&&printingPolicy.allowsPadDirect(store))return;
+        throw fail("ALLO_RECEIPT_TEST_MOCK_ONLY");
+    }
+    private void requireFrozenPadIntent(Store store,String module,ReceiptPresentation context) {
+        if("PAD_DIRECT".equals(store.printing_mode)&&"ALLO_NOUILLES_TEST".equals(store.code)
+                &&Set.of("GRAB","FRONTDESK_RECEIPT").contains(module)
+                &&(context==null||!"PAD_DIRECT".equals(context.execution_mode))) {
+            throw fail("RECEIPT_PAD_INTENT_REQUIRED");
+        }
     }
     private static BusinessException fail(String message){return new BusinessException(message);}
 }

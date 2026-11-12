@@ -14,6 +14,8 @@ export interface TemplateOption {
   price_delta: number
   is_active: boolean
   is_default?: boolean
+  store_addon_id?: number | null
+  addon_eligible?: boolean | null
 }
 
 export interface TemplateOptionGroup {

@@ -217,6 +217,22 @@ class AlloReceiptPresentationTest {
         assertTrue(grab.render(request).contains("Frozen English fallback"));
     }
 
+    @Test void frozenCategoryExclusionsAffectOnlyGrabNotReceiptAndNeverDuplicateTheSharedStation() {
+        var request=request();
+        var dessert=item(11L,"3.99");dessert.category_code_snapshot="DESSERT";
+        var drink=item(12L,"1.99");drink.category_code_snapshot="DRINK";
+        request.order_items=List.of(request.order_items.get(0),dessert,drink);
+        request.kitchen_tasks=List.of(task(1L,10L,"BACK_KITCHEN"),task(2L,11L,"BACK_KITCHEN"));
+        request.receipt_context.order_item_ids=List.of(10L,11L,12L);
+        request.receipt_context.item_names=Map.of("10","B1 Main","11","E1 Dessert","12","D1 Water");
+        request.receipt_context.kitchen_excluded_item_ids=List.of(11L,12L);
+        String kitchen=grab.render(request);String receipt=frontdesk.render(request);
+        assertTrue(kitchen.contains("B1 Main"));assertFalse(kitchen.contains("E1 Dessert"));assertFalse(kitchen.contains("D1 Water"));
+        assertTrue(receipt.contains("B1 Main"));assertTrue(receipt.contains("E1 Dessert"));assertTrue(receipt.contains("D1 Water"));
+        request.receipt_context.kitchen_excluded_item_ids=List.of(12L);
+        assertEquals(1,occurrences(grab.render(request),"E1 Dessert"));
+    }
+
     private PrintRenderRequest request() {
         PrintRenderRequest request = new PrintRenderRequest();
         request.order = new Order();

@@ -1,3 +1,4 @@
+import { withMenuCode } from '../../utils/menuCode'
 import { useEffect, useMemo, useState } from 'react'
 import {
   fetchAdminMenuItems,
@@ -17,7 +18,8 @@ import { RemoveCatalogPanel } from './RemoveCatalogPanel'
 import { PrintingRulesMenuPanel } from './PrintingRulesMenuPanel'
 import { menuManagementSection, menuManagementPath, type MenuManagementSection } from './menuManagementSections'
 import { CategoryManagementPanel, StationManagementPanel } from './MenuStructurePanels'
-import { PricingRulesPanel } from './PricingRulesPanel'
+import { StorePricingPanel } from './StorePricingPanel'
+import { CategoryKitchenPrintingPanel } from './CategoryKitchenPrintingPanel'
 import { ItemPrintingRuleAliasPanel } from './PrintingDisplayRulesPanel'
 import { TemplateOptionGroupsPanel } from './TemplateOptionGroupsPanel'
 import { useAuth } from '../auth/useAuth'
@@ -678,12 +680,12 @@ export function MenuManagementPage() {
             {activeSection === 'option_groups' && canManageTemplate ? <TemplateOptionGroupsPanel key={`library:${selectedStoreId}`} storeId={Number(selectedStoreId)} /> : null}
 
             {activeSection === 'categories' ? (
-              <CategoryManagementPanel
+              <div><CategoryManagementPanel
                 storeId={Number(selectedStoreId)}
                 records={overview?.menu_categories ?? []}
                 onChanged={refreshMenuManagement}
                 setToast={showToast}
-              />
+              /><CategoryKitchenPrintingPanel storeId={Number(selectedStoreId)} categories={(overview?.menu_categories ?? []).filter(category => Number(category.store_id) === Number(selectedStoreId)).map(category => ({ code: asString(category.code), label: label({ en: asString(category.name_en), zh: asString(category.name_zh), fr: asString(category.name_fr) }) }))} onChanged={() => void refreshMenuManagement()} /></div>
             ) : null}
 
             {activeSection === 'stations' ? (
@@ -702,7 +704,7 @@ export function MenuManagementPage() {
                     className={`min-h-11 rounded-[14px] px-4 py-2 font-semibold ${modifierSection === section ? 'bg-[var(--primary)] text-white' : 'bg-white'}`}
                     onClick={() => setModifierSection(section)}>{section === 'addons' ? t('menu.addons') : t('menu.removes')}</button>)}
                 </div>
-                {modifierSection === 'addons' ? <AddonCatalogPanel key={selectedStoreId} storeId={Number(selectedStoreId)} onSaved={(message) => setToast({ kind: 'success', message })} />
+                {modifierSection === 'addons' ? <AddonCatalogPanel key={selectedStoreId} storeId={Number(selectedStoreId)} onChanged={refreshMenuManagement} onSaved={(message) => setToast({ kind: 'success', message })} />
                   : <RemoveCatalogPanel storeId={Number(selectedStoreId)} categories={categories} onChanged={refreshMenuManagement} onSaved={(message) => setToast({ kind: 'success', message })} />}
               </div>
             ) : null}
@@ -723,7 +725,8 @@ export function MenuManagementPage() {
             ) : null}
 
             {activeSection === 'pricing' ? (
-              <PricingRulesPanel
+              <StorePricingPanel
+                categories={categories.filter(category => (overview?.menu_categories ?? []).find(record => Number(record.id) === Number(category.id))?.is_active !== false).map(category => ({ id: Number(category.id), label: category.label }))}
                 storeId={Number(selectedStoreId)}
                 onSaved={(message) => setToast({ kind: 'success', message })}
               />
@@ -847,7 +850,7 @@ export function MenuManagementPage() {
                         {filteredMenuItems.map((item) => (
                           <tr key={item.id ?? item.sku ?? item.name_zh} className="border-t border-[rgba(26,28,25,0.06)]">
                             <td className="px-4 py-3">
-                              <div className="font-semibold text-[var(--on-surface)]">{label({ en: item.name_en, zh: item.name_zh, fr: item.name_fr })}</div>
+                              <div className="font-semibold text-[var(--on-surface)]">{withMenuCode(item.sku, label({ en: item.name_en, zh: item.name_zh, fr: item.name_fr }))}</div>
                               <div className="text-[0.78rem] text-[var(--muted)]">{item.name_en || '—'} {item.sku ? `· ${item.sku}` : ''}</div>
                             </td>
                             <td className="px-4 py-3 text-[var(--muted)]">{categoryNameById.get(item.category_id) ?? 'Unassigned'}</td>

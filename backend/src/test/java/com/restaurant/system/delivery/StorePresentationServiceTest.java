@@ -202,7 +202,7 @@ class StorePresentationServiceTest {
     void controllerRejectsUnauthorizedStoreBeforeAnyServiceReadOrWrite() {
         AuthorizationService auth = mock(AuthorizationService.class);
         StorePresentationService scoped = mock(StorePresentationService.class);
-        StorePresentationController controller = new StorePresentationController(scoped, auth);
+        StorePresentationController controller = new StorePresentationController(scoped, auth, mock(com.restaurant.system.modules.StoreModuleAccessEvaluator.class));
         doThrow(new ForbiddenException("synthetic foreign store"))
             .when(auth).requireManagerOrOwnerForStore(STORE, Capability.ADMIN_MENU_MANAGE);
         doThrow(new ForbiddenException("synthetic foreign store"))
@@ -218,7 +218,7 @@ class StorePresentationServiceTest {
     void controllerAuthorizesExactStoreAndCapabilityBeforeDelegatingEachEndpoint() {
         AuthorizationService auth = mock(AuthorizationService.class);
         StorePresentationService scoped = mock(StorePresentationService.class);
-        StorePresentationController controller = new StorePresentationController(scoped, auth);
+        StorePresentationController controller = new StorePresentationController(scoped, auth, mock(com.restaurant.system.modules.StoreModuleAccessEvaluator.class));
         Map<String, Object> input = Map.of("display_name", "Synthetic restaurant");
         ReceiptSettings request = receipts();
         controller.get(STORE);

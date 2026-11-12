@@ -28,6 +28,13 @@ public class StorePresentationService {
         public String frontdesk_language;
         public List<String> kitchen_station_codes=new ArrayList<>();
         public long revision;
+        public Long expected_revision;
+        /** Category code -> GRAB enabled. Absent means retain the current/legacy policy. */
+        public Map<String,Boolean> kitchen_category_enabled;
+        public boolean kitchenEnabled(String code) {
+            if (Set.of("DRINK", "ALCOHOL").contains(code == null ? "" : code)) return false;
+            return code == null || kitchen_category_enabled == null || !Boolean.FALSE.equals(kitchen_category_enabled.get(code));
+        }
     }
     public ReceiptSettings receipts(Store store){Object value=read(store).get("receipts");return value==null?new ReceiptSettings():mapper.convertValue(value,ReceiptSettings.class);}
     public ReceiptSettings receipts(Long id){return receipts(require(id));}
@@ -53,7 +60,28 @@ public class StorePresentationService {
         for(String locale:Arrays.asList(input.kitchen_language,input.frontdesk_language))if(locale!=null&&!LOCALES.contains(locale))throw fail("RECEIPT_LANGUAGE_INVALID");
         if(new HashSet<>(input.kitchen_station_codes).size()!=input.kitchen_station_codes.size())throw fail("RECEIPT_STATION_INVALID");
         for(String code:input.kitchen_station_codes)if(code==null||!code.matches("[A-Z][A-Z0-9_]{0,63}")||jdbc.queryForObject("select count(*) from stations where store_id=? and code=? and is_active=true",Integer.class,id,code)!=1)throw fail("RECEIPT_STATION_INVALID");
-        var config=read(store);input.revision=receipts(store).revision+1;config.put("receipts",input);write(store,config);return input;
+        ReceiptSettings current=receipts(store);
+        if(input.expected_revision!=null && input.expected_revision!=current.revision)throw new ReceiptSettingsConflict();
+        if(input.kitchen_category_enabled==null)input.kitchen_category_enabled=current.kitchen_category_enabled;
+        if(input.kitchen_category_enabled!=null) {
+            if(input.kitchen_category_enabled.size()>100)throw fail("RECEIPT_CATEGORY_INVALID");
+            for(var entry:input.kitchen_category_enabled.entrySet()) {
+                String code=entry.getKey();
+                if(code==null||!code.matches("[A-Z][A-Z0-9_]{0,63}")||entry.getValue()==null
+                    ||jdbc.queryForObject("select count(*) from menu_categories where store_id=? and code=?",Integer.class,id,code)!=1)
+                    throw fail("RECEIPT_CATEGORY_INVALID");
+                if(Set.of("DRINK","ALCOHOL").contains(code)&&entry.getValue())throw fail("DIRECT_SERVE_CATEGORY_NOT_KITCHEN");
+            }
+            input.kitchen_category_enabled=new LinkedHashMap<>(input.kitchen_category_enabled);
+        }
+        boolean routingChanged=!Objects.equals(current.kitchen_category_enabled,input.kitchen_category_enabled);
+        var config=read(store);input.revision=current.revision+1;input.expected_revision=null;
+        config.put("receipts",input);write(store,config);
+        if(routingChanged) { stores.flush();revisions.incrementRevision(id); }
+        return input;
+    }
+    public static final class ReceiptSettingsConflict extends BusinessException {
+        public ReceiptSettingsConflict(){super("RECEIPT_SETTINGS_STALE: reload before saving");}
     }
     private Store require(Long id){return stores.findById(id).orElseThrow(()->fail("STORE_NOT_FOUND"));}
     private void write(Store store,Map<String,Object> value){try{store.presentation_json=mapper.writeValueAsString(value);store.updated_at=LocalDateTime.now();stores.save(store);}catch(Exception e){throw fail("PRESENTATION_CONFIGURATION_INVALID");}}

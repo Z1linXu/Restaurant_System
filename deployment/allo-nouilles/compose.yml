@@ -48,6 +48,10 @@ services:
     environment:
       TZ: America/Toronto
       SPRING_PROFILES_ACTIVE: allo-test
+      APP_ENVIRONMENT: production
+      APP_DELIVERY_ALLO_PRODUCTION_PRINTING_ENABLED: 'true'
+      APP_PRINTING_ALLOWED_MODES: DISABLED,MOCK,PAD_DIRECT
+      APP_PRINTING_ENDPOINT_CONFIGURATION_ENABLED: 'true' 
       APP_BUILD_SHA: ${APP_BUILD_SHA:?verified derived release identity required}
       APP_REALTIME_AUTHENTICATED_STOMP_ENABLED: 'true'
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/restaurant_allo_nouilles_test
@@ -59,7 +63,7 @@ services:
       SPRING_FLYWAY_ENABLED: 'true'
       SPRING_FLYWAY_VALIDATE_ON_MIGRATE: 'true'
       SPRING_FLYWAY_BASELINE_ON_MIGRATE: 'false'
-      SPRING_FLYWAY_TARGET: '41'
+      SPRING_FLYWAY_TARGET: '42'
       APP_AUTH_JWT_SECRET: ${JWT_SECRET:?fresh independent secret required}
       JWT_SECRET: ${JWT_SECRET:?fresh independent secret required}
       APP_AUTH_X_USER_ID_FALLBACK_ENABLED: 'false'
@@ -73,7 +77,6 @@ services:
       APP_TEMPLATE_TEST_BOOTSTRAP_ENABLED: 'false'
       APP_DAILY_CLOSE_ENABLED: 'false'
       TEMPLATE_TEST_ENABLED: 'true'
-      TEMPLATE_TEST_MOCK_ONLY: 'true'
       UBER_EATS_ENABLED: 'false'
       UBER_EATS_WORKER_ENABLED: 'false'
       SERVER_FORWARD_HEADERS_STRATEGY: framework

@@ -29,6 +29,29 @@ export interface ItemAddon extends StoreAddon {
   enabled: boolean
 }
 
+export interface AddonReconciliationReport {
+  store_id: number
+  dry_run: boolean
+  linked_groups: number
+  linked_options: number
+  conflicts: AddonConflict[]
+  menu_revision: number
+  fingerprint: string
+}
+
+export function previewAddonReconciliation(storeId: number) {
+  return apiRequest<AddonReconciliationReport>('/api/v1/admin/menu/addons/reconcile', {
+    method: 'POST', body: JSON.stringify({ store_id: storeId, dry_run: true }),
+  })
+}
+
+export function applyAddonReconciliation(preview: AddonReconciliationReport) {
+  return apiRequest<AddonReconciliationReport>('/api/v1/admin/menu/addons/reconcile', {
+    method: 'POST', body: JSON.stringify({ store_id: preview.store_id, dry_run: false,
+      expected_menu_revision: preview.menu_revision, expected_fingerprint: preview.fingerprint }),
+  })
+}
+
 export type AddonValues = Pick<StoreAddon, 'name_zh' | 'name_en' | 'price' | 'active'>
 
 export function fetchStoreAddons(storeId: number) {

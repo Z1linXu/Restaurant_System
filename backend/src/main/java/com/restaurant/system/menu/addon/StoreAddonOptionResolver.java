@@ -23,7 +23,12 @@ public class StoreAddonOptionResolver {
     private record Current(Long id, Long store, String code, String zh, String en, BigDecimal price, boolean active) {}
 
     public List<MenuItemOption> resolve(List<MenuItemOption> options) {
-        if (removeResolver != null) options = removeResolver.resolve(options);
+        if (removeResolver != null) {
+            Map<Long, String> french = new java.util.HashMap<>();
+            options.forEach(option -> french.put(option.id, option.name_fr));
+            options = removeResolver.resolve(options);
+            options.forEach(option -> { if (option.store_remove_id != null) option.name_fr = french.get(option.id); });
+        }
         List<Long> ids = options.stream().map(o -> o.store_addon_id).filter(Objects::nonNull).distinct().toList();
         if (ids.isEmpty()) return options;
         Map<Long, Current> catalog = jdbc.query("""
@@ -57,10 +62,12 @@ public class StoreAddonOptionResolver {
             current.option_group = "ADD_ON";
             current.template_group_code = option.template_group_code;
             current.template_default = option.template_default;
-            current.name_zh = option.template_group_code == null ? addon.zh() : option.name_zh;
-            current.name_en = option.template_group_code == null ? addon.en() : option.name_en;
-            current.price_delta = option.template_group_code == null ? addon.price() : option.price_delta;
-            current.is_active = addon.active() && Boolean.TRUE.equals(option.addon_eligible) && (option.template_group_code == null || Boolean.TRUE.equals(option.is_active));
+            current.name_zh = addon.zh();
+            current.name_en = addon.en();
+            // The bilingual catalog has no French column. Preserve the item-owned translation.
+            current.name_fr = option.name_fr;
+            current.price_delta = addon.price();
+            current.is_active = addon.active() && Boolean.TRUE.equals(option.addon_eligible);
             return current;
         }).toList();
     }

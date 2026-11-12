@@ -12,11 +12,15 @@ import java.util.Set;
 
 /** Frozen, server-owned presentation data for the explicitly enabled merchant receipt. */
 public class ReceiptPresentation {
+    /** Server-frozen intent. Missing historical values may only use inert MOCK printing. */
+    public String execution_mode;
     public String language;
     public String restaurant_name;
     public Long settings_revision;
     public List<String> kitchen_station_codes = new ArrayList<>();
     public List<Long> order_item_ids = new ArrayList<>();
+    /** GRAB-only frozen exclusions. Receipt retains every sold item. Missing legacy field means include. */
+    public List<Long> kitchen_excluded_item_ids = new ArrayList<>();
     public Map<String, String> item_names = new LinkedHashMap<>();
     public Map<String, String> option_names = new LinkedHashMap<>();
     public BigDecimal subtotal;
@@ -35,6 +39,10 @@ public class ReceiptPresentation {
 
     public boolean includesItem(Long id) {
         return id != null && order_item_ids.contains(id);
+    }
+
+    public boolean includesKitchenItem(Long id) {
+        return includesItem(id) && (kitchen_excluded_item_ids == null || !kitchen_excluded_item_ids.contains(id));
     }
 
     public String itemName(OrderItem item) {

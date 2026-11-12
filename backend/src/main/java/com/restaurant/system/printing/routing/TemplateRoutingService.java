@@ -11,6 +11,8 @@ import com.restaurant.system.order.dto.CreateOrderItemRequest;
 import com.restaurant.system.printing.entity.*;
 import com.restaurant.system.printing.repository.*;
 import com.restaurant.system.printing.service.PrinterConfigService;
+import com.restaurant.system.printing.AlloProductionPrintingPolicy;
+import com.restaurant.system.printing.security.PrintOriginContext;
 import com.restaurant.system.printing.routing.TemplateRoutingModels.*;
 import com.restaurant.system.common.exception.BusinessException;
 import java.time.LocalDateTime;
@@ -30,6 +32,7 @@ public class TemplateRoutingService {
  private final MenuRevisionService revisions;
  private final OrderDispatchOutboxRepository outbox;
  private final PrinterConfigService printing;
+ private final AlloProductionPrintingPolicy printingPolicy;
  private com.restaurant.system.menu.template.TemplateComboAdapter combos;
  @org.springframework.beans.factory.annotation.Autowired
  public void setCombos(com.restaurant.system.menu.template.TemplateComboAdapter value){this.combos=value;}
@@ -37,9 +40,10 @@ public class TemplateRoutingService {
  public static final String EVENT="TEMPLATE_KITCHEN";
  public TemplateRoutingService(TemplateMenuService menus,TemplateStoreConfigurationRepository configs,
   MenuItemRepository items,MenuItemOptionRepository options,MenuCategoryRepository categories,
-  PrinterConfigRepository printers,MenuRevisionService revisions,OrderDispatchOutboxRepository outbox,PrinterConfigService printing){
+  PrinterConfigRepository printers,MenuRevisionService revisions,OrderDispatchOutboxRepository outbox,PrinterConfigService printing,AlloProductionPrintingPolicy printingPolicy){
   this.menus=menus;this.configs=configs;this.items=items;this.options=options;this.categories=categories;
   this.printers=printers;this.revisions=revisions;this.outbox=outbox;this.printing=printing;
+  this.printingPolicy=printingPolicy;
  }
  @Transactional(readOnly=true)
  public Configuration configuration(Long storeId){
@@ -53,7 +57,8 @@ public class TemplateRoutingService {
  @Transactional
  public Configuration save(Long storeId,Configuration request){
   menus.requireEnabled();revisions.lockStoresInOrder(List.of(storeId));
-  if(!"MOCK".equals(printing.getStorePrintingMode(storeId)))throw new BusinessException("TEMPLATE_ROUTING_REQUIRES_MOCK");
+  String mode=printing.getStorePrintingMode(storeId);
+  if(!"MOCK".equals(mode)&&!("PAD_DIRECT".equals(mode)&&printingPolicy.allowsPadDirect(storeId)))throw new BusinessException("TEMPLATE_ROUTING_REQUIRES_MOCK");
   if(request==null||request.groups==null||request.groups.size()>100||request.item_overrides==null)throw new BusinessException("ROUTING_CONFIG_INVALID");
   Set<Long> validCategories=new HashSet<>();categories.findAllByStoreIdOrderByIdAsc(storeId).forEach(c->validCategories.add(c.id));
   Set<String> codes=new HashSet<>();
@@ -64,6 +69,7 @@ public class TemplateRoutingService {
    g.item_ids.forEach(id->menus.requireItem(storeId,id));
    if(g.printer_id!=null && printers.findByIdAndStoreId(g.printer_id,storeId).isEmpty())throw new com.restaurant.system.common.auth.ForbiddenException("Printer belongs to another store");
    if(g.mock_failure!=null&&!Set.of("FAILED","UNCERTAIN").contains(g.mock_failure))throw new BusinessException("MOCK_FAILURE_INVALID");
+   if("PAD_DIRECT".equals(mode)&&g.mock_failure!=null)throw new BusinessException("MOCK_FAILURE_REQUIRES_MOCK");
    if(g.logical_target!=null&&g.logical_target.length()>64)throw new BusinessException("ROUTING_TARGET_INVALID");
   }
   Set<Long> overridden=new HashSet<>();
@@ -114,6 +120,7 @@ public class TemplateRoutingService {
  @Transactional
  public void enqueue(Order order,Long batchId,List<OrderItem> orderItems,List<OrderItemOption> selected){
   Configuration c=configuration(order.store_id);long rev=revisions.getRevision(order.store_id).menu_revision;
+  String executionMode=printing.getStorePrintingMode(order.store_id);
   List<KitchenRoutingPlanner.SourceLine> lines=new ArrayList<>();
   for(var line:orderItems){
    if("cancelled".equalsIgnoreCase(line.status))continue;
@@ -142,16 +149,16 @@ public class TemplateRoutingService {
     f.printer_id=ticket.printerId();f.rendered_text=ticket.renderedText();f.source_keys=new ArrayList<>(ticket.sourceKeys());f.menu_revision=rev;f.routing_revision=c.revision;
     if(!ticket.diagnostics().isEmpty()){f.error_code=ticket.diagnostics().get(0).code();f.reason=ticket.diagnostics().get(0).message();}
     f.mock_failure=c.groups.stream().filter(g->g.group_code.equals(f.group_code)).map(g->g.mock_failure).filter(Objects::nonNull).findFirst().orElse(null);
-    persist(order,batchId,f);
+    persist(order,batchId,f,executionMode);
    }
    var unassigned=result.coverage().stream().filter(v->"UNASSIGNED".equals(v.disposition())).toList();
    if(!unassigned.isEmpty()){
     FrozenIntent f=new FrozenIntent();f.diagnostic_only=true;f.group_code="UNASSIGNED";f.group_name="Unassigned kitchen items";f.error_code="UNASSIGNED";f.reason="Required items have no kitchen ticket group";
-    f.source_keys=unassigned.stream().map(v->v.sourceKey()).toList();f.menu_revision=rev;f.routing_revision=c.revision;f.rendered_text="";persist(order,batchId,f);
+    f.source_keys=unassigned.stream().map(v->v.sourceKey()).toList();f.menu_revision=rev;f.routing_revision=c.revision;f.rendered_text="";persist(order,batchId,f,executionMode);
    }
   }catch(IllegalArgumentException ex){
    FrozenIntent f=new FrozenIntent();f.diagnostic_only=true;f.group_code="PLAN_INVALID";f.group_name="Kitchen routing";f.error_code="PLAN_INVALID";f.reason="Kitchen routing configuration could not be resolved";
-   f.menu_revision=rev;f.routing_revision=c.revision;f.rendered_text="";persist(order,batchId,f);
+   f.menu_revision=rev;f.routing_revision=c.revision;f.rendered_text="";persist(order,batchId,f,executionMode);
   }
  }
  private List<KitchenRoutingPlanner.SourceLine> componentLines(Long store,String parent,int quantity,List<com.restaurant.system.order.dto.CreateOrderItemOptionRequest> choices){
@@ -169,9 +176,11 @@ public class TemplateRoutingService {
    sources.add(new KitchenRoutingPlanner.SourceLine(parent+":component:"+c.code(),parent,child.id,child.category_id,c.name(),Math.multiplyExact(quantity,choice.quantity),instructions,c.code()));
   }return sources;
  }
- private void persist(Order order,Long batch,FrozenIntent f){
+ private void persist(Order order,Long batch,FrozenIntent f,String executionMode){
+  f.execution_mode=executionMode;
   String key="template:"+(batch==null?"submit:"+order.id:"update:"+order.id+":"+batch)+":"+(f.diagnostic_only?"diagnostic":"group")+":"+f.group_code;
-  int inserted=outbox.insertIfAbsent(revisions.getRevision(order.store_id).organization_id,order.store_id,order.id,batch,EVENT,EVENT,key,LocalDateTime.now(),null);
+  Long organizationId=revisions.getRevision(order.store_id).organization_id;
+  int inserted=outbox.insertIfAbsent(organizationId,order.store_id,order.id,batch,EVENT,EVENT,key,LocalDateTime.now(),PrintOriginContext.deviceFor(order.store_id,organizationId));
   if(inserted==1){var e=outbox.findBySourceKey(key).orElseThrow();e.routingContext=menus.write(f);e.lastError=f.reason;outbox.save(e);}
  }
  private KitchenRoutingPlanner.Result plan(Long store,Long order,Long batch,String number,String type,String table,long rev,Configuration c,List<KitchenRoutingPlanner.SourceLine> lines){

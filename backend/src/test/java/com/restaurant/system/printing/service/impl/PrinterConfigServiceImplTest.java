@@ -45,7 +45,8 @@ class PrinterConfigServiceImplTest {
             printerAssignmentRepository,
             storeRepository,
             cloudPrintingGuard,
-            runtimePolicy
+            runtimePolicy,
+            new com.restaurant.system.printing.AlloProductionPrintingPolicy(new org.springframework.mock.env.MockEnvironment(), runtimePolicy, storeRepository)
         );
     }
 

@@ -99,8 +99,8 @@ public class OwnerMenuAddonController {
             throw new BusinessException("ADDON_PRICE_RECONCILIATION_STAGING_ONLY");
         }
         var result = hasDecisions ? addons.reconcilePrices(request.store_id, request.dry_run, request.confirmed_prices)
-            : addons.reconcile(request.store_id, request.dry_run);
-        if (!request.dry_run) audit.record(request.store_id, user, "MENU_ADDONS_RECONCILED", "STORE", request.store_id,
+            : addons.reconcile(request.store_id, request.dry_run, request.expected_menu_revision, request.expected_fingerprint);
+        if (!request.dry_run && (hasDecisions || result.linked_options() > 0)) audit.record(request.store_id, user, "MENU_ADDONS_RECONCILED", "STORE", request.store_id,
             "Reconciled Store Add-ons", Map.of("linked_groups", result.linked_groups(),
                 "linked_options", result.linked_options(), "conflict_count", result.conflicts().size(),
                 "confirmed_prices", hasDecisions ? request.confirmed_prices : Map.of()), servletRequest);

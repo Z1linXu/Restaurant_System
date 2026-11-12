@@ -9812,3 +9812,36 @@ review and release gates are tracked in
 `docs/commercialization/merchants/allo-nouille/EXECUTION_CHECKLIST.md`.
 No production test orders, bulk price changes, physical printing or queue replay
 are authorized as testing. Hardware status is explicitly separate from API proof.
+
+
+### Allô 2026-11-12 implementation contract
+
+The release now includes explicit opt-in Allô PAD_DIRECT policy with no backend
+REAL transport, immutable execution provenance for new receipt/template intents,
+closed historical MOCK conversion, current-mode claim/start/payload gates and
+owned in-flight reporting. Existing native device authentication, attestation,
+leases, source-key idempotency and PRINTING no-reclaim remain intact.
+
+The32 approved AN_ item codes derive only from stable SKU/order snapshots, with
+no record rename/price rewrite. GRAB-only frozen category exclusions use existing
+receipt settings and printer assignments; drinks remain direct-serve, Desserts
+are independently configurable and default included, all sold items remain on
+FRONTDESK_RECEIPT. Canonical Add-ons now govern linked template choices through
+catalog and server validation, with checked repeatable reconciliation. Generic
+client group spoofing stays blocked; independent template choices require
+verified same-Store persisted option/item/group bindings.
+
+V42 adds an opt-in category-bulk-price capability, previews and idempotency
+ledger. Bulk applies base prices under the existing Store lock with server
+preview/revision/fingerprint validation and strict transactional audit; free
+refills, fixed offers, option prices, old orders and PrintJobs remain unchanged.
+The new high-impact batch endpoints use the existing Manager/Owner/Admin price
+management role policy; the shared FRONTDESK registry is unchanged. Legacy Size
+and Combo engines remain available according to actual Store capabilities.
+
+Synthetic QA is a new loopback-only PG26512/backend18512/frontend28182, explicit
+allo-test,allo-qa profiles, independent credentials and no production recovery
+data. Existing local PG25442/frontend28180 were discovered and left intact.
+Production recovery backup was separately restored/hash-verified (85 tables)
+and that recovery cluster was removed before synthetic QA. Production is not
+used for writes, test orders, repricing, reprints or physical print proof.

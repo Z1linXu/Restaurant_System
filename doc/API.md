@@ -2271,3 +2271,50 @@ Station codes must be distinct active stations of the same Store. `revision` is 
 Catalog/category/item/option DTOs optionally expose `name_fr`; order item/option and frontdesk beverage DTOs optionally expose `item_name_snapshot_fr` / `option_name_snapshot_fr`. Historical display uses order snapshots. Template group `name_translations` accepts the same three locales; optional `min_select`/`max_select` are distinct selected counts, with per-selection quantity1 for explicitly bounded non-ADD_ON groups. Omission on update preserves existing bounds; explicit JSON null removes them. Existing per-option canonical price authority is unchanged.
 
 `refill_category_code` is server-owned catalog metadata consumed by ordering visibility and validated again at submit/Update. Client labels, notes, prices or category guesses cannot grant refill eligibility. Errors such as `REFILL_*`, `TEMPLATE_*`, `RECEIPT_STATION_NOT_ASSIGNED`, `RECEIPT_ORIGINAL_ARTIFACT_*` preserve their canonical diagnostic identity; a committed order and failed print Job remain separate outcomes. There is no public merchant bulk-import API in this delivery; the importer is invoked by the closed isolated Test bootstrap.
+
+
+## Allô controlled release, 2026-11-12
+
+`GET /api/v1/admin/menu/pricing-capabilities?store_id=…` returns explicit
+`category_bulk_enabled` and `standard_size_enabled`. It does not infer a pricing
+engine from restaurant name, locale, theme or receipt style.
+
+`POST /api/v1/admin/menu/category-pricing/preview` accepts `store_id`, unique
+`category_ids`, `direction` (INCREASE/DECREASE), positive two-decimal `amount`,
+`currency: CAD` and explicit `include_inactive`. The server computes actual old
+and new base prices and exclusions, and returns a 10-minute `preview_id`,
+`menu_revision`, `fingerprint`, item changes and scope. Free refills and fixed
+offers never participate.
+
+`POST /api/v1/admin/menu/category-pricing/apply` accepts the same operation plus
+`preview_id`, `expected_revision`, `fingerprint`, `idempotency_key`. It locks the
+Store, rechecks server data, and commits prices, one menu revision increment,
+strict audit and idempotency result atomically. Same key/body returns the prior
+result; changed body/stale or expired preview returns 409. No Add-on, historical
+order or PrintJob amount is changed. The three new endpoints require the existing
+Manager/Owner/Admin gate plus ADMIN_MENU_MANAGE and MENU_MANAGEMENT. Existing
+FRONTDESK capability registry and single-item/Add-on contracts remain unchanged.
+
+`POST /api/v1/admin/menu/addons/reconcile` dry run now returns `menu_revision`
+and `fingerprint`; apply requires `expected_menu_revision` and
+`expected_fingerprint`, checked again under the Store lock. GET/dry-run do not
+reconcile. Repeat no-change apply creates no new catalog rows/revision. Linked
+ADD_ON template choices use canonical current names/prices/active eligibility;
+CUSTOM/SPICY/SIZE retain independently verified server-side semantics. A client
+snapshot group cannot opt out of canonical assignment or price validation. New
+Owner-saved ADD_ON choices must reference a same-Store catalog Add-on.
+
+The existing `GET/PUT /api/v1/stores/{storeId}/receipt-presentation` additionally
+supports `kitchen_category_enabled` (category-code-to-boolean) and optional
+`expected_revision`; stale saves return 409. Unknown/foreign categories are
+rejected. Omitted mapping preserves the current mapping; direct-serve drinks
+cannot be routed as kitchen items. Only new GRAB contexts freeze exclusions;
+FRONTDESK_RECEIPT retains all sold items and historical contexts/Jobs are not
+rewritten. A routing change increments menu revision for cache refresh. Printing
+module and Manager/Owner printing permission remain required.
+
+Controlled Allô PAD policy permits DISABLED/MOCK/PAD_DIRECT, never backend REAL.
+Only explicitly frozen PAD intents may create physical artifacts; historical
+MOCK/unspecified intents and Jobs cannot become PAD because a live mode changed.
+New claims/start/payload require current PAD mode; authenticated owned in-flight
+completion/failure remains reportable. No physical printer success is implied.

@@ -1,6 +1,8 @@
 package com.restaurant.system.printing.service.impl;
 
 import com.restaurant.system.printing.PrintJobStatus;
+import com.restaurant.system.printing.AlloProductionPrintingPolicy;
+import com.restaurant.system.delivery.ReceiptArtifact;
 import com.restaurant.system.printing.dto.PadPrintJobClaimRequest;
 import com.restaurant.system.printing.dto.PadPrintJobCompleteRequest;
 import com.restaurant.system.printing.dto.PadPrintJobFailRequest;
@@ -44,22 +46,26 @@ public class PadPrintJobServiceImpl implements PadPrintJobService {
     private final PrintJobAttemptRepository printJobAttemptRepository;
     private final PrinterConfigRepository printerConfigRepository;
     private final PrintJobService printJobService;
+    private final AlloProductionPrintingPolicy printingPolicy;
 
     public PadPrintJobServiceImpl(
         PrintJobRepository printJobRepository,
         PrintJobAttemptRepository printJobAttemptRepository,
         PrinterConfigRepository printerConfigRepository,
-        PrintJobService printJobService
+        PrintJobService printJobService,
+        AlloProductionPrintingPolicy printingPolicy
     ) {
         this.printJobRepository = printJobRepository;
         this.printJobAttemptRepository = printJobAttemptRepository;
         this.printerConfigRepository = printerConfigRepository;
         this.printJobService = printJobService;
+        this.printingPolicy = printingPolicy;
     }
 
     @Override
     public List<PrintJobResponse> listPendingJobs(StoreDevice device, Long storeId, int limit) {
         ensureDeviceStore(device, storeId);
+        requirePadRuntime(storeId);
         int effectiveLimit = limit <= 0 ? DEFAULT_PENDING_LIMIT : Math.min(limit, 100);
         LocalDateTime now = LocalDateTime.now();
         List<PrintJobResponse> jobs = printJobRepository.findPendingPadDirectJobs(storeId, device.id, now, PageRequest.of(0, effectiveLimit))
@@ -84,6 +90,7 @@ public class PadPrintJobServiceImpl implements PadPrintJobService {
     @Transactional
     public PrintJobResponse claimJob(StoreDevice device, Long jobId, PadPrintJobClaimRequest request) {
         PrintJob existing = requirePadJobForDevice(device, jobId);
+        requirePadRuntime(existing.store_id);
         String attemptToken = normalizeAttemptToken(request == null ? null : request.client_attempt_token);
         if (isSameActiveClaim(existing, device, attemptToken)) {
             return printJobService.toResponse(existing);
@@ -121,6 +128,7 @@ public class PadPrintJobServiceImpl implements PadPrintJobService {
     @Transactional
     public PrintJobResponse startPrint(StoreDevice device, Long jobId, PadPrintJobStartPrintRequest request) {
         PrintJob job = requirePadJobForDevice(device, jobId);
+        requirePadRuntime(job.store_id);
         String attemptToken = normalizeAttemptToken(request == null ? null : request.client_attempt_token);
         ensureClaimedOrPrintingByDevice(job, device, attemptToken);
 
@@ -138,8 +146,17 @@ public class PadPrintJobServiceImpl implements PadPrintJobService {
     @Transactional
     public PadPrintJobPayloadResponse getPayload(StoreDevice device, Long jobId) {
         PrintJob job = requirePadJobForDevice(device, jobId);
+        requirePadRuntime(job.store_id);
         ensureClaimedOrPrintingByDevice(job, device, job.clientAttemptToken);
         PrinterConfig printer = requireAssignedPayloadPrinter(job);
+        if (ReceiptArtifact.protects(job)) {
+            try {
+                String frozenFont = ReceiptArtifact.validate(job).path("font").asText();
+                ReceiptArtifact.requireCompatiblePadArtifact(job, printer, frozenFont);
+            } catch (com.restaurant.system.common.exception.BusinessException invalidArtifact) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, invalidArtifact.getMessage());
+            }
+        }
         logger.info("PAD_DIRECT Job Processing payload job {} module {} device {} printer {}", job.id, job.module_code, device.id, printer.id);
         return PadPrintJobPayloadResponse.from(job, printer);
     }
@@ -149,7 +166,8 @@ public class PadPrintJobServiceImpl implements PadPrintJobService {
     public PrintJobResponse completeJob(StoreDevice device, Long jobId, PadPrintJobCompleteRequest request) {
         PrintJob job = requirePadJobForDevice(device, jobId);
         String attemptToken = normalizeAttemptToken(request == null ? null : request.client_attempt_token);
-        if (PrintJobStatus.PRINTED.equals(job.status) && sameToken(job.clientAttemptToken, attemptToken)) {
+        if (PrintJobStatus.PRINTED.equals(job.status) && device.id.equals(job.claimedByDeviceId)
+                && sameToken(job.clientAttemptToken, attemptToken)) {
             return printJobService.toResponse(job);
         }
         ensureClaimedOrPrintingByDevice(job, device, attemptToken);
@@ -228,10 +246,19 @@ public class PadPrintJobServiceImpl implements PadPrintJobService {
         PrintJob job = printJobRepository.findLockedById(jobId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Print job not found"));
         ensureDeviceStore(device, job.store_id);
+        if (!java.util.Objects.equals(device.organizationId, job.organization_id)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Device cannot access this organization");
+        }
         if (!"PAD_DIRECT".equals(job.executionMode)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Print job is not a Pad Direct job");
         }
         return job;
+    }
+
+    private void requirePadRuntime(Long storeId) {
+        if (!printingPolicy.padDirectActive(storeId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "PAD_DIRECT is not active for this store runtime");
+        }
     }
 
     private void ensureDeviceStore(StoreDevice device, Long storeId) {

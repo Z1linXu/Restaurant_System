@@ -59,7 +59,8 @@ class PrintJobServiceImplTest {
         service = new PrintJobServiceImpl(
             printJobRepository,
             printJobAttemptRepository,
-            printerConfigRepository
+            printerConfigRepository,
+            org.mockito.Mockito.mock(com.restaurant.system.printing.AlloProductionPrintingPolicy.class)
         );
     }
 

@@ -78,9 +78,18 @@ class OwnerMenuAddonControllerTest {
     @Test void reconciliationAuthorizesExactStoreAndReturnsSanitizedReport() {
         var request = new StoreAddonService.ReconcileRequest(); request.store_id = 12L; request.dry_run = true;
         var report = new StoreAddonService.ReconciliationReport(12L, true, 0, 0, List.of());
-        when(service.reconcile(12L, true)).thenReturn(report);
+        when(service.reconcile(12L, true, null, null)).thenReturn(report);
         assertThat(controller.reconcile(request, null).getData()).isSameAs(report);
         verify(authorization).requireForStore(12L, Capability.ADMIN_MENU_MANAGE);
         verify(modules).requireCapability(12L, ModuleKeys.MENU_MANAGEMENT);
+    }
+
+    @Test void applyPassesExactPreviewGuardsToTheTransactionalService() {
+        var request = new StoreAddonService.ReconcileRequest(); request.store_id = 12L; request.dry_run = false;
+        request.expected_menu_revision = 7L; request.expected_fingerprint = "fingerprint";
+        var report = new StoreAddonService.ReconciliationReport(12L, false, 0, 0, List.of());
+        when(service.reconcile(12L, false, 7L, "fingerprint")).thenReturn(report);
+        assertThat(controller.reconcile(request, null).getData()).isSameAs(report);
+        verify(service).reconcile(12L, false, 7L, "fingerprint");
     }
 }

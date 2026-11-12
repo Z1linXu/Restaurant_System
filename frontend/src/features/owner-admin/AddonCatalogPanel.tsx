@@ -12,6 +12,7 @@ import {
 interface AddonCatalogPanelProps {
   storeId: number
   onSaved?: (message: string) => void
+  onChanged?: () => void
 }
 
 interface AddonDraft {
@@ -30,7 +31,7 @@ function money(value: number) {
   return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD' }).format(value)
 }
 
-export function AddonCatalogPanel({ storeId, onSaved }: AddonCatalogPanelProps) {
+export function AddonCatalogPanel({ storeId, onSaved, onChanged }: AddonCatalogPanelProps) {
   const { t } = useLocale()
   const [catalog, setCatalog] = useState<StoreAddonCatalog | null>(null)
   const [draft, setDraft] = useState<AddonDraft | null>(null)
@@ -106,6 +107,7 @@ export function AddonCatalogPanel({ storeId, onSaved }: AddonCatalogPanelProps) 
           : [...current.addons, saved],
       } : current)
       setDraft(null)
+      onChanged?.()
       onSaved?.(t('management.addons.saved'))
     } catch (saveError) {
       if (scope.current === requestScope) {

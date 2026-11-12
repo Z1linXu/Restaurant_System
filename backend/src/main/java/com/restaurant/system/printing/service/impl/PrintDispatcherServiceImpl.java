@@ -865,7 +865,13 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         printJobRepository.save(job);
         try {
             boolean originalCopy = com.restaurant.system.delivery.ReceiptContextService.hasContext(source);
-            if (originalCopy && !PrintingMode.MOCK.equals(printingMode)) throw new BusinessException("ALLO_RECEIPT_TEST_MOCK_ONLY");
+            boolean templateCopy = com.restaurant.system.delivery.ReceiptArtifact.isTemplateJob(source);
+            originalCopy = originalCopy || templateCopy && com.restaurant.system.delivery.ReceiptArtifact.present(source);
+            if ((originalCopy || templateCopy) && !PrintingMode.MOCK.equals(printingMode)) {
+                if (!PrintingMode.PAD_DIRECT.equals(printingMode)) throw new BusinessException("ALLO_RECEIPT_TEST_MOCK_ONLY");
+                com.restaurant.system.delivery.ReceiptArtifact.requirePadSourceJob(source);
+                originalCopy = true;
+            }
             if (originalCopy && (source.rendered_text_snapshot == null || source.rendered_text_snapshot.isBlank()
                     || source.escposPayloadBase64 == null || source.escposPayloadBase64.isBlank()))
                 throw new BusinessException("RECEIPT_ORIGINAL_ARTIFACT_MISSING");

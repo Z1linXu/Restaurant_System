@@ -28,6 +28,9 @@ public class AlloMenuImporter {
     private final TemplateMenuService menus;
     private final MenuRevisionService revisions;
     private final ObjectMapper mapper;
+    private com.restaurant.system.menu.addon.StoreAddonService addons;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setAddons(com.restaurant.system.menu.addon.StoreAddonService value) { this.addons=value; }
 
     public AlloMenuImporter(JdbcTemplate jdbc, MenuItemRepository items, MenuCategoryRepository categories,
                            TemplateMenuService menus, MenuRevisionService revisions, ObjectMapper mapper) {
@@ -52,6 +55,7 @@ public class AlloMenuImporter {
         sourceItems.add(refill("REFILL_NOODLES","NOODLE","续面","Noodle refill","Nouilles supplémentaires"));
         sourceItems.add(refill("REFILL_RICE","RICE","续饭","Rice refill","Riz supplémentaire"));
         int created=0,updated=0,unchanged=0,preserved=0;
+        Map<String,MenuItem> writtenItems=new LinkedHashMap<>();
         for (int sourceIndex=0;sourceIndex<sourceItems.size();sourceIndex++) {
             JsonNode input=sourceItems.get(sourceIndex);
             String sourceKey="item:"+text(input,"code");String sku="AN_"+text(input,"code");
@@ -80,11 +84,19 @@ public class AlloMenuImporter {
             row.name_zh=text(input,"name_zh");row.name_en=text(input,"name_en");row.name_fr=text(input,"name_fr");
             row.refill_category_code=input.path("refill_category_code").isTextual()?input.path("refill_category_code").asText():null;
             row.item_type="DRINK".equals(text(input,"category_code"))?"DRINK":"FOOD";row.base_price=money(input,"base_price");row.is_active=true;row.sort_order=sourceIndex;row.updated_at=LocalDateTime.now();
-            row=items.saveAndFlush(row);menus.saveItem(storeId,row.id,desired);items.flush();
+            row=items.saveAndFlush(row);menus.saveImportedItem(storeId,row.id,desired);items.flush();
             String appliedHash=hash(current(row));
             if(creating)jdbc.update("insert into merchant_menu_import_entries(store_id,source_key,entity_kind,entity_id,source_hash,applied_hash) values(?,?,'ITEM',?,?,?)",storeId,sourceKey,row.id,sourceHash,appliedHash);
             else jdbc.update("update merchant_menu_import_entries set source_hash=?,applied_hash=?,imported_at=current_timestamp where store_id=? and source_key=?",sourceHash,appliedHash,storeId,sourceKey);
             if(creating)created++;else updated++;
+            writtenItems.put(sourceKey,row);
+        }
+        // Only an actual menu import materializes new links. A repeat startup/import is read-only.
+        if(addons!=null && !writtenItems.isEmpty()) {
+            var reconciled=addons.reconcile(storeId,false);
+            if(!reconciled.conflicts().isEmpty())throw fail("IMPORT_ADDON_CONFLICT");
+            // Freeze the current visible values without rewriting preserved Owner edits.
+            writtenItems.forEach((key,row)->jdbc.update("update merchant_menu_import_entries set applied_hash=? where store_id=? and source_key=?",hash(current(row)),storeId,key));
         }
         return new Result(created,updated,unchanged,preserved,source.path("menu_version").asText());
     }
@@ -209,6 +221,8 @@ public class AlloMenuImporter {
     private JsonNode canonical(JsonNode value){
         if(value.isObject()){
             var sorted=mapper.createObjectNode();var keys=new TreeSet<String>();value.fieldNames().forEachRemaining(keys::add);
+            // Keep the V41 import fingerprint format stable as read-only assignment DTO fields grow.
+            if(value.has("price_delta") && value.has("option_group"))keys.removeAll(Set.of("store_addon_id","addon_eligible"));
             for(String key:keys)sorted.set(key,canonical(value.get(key)));return sorted;
         }
         if(value.isArray()){var ordered=mapper.createArrayNode();for(JsonNode child:value)ordered.add(canonical(child));return ordered;}

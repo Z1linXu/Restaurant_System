@@ -25,6 +25,8 @@ public final class TemplateRoutingModels {
  public static class ItemOverride {public Long menu_item_id;public List<String> group_codes=new ArrayList<>();}
  public static class PreviewRequest {public List<CreateOrderItemRequest> items=new ArrayList<>();}
  public static class FrozenIntent {
+  /** Missing historical values are MOCK-only, never permission to enter a physical queue. */
+  public String execution_mode;
   public boolean diagnostic_only;
   public String group_code;
   public String group_name;

@@ -2,6 +2,7 @@ package com.restaurant.system.printing.service.impl;
 
 import com.restaurant.system.common.exception.BusinessException;
 import com.restaurant.system.printing.CloudPrintingGuard;
+import com.restaurant.system.printing.AlloProductionPrintingPolicy;
 import com.restaurant.system.printing.PrintingMode;
 import com.restaurant.system.printing.PrintingRuntimePolicyProperties;
 import com.restaurant.system.printing.dto.PrintCenterOverviewResponse;
@@ -25,19 +26,22 @@ public class PrinterConfigServiceImpl implements PrinterConfigService {
     private final StoreRepository storeRepository;
     private final CloudPrintingGuard cloudPrintingGuard;
     private final PrintingRuntimePolicyProperties runtimePolicy;
+    private final AlloProductionPrintingPolicy alloPrintingPolicy;
 
     public PrinterConfigServiceImpl(
         PrinterConfigRepository printerConfigRepository,
         PrinterAssignmentRepository printerAssignmentRepository,
         StoreRepository storeRepository,
         CloudPrintingGuard cloudPrintingGuard,
-        PrintingRuntimePolicyProperties runtimePolicy
+        PrintingRuntimePolicyProperties runtimePolicy,
+        AlloProductionPrintingPolicy alloPrintingPolicy
     ) {
         this.printerConfigRepository = printerConfigRepository;
         this.printerAssignmentRepository = printerAssignmentRepository;
         this.storeRepository = storeRepository;
         this.cloudPrintingGuard = cloudPrintingGuard;
         this.runtimePolicy = runtimePolicy;
+        this.alloPrintingPolicy = alloPrintingPolicy;
     }
 
     @Override
@@ -65,6 +69,7 @@ public class PrinterConfigServiceImpl implements PrinterConfigService {
             throw new BusinessException("Printer store is required");
         }
         runtimePolicy.requireEndpointConfigurationAllowed(printerConfig.ip_address);
+        alloPrintingPolicy.requireEndpointStore(printerConfig.store_id, printerConfig.ip_address);
         PrinterConfig target = printerConfig.id == null
             ? new PrinterConfig()
             : printerConfigRepository.findByIdAndStoreId(printerConfig.id, printerConfig.store_id)
@@ -114,7 +119,7 @@ public class PrinterConfigServiceImpl implements PrinterConfigService {
     @Override
     public String getStorePrintingMode(Long storeId) {
         Store store = requireStore(storeId);
-        return runtimePolicy.safePersistedModeOrDisabled(store.printing_mode);
+        return alloPrintingPolicy.effectiveMode(store);
     }
 
     @Override
@@ -127,6 +132,7 @@ public class PrinterConfigServiceImpl implements PrinterConfigService {
     public boolean updateStorePrintingEnabled(Long storeId, boolean enabled) {
         Store store = requireStore(storeId);
         String targetMode = runtimePolicy.requireAllowedMode(enabled ? PrintingMode.REAL : PrintingMode.DISABLED);
+        alloPrintingPolicy.requireStoreMode(store, targetMode);
         store.printing_enabled = enabled;
         store.printing_mode = targetMode;
         store.updated_at = LocalDateTime.now();
@@ -139,6 +145,7 @@ public class PrinterConfigServiceImpl implements PrinterConfigService {
     public String updateStorePrintingMode(Long storeId, String printingMode) {
         Store store = requireStore(storeId);
         String normalizedMode = runtimePolicy.requireAllowedMode(printingMode);
+        alloPrintingPolicy.requireStoreMode(store, normalizedMode);
         store.printing_mode = normalizedMode;
         store.printing_enabled = !PrintingMode.DISABLED.equals(normalizedMode);
         store.updated_at = LocalDateTime.now();

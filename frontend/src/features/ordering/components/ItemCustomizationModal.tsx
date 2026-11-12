@@ -1,3 +1,4 @@
+import { withMenuCode } from '../../../utils/menuCode'
 import { useEffect } from 'react'
 import { useLocale } from '../../../i18n/useLocale'
 import { Button } from '../../../components/ui/Button'
@@ -368,7 +369,7 @@ export function ItemCustomizationModal({
             <div className={`${compact ? 'mt-2.5' : 'mt-3'} flex items-start justify-between gap-6`}>
               <div>
                 <h2 className={`${compact ? 'text-[1.8rem]' : 'text-[2.35rem]'} font-extrabold tracking-[-0.05em] text-[var(--on-surface)]`}>
-                  {businessName({ en: item.nameEn, zh: item.nameZh, fr: item.nameFr })}
+                  {withMenuCode(item.sku, businessName({ en: item.nameEn, zh: item.nameZh, fr: item.nameFr }))}
                 </h2>
                 {missingTranslation ? <p className="mt-1 text-xs text-[var(--muted)]">{t('common.translationFallback')}</p> : null}
               </div>
