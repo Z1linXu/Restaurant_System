@@ -2,6 +2,7 @@
 
 Supporting implementation contract, 2026-11-12. This document does not authorize
 deployment, a Store capability change, or any Production price adjustment.
+Actual16:09UTC Allô release appliedV42 and enabled only reviewed Store1 capability; no Productionprice adjustment was run. See ALLO_PRODUCTION_DEPLOYMENT_REPORT.md.
 
 ## Scope and Store capabilities
 

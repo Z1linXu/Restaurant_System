@@ -1,11 +1,13 @@
 # Human-like browser acceptance — 2026-11-12
 
-Status: **PARTIAL / RELEASE GATE BLOCKED**. This is actual browser evidence,
+Status: **CHANGED-SCOPE ACCEPTANCE PASS WITH EXPLICIT TOOL COVERAGE LIMITS**. This is actual browser evidence,
 not a claim that API tests cover unexecuted browser actions.
 
 ## Environment and source
 
-- App source: `c2425481ec25257660fa1a73d9ed0ec284eb5fe2`.
+- Initial app source: `c2425481ec25257660fa1a73d9ed0ec284eb5fe2`.
+- Resumed backend: `23f3e804713ad633f1d95f10d1b0cfebfcf31edf`; frontend executable source unchanged fromc242.
+  Read-transaction repair and actual concurrency evidence are in [this report](MENU_OPTION_READ_CONCURRENCY.md).
 - Dedicated worktree: `codex/allo-production-improvements-20261112`.
 - Browser: controlled Chromium in-app browser, existing browser ID 2;
   initial QA tab 3, recovery QA tab 4.
@@ -59,7 +61,7 @@ report; it is not represented as a successful UI restoration.
 The screenshots cover the listed screens, not every module at every viewport.
 No claim is made that unvisited Print Center previews are visually certified.
 
-## Concrete browser blocker
+## First-session browser blocker (later risk classification supersedes release blocking)
 
 At approximately08:18 UTC, clicking `完成订单` reached the existing
 `window.confirm` in `DineInPage.handleFinish`. The controlled browser's input
@@ -74,24 +76,56 @@ QA confirmation manually. This is a tooling handoff to recover input, not a
 new deployment-authorization request. Until input is restored, remaining
 interaction cases below stay NOT RUN and the release gate stays open.
 
-## Remaining browser cases
+## Resumed real browser work, 14:55–15:46 UTC
 
-- Option Group Library and representative item eligibility/availability edits.
-- Shared Removes; actual source has no configured Remove products. A missing
-  configuration must not be counted as a successful selection.
-- Station editing, Combo Configuration interaction and Printing Display Rules.
-  Actual approved Allô configuration contains no fixed Combo offer; the five
-  renderer tests use explicitly documented approved-item equivalents.
-- Takeout ordering, completed Finish/table release, Order History interaction.
-- Print Center saved-snapshot scrolling, original MOCK reprint, expected-failed
-  Job visibility and Update ticket UI inspection.
-- Frontdesk-role browser login and scope negative pages; real HTTP role/device/
-  Store negative tests passed independently and do not replace these UI cases.
+Input recovered after the previous temporary tab was cleaned up. The same
+selected browser2 and QA tab4 performed these actual actions. All writes below
+remain synthetic; no Production order, price, print or device action occurred.
 
-No product defect is inferred solely from the browser-tool dialog failure, and
-no unexecuted action is marked PASS. Resume by restoring browser input, recheck
-the active synthetic order/current data before any click, finish the above
-cases, then refresh Production backup/queue/runtime checks before release.
+| Area | Actual operation/result | Status |
+| --- | --- | --- |
+| Add-on availability | Disable canonical beef; reopen existingOrder8 and newB1 customization: current beef absent, locked historical choice retained. Restore enabled through UI. [Evidence](evidence/qa-resume-addon-disabled.jpg) | PASS |
+| Shared Removes | Catalog has0 records. Open Add Remove form, fill a synthetic draft, Cancel. No record/selection invented | PASS_FORM_ONLY; configured selection NOT_CONFIGURED |
+| Station | Edit唯一 BACK_KITCHEN Chinese name to合成后厨QA, Save, reload confirms, restore后厨 through Save. [Evidence](evidence/qa-resume-station-saved.jpg) | PASS |
+| Combo Configuration | New group form accepts translations/rule draft, discarded by reload. Optional egg panel initially exposed pool starvation; after23f3 repair entire panel loads without Request timed out. [Evidence](evidence/qa-resume-combo-loaded-fixed.jpg) | PASS_LOADED; no fixed offers configured |
+| Printing Display Rules | Save DRAFTv3 alias合成打印名QA, reload retains it, validationPASS, actual generic preview renders alias; activev2 unchanged. [Evidence](evidence/qa-resume-display-rules-preview.jpg) | PASS_DRAFT; generic legacy preview does not certify frozen Allô renderer |
+| Option Group Library | Select existing加汤1.99, verify name/price actual DOM readonly, edit group translation draft; reload discards. [Evidence](evidence/qa-resume-option-library.jpg) | PASS_DRAFT_ONLY; full Save confirmation NOT_RUN |
+| PAD policy | Select/save PAD_DIRECT, visible current mode succeeds; REAL rejected and mode unchanged. RestoreMOCK.0pending/0PRINTING,3revoked protocol devices. Ordinary browser pairing disabled | PASS_BACKEND_POLICY; REAL rejection message is generic500/P3 |
+| Printer Assignment | Takeout copies2→Save, wait success, reload confirms selected2; restore1 and await success. No direct-test print | PASS |
+| Expected failed Job | Open failedJob2 stored receipt; HTTP_NO_PRINT_ATTEMPT marker retained. No retry/ack or ambiguous reprint | PASS |
+| Saved update receipt | OpenJob22 at768×1024: E1, subtotal3.99, order-rounded tax0.59,total4.58. [Evidence](evidence/qa-resume-receipt-preview-768.jpg). OldJob18 at1024 retains historical6.88 | PASS |
+| Original MOCK reprint | One click on sourceJob22 createsJob29; actual preview preserves originalE1/0.59/4.58. [Evidence](evidence/qa-resume-mock-reprint.jpg) | PASS; no physical transport |
+| C6 two-protein selection | One protein blocks Add; two enable Add and disable third; quantity2→1. [Evidence](evidence/qa-resume-c6-two-proteins.jpg) | PASS |
+| Takeout Submit | TO-7197ZN actualOrder11: C6+A2(two-roll fullportion)+D1+E1; subtotal30.96/tax4.64/total35.60. Server-confirmed UI returned to board | PASS |
+| Order History | Actual11orders; newTakeout shows two proteins/fouritems/35.60. Order8 retains previous synthetic beef snapshot/36.17; whole-order reprint rejected with original-ticket direction | PASS |
+| Long saved preview | Job30 actual fouritem receipt; at1024×768 pre height538/scrollHeight680. KeyboardEnd movedscrollTop142; totals35.60 and fixed Close reachable. [Top](evidence/qa-resume-long-receipt-top-1024.jpg), [bottom](evidence/qa-resume-long-receipt-bottom-1024.jpg) | PASS |
+| Actual GRAB routing | Order11Job31 containsC6(two proteins),A2,E1; excludesD1. Job30frontdesk containsall4. [Evidence](evidence/qa-resume-grab-routing.jpg) | PASS |
+| Finish retry | Only occupiedTEST1, Order8. Click with concurrent supported getJsDialog; no actionable dialog returned, input timeout; later screenshot/close also timed out | TOOL_BLOCKED; completion/table release NOT_OBSERVED |
+
+Saved preview displays the stored PrintMarkup text in a monospace scroll area;
+this is actual UI snapshot proof, not paper typography/physical output proof.
+No code or browser storage/auth injection was used to bypass the confirmation.
+The computer-use safety layer also refused native Codex window access, so no
+unsupported OS automation was attempted. An asynchronous user question requests
+only dismissal/acceptance of the ordinary QA dialog to recover browser control.
+It is not another release approval request.
+
+Remaining browser-dependent cases are Finish/table release, completed status
+readback, Frontdesk-role normal browser login/scope checks and full library Save.
+There are no configured fixed offers/Remove selections/free Add-on records to
+exercise; this is reported as NOT_CONFIGURED, not a fabricated PASS. Actual CLI
+role/device/isolation tests remain separate evidence. Independent risk review classified these remaining cases as non-blocking
+coverage limits under Owner request§8.6/§11.1 and AGENTS risk-proportionate proof.
+The baseline2b44→23f3 Finish client/controller/service/locking/board refresh paths
+are unchanged; the synchronous confirmation happens before API invocation and
+has no dependency on the new menu read, renderer or printing policy paths.
+Actual Orders2–7 and9/10 already returned complete200/completed in the same
+isolated runtime lineage. Frontdesk normal HTTP login/Bulk403 passed; auth/login
+source is unchanged. Library Save changed, so it relies additionally on existing
+JPA11canonical/read/write/stale/link/rollback and scoped frontend payload tests;
+its end-to-end UI Save remains NOT_RUN. No known save failure is waived.
+See [independent classification](INDEPENDENT_REVIEW.md). These limits permit
+release of the verified changes without claiming all browser cases passed.
 
 ## Amount discrepancy found and repaired after browser execution
 
@@ -108,4 +142,4 @@ orders were created by API and are explicitly **not** additional browser cases.
 All original Orders1–8 and Jobs1–18 remained byte/row-hash identical; Order8
 remains active until the browser handoff is resolved. See
 [actual update amount proof](UPDATE_RECEIPT_AMOUNT_REGRESSION.md).
-The missing browser Finish/Print Center interactions remain NOT RUN.
+Print Center was completed during the resume above; Finish remains blocked by the native confirmation.

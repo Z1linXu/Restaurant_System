@@ -9872,30 +9872,9 @@ legacy update semantics, including already saved historical Allô Jobs. Physical
 printing is never inferred from a renderer or protocol result. The latest test,
 review and activation status belongs in the merchant release reports.
 
-### Allô 2026-11-12 validation and release state
-
-Sealed app source is `e7dde0a6e27adf3be00baa9972fee06cdcc5482c`. Backend:
-191 report files,1519 tests total =1402 passed +117 skipped,0 failures/errors.
-Unchanged frontend source:84 files/481 tests passed, TypeScript/Vite builds pass.
-Fresh PostgreSQL V42, five renderer groups with12 original snapshots, device
-HTTP safety and new update-amount/idempotency/history preservation acceptance
-passed. Independent code/amount review passed. Hosted CI was not run; this
-checkout has no configured `.github` workflow. These are local/isolated results.
-
-Real browser testing operated Owner login, item edit/code persistence, category
-routing,14-item multi-category increase/decrease, canonical Add-on current
-price, POS draft/submit/append Update, and inspected desktop/1024/768 layouts.
-The ordinary Finish `window.confirm` blocked supported browser controls; Finish,
-Print Center and remaining representative module interactions are incomplete.
-The release remains NO-GO until this browser gate is completed. Android Worker
-and physical printing are NOT TESTED.
-
-Candidate e7dde0a images and an exact old Compose/env/image rollback tuple are
-staged on43.166.242.250. The running old2b44+915e WSS application, V41, StoreMOCK,
-34 prices, ten historical orders and30 Jobs remain unchanged. No candidate
-activation, V42 Production migration, canonical reconciliation, capability
-enable or production test write occurred. Old-binary rollback after a future
-activation also requires pausing writes and draining all new monetary outbox
-intents with the new binary first; an old renderer must not reinterpret them.
-See the [release report](docs/commercialization/merchants/allo-nouille/ALLO_PRODUCTION_DEPLOYMENT_REPORT.md)
-for exact hashes, restored85-table recovery evidence and remaining steps.
+Current execution state is recorded only in
+[`CURRENT_STATE.yml`](docs/governance/CURRENT_STATE.yml). Exact artifact, backup,
+browser and deployment proof is in the
+[Allô merchant release reports](docs/commercialization/merchants/allo-nouille/ALLO_PRODUCTION_DEPLOYMENT_REPORT.md).
+Old-binary rollback requires pausing writes and draining new monetary outbox
+intents with the new binary first; old renderers cannot reinterpret those fields.

@@ -1,0 +1,116 @@
+{
+  "source_sha": "23f3e804713ad633f1d95f10d1b0cfebfcf31edf",
+  "activated_at_utc": "2026-11-12T16:09:12.653166+00:00",
+  "post_smoke_at_utc": "2026-11-12T16:12:37.316797+00:00",
+  "images": {
+    "backend": "sha256:edd2f53a0c2c64e9218c682015763f958dc87db8fa246447db6987cbcd5f5f9f",
+    "frontend": "sha256:1e5094013596f889b498f9438a17d3ba3dd103fb10815240051f5e8afedbeaf2"
+  },
+  "jar_sha256": "d4b9473fce4d7bfaf35c6a5f1ace4e83bc5dc0ab24fe9c04a616c9187154f522",
+  "archive_sha256": "f12e133270db93bb913071c7e60bab4c3c04ad58014a5e37d961c4f93ff04fb1",
+  "flyway": "V42",
+  "db_container_unchanged": true,
+  "printing_mode": "MOCK",
+  "canonical": {
+    "dry_run": {
+      "store_id": 1,
+      "dry_run": true,
+      "linked_groups": 13,
+      "linked_options": 94,
+      "conflicts": [],
+      "menu_revision": 96,
+      "fingerprint": "f3279421df19dddd0ea7548d86bf77146db43f18475b5088b83d6033fcfd9f32"
+    },
+    "apply": {
+      "store_id": 1,
+      "dry_run": false,
+      "linked_groups": 13,
+      "linked_options": 94,
+      "conflicts": [],
+      "menu_revision": 97,
+      "fingerprint": "2ffb06597d681dbb7a4f267593cc89d67814a57e49896ef3dfc29ebdad8f125b"
+    },
+    "replay": {
+      "store_id": 1,
+      "dry_run": false,
+      "linked_groups": 0,
+      "linked_options": 0,
+      "conflicts": [],
+      "menu_revision": 97,
+      "fingerprint": "2ffb06597d681dbb7a4f267593cc89d67814a57e49896ef3dfc29ebdad8f125b"
+    }
+  },
+  "protected_history_and_prices": "PASS",
+  "public_https_assets": "EXACT_MATCH",
+  "api_smoke": [
+    {
+      "path": "/api/v1/stores/1/template/runtime-safety",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/admin/printing?store_id=1",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/admin/menu/pricing-capabilities?store_id=1",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/menu/catalog?store_id=1",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/admin/menu/addons?store_id=1",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/stores/1/context",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/admin/platform/menu/categories?store_id=1",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/orders/active?store_id=1",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/admin/printing/devices?store_id=1",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/admin/menu/addons?store_id=1",
+      "method": "GET",
+      "status": 401
+    },
+    {
+      "path": "/api/v1/menu/catalog?store_id=2",
+      "method": "GET",
+      "status": 403
+    },
+    {
+      "path": "/api/v1/admin/menu/pricing-capabilities?store_id=1",
+      "method": "GET",
+      "status": 200
+    }
+  ],
+  "websocket": {
+    "anonymous": "DENIED",
+    "invalid_token": "DENIED",
+    "cross_store": "DENIED",
+    "wildcard": "DENIED",
+    "client_publish": "DENIED",
+    "authenticated_own_store": "CONNECTED_SUBSCRIBED_DISCONNECTED"
+  },
+  "physical_printing": "NOT_TESTED_NO_ATTEMPT"
+}

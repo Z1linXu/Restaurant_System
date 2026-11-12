@@ -1,189 +1,208 @@
-# Allô controlled production release — 2026-11-12
+# Allô controlled Production release — 2026-11-12
 
-**NOT DEPLOYED — PENDING_BROWSER_GATE — RELEASE NO-GO.**
+**DEPLOYED — PRODUCTION SMOKE PASS — EXPLICIT NON-BLOCKING TOOL COVERAGE LIMITS.**
 
-Owner deployment authorization already covers this release to
-<https://pos.allonouilles.com/>. No additional deployment approval is being
-requested. The browser interaction gate remains incomplete because the ordinary
-synthetic Finish confirmation blocks the supported browser controls; details
-and completed cases are in [browser acceptance](HUMAN_LIKE_E2E_REPORT.md).
-This report must not be used as a successful deployment certificate.
+Owner explicitly authorized completing browser acceptance and then deploying
+Allô without repeated per-step confirmation. No deployment approval is missing.
+The ordinary synthetic Finish native confirmation blocks supported browser
+control; no new completed/table-release state is claimed. Independent review
+classified the remaining Finish/Frontdesk-UI/library-full-Save gaps as
+NOT_RUN_TOOL_LIMIT / NON_BLOCKING_COVERAGE_LIMIT under Owner§8.6/§11.1.
+Finish/auth paths are unchanged and actual8FinishAPI proofs pass; library has
+focused actual JPA/scoped-payload proof. This supersedes the earlier over-strict
+interpretation that every unsupported browser action must block release.
+See [actual browser results](HUMAN_LIKE_E2E_REPORT.md).
 
-## Target and unchanged live version
+## Exact fixed batch, prepared and independently reviewed
 
-Only `43.166.242.250` / `VM-0-6-ubuntu`, Compose project `allo-nouilles`, root
-`/srv/allo-nouilles`. Existing Lanzhou Production and the unrelated dirty main
-checkout were not deployment targets.
-
-| Property | Actual live value before candidate activation |
+| Property | Verified value |
 | --- | --- |
-| Backend/frontend source | `2b44aa95d6b9f5ead343858b3a4a18c4eda3d0a9` + authenticated WSS compatibility patch `915e4ff4d8a6a0698c54ae70d2567e0919c50a49a59e48bdd03fbf902321c6e0` |
+| Source | `23f3e804713ad633f1d95f10d1b0cfebfcf31edf` |
+| Branch | `codex/allo-production-improvements-20261112` |
+| PR | [#310](https://github.com/Z1linXu/Restaurant_System/pull/310), draft, base `codex/allo-nouilles-delivery-20261103` at `1f9f1122efe7763015b49f1a6aa4ecbb33030dd8`; not merged into main |
+| Fresh origin/main | `80e888fcdad74e98326fcbeaa5df14bc0d9baed6`; reference only, not Allô deployed source |
+| New archive SHA-256 | `f12e133270db93bb913071c7e60bab4c3c04ad58014a5e37d961c4f93ff04fb1` |
+| JAR SHA-256 | `d4b9473fce4d7bfaf35c6a5f1ace4e83bc5dc0ab24fe9c04a616c9187154f522` |
+| Backend image | `sha256:edd2f53a0c2c64e9218c682015763f958dc87db8fa246447db6987cbcd5f5f9f` |
+| Frontend image | `sha256:1e5094013596f889b498f9438a17d3ba3dd103fb10815240051f5e8afedbeaf2` |
+| Compose SHA-256 | `6672b3277ab87b39da37d6313d8694b238599de29fb41f3c6635754a7bc94177` |
+| Resolved candidate env SHA-256 | `e0f7e07543b16f2d3ba97eadea7f789ded8a628e7edd44fca4b37823e0604a2a`; private values never printed/committed |
+| Frontend namespace | `allo-nouilles`; QA namespace absent from Production build |
+| Migration | Reviewed additive V42, Store capability defaultsfalse; no price/order/history rewrite |
+| Reviewed targeted capability SQL SHA-256 | `e9b5b41b301bc71991a4942ce2e168f4eec792392b69bedb0ac8f4e8f6f279c8` |
+| Remote candidate | `/srv/allo-nouilles/releases/23f3e804713ad633f1d95f10d1b0cfebfcf31edf` |
+
+Archive59file hashes, source labels, verified existing base images, brand asset
+and JAR were checked locally and on43.166.242.250. Docker builds used
+`--network=none --pull=false`. Production namespace is retained. Source is
+pushed and reviewable; a draft PR on the separate Allô delivery line is not
+claimed as a merge into main. Unrelated dirty main-checkout work was untouched.
+The oldc242/e7candidate artifacts are superseded and must not be activated.
+Documentation-only commits do not change/rebuild this exact application batch.
+
+## Actual activation and post-deployment result
+
+Activation began `2026-11-12T16:07:52Z` and completed
+`2026-11-12T16:09:12.653166Z` (Toronto11:09). Only backend/frontend were
+recreated. Exact image IDs match the sealed table above; running JAR SHA matches
+`d4b9473f…4f522`. Backendcontainer`c10fe14222d5e0224e58777776315d39bda5c109f168e6794477122382e60b81`,
+frontendcontainer`28d00cc47a186900c8230c1b41b2e59b7612cc12767543d86047359829350f77`.
+DBcontainer and its `2026-11-08T07:51:56.8264236Z` start time are unchanged.
+FlywayV42 successful; exact Store1 capability enabled without a price batch.
+
+Actual checked canonicalAPI dry-run returned13groups/94leaves/0conflicts at
+menu_revision96/fingerprint`f3279421df19dddd0ea7548d86bf77146db43f18475b5088b83d6033fcfd9f32`.
+Apply used those fresh guards and returnedrevision97/fingerprint
+`2ffb06597d681dbb7a4f267593cc89d67814a57e49896ef3dfc29ebdad8f125b`.
+Replay used the apply-returned guards and produced0groups/0leaves, unchanged
+revision/fingerprint/configuration/audit. Apply produced exactly one reconcile
+audit.13canonicalAdd-ons now serve94linked leaves. All94core fields including
+French and price retained; the other94options remain full-row identical.
+All34menu_items, groups, printers/assignments and historical business hashes
+remain identical to pre-deploy snapshots.10completedorders/30Jobs/30outboxrows
+retain their existing statuses, with0active/pending work. No historicalFAILED
+record was cleared or automatically replayed.
+
+At16:11:46UTC authenticated readonly smoke passed Owner and Manager login,
+Storecontext,34itemcatalog,13Add-ons,canonical categoryGET,capabilityflag,
+printingMOCK/0devices. Runtimepolicy reportsproduction/build23f3 and
+DISABLED,MOCK,PAD_DIRECT; REAL absent. AnonymousAPI401/crossStore403; WSS
+anonymous/invalid/crossStore/wildcard/client-publish denied, ownStore
+CONNECTED/SUBSCRIBED/DISCONNECTED. No test order/reprint/pricebatch/pairing.
+
+At16:12:35UTC publicHTTPS/TLS/healthUP passed. RootHTML,frontdeskfallbackHTML
+and6observedstaticassets exactly match the sealed bundle; brandlogo unchanged.
+No post-deploy browser visual pass is claimed because the IAB confirmation
+still blocks supported control. The final readonly smoke required one helper
+retry: initial nonexistent categoryGET returned500; the source-confirmed actual
+`GET /api/v1/admin/platform/menu/categories` returned200. No application code,
+artifact,restart or business repair was needed for this smoke-path typo.
+
+## Verified pre-deployment baseline
+
+Target only `43.166.242.250` / `VM-0-6-ubuntu`, Composeproject`allo-nouilles`,
+root`/srv/allo-nouilles`, canonical`https://pos.allonouilles.com`.
+Lanzhou Production and old shared Test/Staging are outside scope.
+
+At15:47:43UTC guarded read-only audit still matched prior container identities,
+start times and full business hashes:
+
+| Property | Actual live value |
+| --- | --- |
+| Backend/frontend | `2b44aa95d6b9f5ead343858b3a4a18c4eda3d0a9` + authenticated WSS patch `915e4ff4d8a6a0698c54ae70d2567e0919c50a49a59e48bdd03fbf902321c6e0` |
 | Backend image | `sha256:613327357035df7e16cbf50206891d7853dca02afd79b4bfbcbf8b13bb81e1d7` |
 | Frontend image | `sha256:e3ae049a8fcaf77311dca3173b5f5761168334672a8571df2e8cb7520cb24cc0` |
-| PostgreSQL image | `sha256:cbf42f0edc946c0bc1b8eeed62403734e1f25dc67a3491455d07a92fdb558b28` |
-| Migration | V1–V41 success; candidate V42 has not run on Production |
-| Database / user | `restaurant_allo_nouilles_test` / `allo_test`, existing independent physical production database |
-| Tenant | Organization1 / Store1 / `ALLO_NOUILLES_TEST` |
-| Printing | Enabled, Store `MOCK`, 0 paired devices |
-| Menu | revision96; 32 numbered products +2 zero-price refills; approved screenshot prices/categories match |
-| Business state | 10 completed orders, 0 active orders; 30 Jobs:25 PRINTED/4 CANCELLED/1 historical FAILED |
-| Outbox | 23 MOCK_RENDERED/2 SKIPPED/4 POLICY_BLOCKED/1 historical FAILED; no PENDING/PROCESSING |
-| Canonical Add-ons | 0 catalog rows; controlled reconciliation has not been applied |
-| Combo | 0 configured fixed offers/components; no new commercial offer was invented |
+| DB image/container | `sha256:cbf42f0edc946c0bc1b8eeed62403734e1f25dc67a3491455d07a92fdb558b28` / `cbd0c6cf504d3b746f880879db3f0beb9da3c3ce212e35c8d2b0a21061820d37` |
+| DB identity | `restaurant_allo_nouilles_test` / user`allo_test`; physical independent Production DB despite historical name |
+| Tenant | Store1/Org1/code`ALLO_NOUILLES_TEST` |
+| Flyway | V1–V41 success; V42 has not run in Production |
+| Print | StoreMOCK/enabled,0devices,0printer endpoints |
+| Menu | revision96;34baseprices unchanged,32numbered products +2free refills |
+| Orders | 10completed/0active |
+| Jobs | 30:25PRINTED/4CANCELLED/1historicalFAILED;0pending/claimed/printing |
+| Outbox | 23MOCK_RENDERED/2SKIPPED/4POLICY_BLOCKED/1historicalFAILED;0pending/processing |
+| Canonical Add-ons | 0; no Production reconcile/capability-enable/price-batch operation |
 
-The container identities and business/menu hashes remained unchanged after
-candidate image staging. Current production health is checked separately in
-the restricted `production-live-unchanged.json` /
-`production-health-before-release.json`; it certifies the **old running
-version**, not a post-deployment smoke of the candidate.
+The prepared script's default **prepare** mode passed after resolving one
+read-only table-name typo. It validates all artifact hashes, old runtime tuple,
+DBmount/image, exact tenant/MOCK, queues/devices/endpoints, backup freshness,
+resolved old/new Compose differences and secret preservation. Only the exact
+backend/frontend images and reviewed policy/Flyway variables may differ.
+DB service configuration compares equal. Candidate private files and images
+were staged; active rootCompose/runtime.env were not replaced or restarted.
 
-At09:10:11 UTC a final guarded read-only snapshot again matched all old
-container IDs, business hashes, Store configuration and34 prices. A separate
-configuration-only extraction included all188 option leaves and31 groups;
-static review found0 reconciliation plan conflicts for13 paid codes/94 leaves,
-including complete zh/en/fr/FK/parent/binding checks. This improves the earlier
-aggregate preflight but is **not** a new-backend checked API dry-run/apply.
-No production rows were imported into the synthetic QA database.
+## Fresh recovery proof
 
-## Traceable candidate artifacts actually prepared
+- Dump: `/srv/allo-nouilles/backups/release-20261112/PRODUCTION_RECOVERY_ONLY_20261112T154832Z.dump`.
+- SHA-256: `ad7dee0694447c566ecef239c19e453dad605d2b3d1918d0ce6e31a6bcd53eff`.
+- 360648bytes,85tables; dump shares a consistent exported PostgreSQL snapshot
+  with all table counts/full-row hashes.
+-15:49:01UTC independent socket-only recovery restored all85tables, exact full
+  row hashes/counts and valid constraints/indexes. Recovery cluster stopped and
+  removed. Production recovery data was never used as synthetic QA data.
+- Previous recovery artifacts remain protected. No live DB restore was run.
 
-App source commit:
-`e7dde0a6e27adf3be00baa9972fee06cdcc5482c` on
-`codex/allo-production-improvements-20261112`.
-Evidence/runbook-only follow-up commits do not change these sealed app artifacts.
+## Acceptance and review
 
-- Backend JAR SHA256:
-  `9430ee811525bd22bf525d479c864ac86c22d26c45bb93facee8e3f14c02d380`.
-- Production frontend build explicitly sets this app SHA and namespace
-  `allo-nouilles`; it does not contain the QA namespace.
-- Existing merchant logo bytes were retained, SHA256
-  `8a91f839aa9e614876fee5d312b06b48e55f00ee7ef36be62490fba52dd0cf94`,
-  equal to the actual old frontend asset. This is an audited existing private
-  asset input, not an untracked source-code override.
-- Release archive SHA256:
-  `1395236f03579715d62ee2a4c7f1433f684a36426e60c172f20d314e38baa3b5`.
-  Manifest verifies59 payload files, committed Dockerfiles/Compose, JAR and dist.
-- Candidate directory on the new host:
-  `/srv/allo-nouilles/releases/e7dde0a6e27adf3be00baa9972fee06cdcc5482c`.
-- Backend candidate image:
-  `sha256:06438f7ebaf408a3b921b9cd00028b8b4854a35471bff9231be42a5a4ac3c591`.
-- Frontend candidate image:
-  `sha256:390cb0d0a6b565dbb58bbd9c98d30f3e9ae85e07dbdc2007a4592ba04132c81c`.
+- Backend1520total=1403passed+117skipped,0fail/error,192XML; focused44pass.
+- Frontend unchanged runtime source481tests/84files; TypeScript/Vite final
+  Production buildPASS. Production npm audit0;7moderate devlint findings deferred.
+- Five renderer groups/6orders/12original snapshotsPASS; no fixed offers or
+  single-roll portion invented. New monetarydelta renderer/HTTP proofsPASS.
+- Actual two rounds34concurrent optionGET/healthPASS with originalpool4,
+  full responses unchanged;20tables378rows unchanged. [Proof](MENU_OPTION_READ_CONCURRENCY.md).
+- Actual browserPrintCenter, updatepreview, originalMOCKreprint, failedJob,
+  assignmentpersist/restore, C6cardinality/takeout/history, longpreviewscroll,
+  canonicalavailability/station/displaydraft and Combo loadPASS. Finish and
+  remaining role/library confirmation cases remain unobserved.
+- [Agent6](INDEPENDENT_REVIEW.md) passed source23f3 and the final exact batch /
+  activation script. Its P2 capabilitySQL identity guard was fixed: one
+  transaction locks exactStore1/Org1/code/MOCK, rejects missing target and
+  asserts one policy row changed. Final pre-restart guard rechecks MOCK,
+ 0devices/endpoints and no active/pending work. No automatic oldbinaryrollback.
+- Android Worker/actual Pad/codepage/paper/physical printing **NOT TESTED**.
 
-The final e7dde0a images were staged at2026-11-12 09:01:41 UTC. The earlier
-c242548 staged-only candidate is superseded and must not be activated: the
-human-browser update case exposed a one-cent receipt reconciliation issue,
-fixed and re-reviewed in e7dde0a. Old Job18 retains its actual6.88 text; new
-updates use the correct frozen order delta.
+## Executed release procedure
 
-Both images were built on the target using the verified original exact base
-images, `--pull=false --network=none`, and validated source/revision labels.
-Old container IDs/images were checked before staging and retained afterward.
-No `compose up`, active Compose/env replacement, migration, capability enable,
-canonical reconciliation, order, reprint or price adjustment was performed.
+1. Repeat instant exact target/runtime/queue/backup guards. If backup is stale
+   or current data/identity differs, refresh appropriate evidence before change.
+2. Replace only reviewed rootCompose and runtime.env from the fixed batch,
+   preserving DB/JWT/TLS/private metadata. Recreate only backend then frontend
+   with `--no-deps`; health-check exact images. DBcontainer/starttime must remain.
+3. Flyway runs only additiveV42. Execute the reviewed capabilitySQL for exact
+   Store1/Org1/code/MOCK inside one lock transaction with affected-row assertion.
+   No category preview/apply price adjustment is permitted in Production smoke.
+4. AuthenticatedOwner API `POST /api/v1/admin/menu/addons/reconcile` dry-run
+   `{store_id:1,dry_run:true}`: require0conflicts,13groups/94leaves and fresh
+   menu_revision/fingerprint. Apply those exact fresh guards, no confirmed_prices.
+   Replay with the apply-returned guards; require0groups/0leaves and no new
+   revision/audit writes. Static09:10full-config check is not actual API proof.
+5. Verify34baseprices; existing orders/items/options/jobs/outbox unchanged.
+   For94linked leaves preserve ID/item/code/zh/en/fr/price/default/sort/parent/
+   templatebinding; allowed linkage/group/eligibility/timestamp updates only.
+   Other94physical leaves retain full rows. Do not assert all188 full rows equal.
+6. Read-only HTTPS/login/menu/categories/addons/capabilities/printing/history/
+   frontdesk/WSS/health/logsmoke; no Production test sale/reprint/pairing. Keep
+   actualStoreMOCK until separately authorized real hardware is available.
 
-## Completed release evidence
+## Matching rollback tuple, prepared not executed
 
-| Gate | Result and actual scope |
-| --- | --- |
-| Backend | PASS:191 Surefire XML files,1519 total =1402 passed +117 explicitly skipped,0 failures/errors |
-| Frontend | PASS:84 files/481 tests; TypeScript and Vite builds |
-| Database | PASS:V42 on fresh synthetic PostgreSQL; H2 transaction/locking/idempotency/audit rollback cases in backend suite |
-| Five renderer groups | PASS:6 synthetic orders/12 saved snapshots; 2/3 are approved-item equivalents, not fixed Combo certification |
-| Update receipt money | PASS:actual saved new Job19–28, positive/negative cent allocation, consecutive free refill, no duplicate update Jobs, all prior data unchanged; [evidence](UPDATE_RECEIPT_AMOUNT_REGRESSION.md) |
-| Independent code review | PASS for e7dde0a after four initial P1 repairs and the update-amount regression; hardware remains NOT TESTED |
-| Security | ACCEPT WITH LIMITATIONS; production npm audit0,7 moderate dev-only findings; no exhaustive backend SCA claim |
-| Human-like browser | PARTIAL; new main workflows operated, remaining Finish/Print Center/other modules NOT RUN after browser control blocker |
-| Hosted CI | NOT RUN / no repository `.github` workflow configured; actual local test/build results above are not relabelled remote CI |
-| Production candidate smoke | NOT RUN, because candidate is not activated |
+`/srv/allo-nouilles/releases/23f3e804713ad633f1d95f10d1b0cfebfcf31edf/rollback-baseline` stores root-only oldCompose/runtime.env/nginx and image IDs.
+OldComposeSHA`2de5ecc5ce6c07c83674610bb63bedf731816001e61e6f5854e3015a3de6679f`. Restore **oldCompose +oldenv +both
+oldimages together**, retaining additiveV42 and current data; do not run an old
+DBdump over new business. No oldbinary+V42 live rollback rehearsal is claimed.
 
-## Recovery backup actually restored
+Before any oldbinary rollback pause writes and use the new binary to drain
+new `update_subtotal/update_total` monetary outbox intents and active jobs.
+Unmaterialized failed monetary intents must not be requeued through an old
+renderer. If this cannot be proven, keep a safe stop/forwardfix boundary.
+Preserve source-key idempotency and queues; never clear/replay them blindly.
+During temporary oldbinary use pause Add-on/templateediting because future
+French Add-on snapshots can fall back to English in old code.
 
-Fresh source snapshot at **2026-11-12 08:31:59 UTC** /03:31:59 America/Toronto:
+## Docker / Disk Hygiene
 
-`/srv/allo-nouilles/backups/release-20261112/PRODUCTION_RECOVERY_ONLY_20261112T083159Z.dump`
+| Metric | Before | After |
+| --- | --- | --- |
+| Disk | 14%,7.9GBused,49GBavailable | 15%,8.1GBused,49GBavailable |
+| BuildCache | 1.046GB,10.18MBreclaimable | 1.162GB,12.72MBreclaimable |
+| Images | 11total/3active | 13total/3active |
 
-SHA256:
-`55dd0ddf0e8a4e4f6a7f1ed22cd298d6e9501fc7d850de485f784da9f5ca0008`.
+CleanupPerformed:none; ReclaimedSpace:0. Healthy limits did not require cleanup.
+ProtectedArtifacts: current23f3app pair, previous2b44+WSS rollbackpair, recovery
+backups, DBmount/privateconfig and evidence. All3Allôcontainers healthy;
+DBcontainer unchanged. StagingHealth:not touched/recertified by this task.
+ProductionMutation:only reviewed Allôapp activation,V42,Store1capability and
+13/94canonicalmetadata; no other environment/runtime mutation.
 
-The custom dump is360648 bytes. The manifest's counts/hashes and dump share a
-single exported repeatable-read snapshot. A restricted local copy was restored
-at08:33:27 UTC into a separate **Unix-socket-only recovery cluster**, not QA.
-All85 tables matched exact row counts/content hashes; indexes and constraints
-were valid. That temporary recovery cluster was stopped and removed. Original
-dump and verification JSON remain private. All85 source hashes also matched the
-earlier07:16 backup; staging did not mutate source data.
+## Product repair / tooling and governance separation
 
-Before a resumed activation, redo a current runtime/active-order/queue check and
-fresh backup validation if intervening time or real business activity makes this
-snapshot stale. The earlier verified file is a recovery reference, not permission
-to overwrite new business records.
-
-## Application rollback prepared, not executed
-
-At09:03:07 UTC the exact old tuple was archived root-only at:
-
-`/srv/allo-nouilles/releases/e7dde0a6e27adf3be00baa9972fee06cdcc5482c/rollback-baseline/`
-
-Contains old `compose.yml`, `runtime.env`, `nginx.conf` and `baseline.json` with
-file hashes and old image IDs. Resolved old Compose was parsed in memory and
-checked without printing secrets. Old Compose SHA256
-`2de5ecc5ce6c07c83674610bb63bedf731816001e61e6f5854e3015a3de6679f`
-also equals the recorded Git baseline.
-
-Rollback must restore **old Compose + old environment + old backend/frontend
-images together**. New policy values are hardcoded Compose environment entries;
-restoring only env or only the old JAR is not a valid rollback. Keep the live
-database and additive V42/ledgers. Never restore this pre-release dump over
-orders accepted after deployment. Existing WSS authentication repair must remain.
-
-V42 adds a default-false flag and new preview/ledger tables; it does not rewrite
-old schema/business rows. Old code already supports the V28 canonical FK shape.
-After reconciliation it can read original prices/names, but its older Add-on
-projection can omit French on **future** order snapshots, and old template/admin
-edits can diverge. A temporary old-version rollback therefore requires pausing
-Add-on/template editing and acknowledging French fallback. Exact old binary
-startup against V42 and an actual live rollback were **not executed**; do not
-claim a full rollback drill.
-
-Before any old-binary rollback, pause new order writes and let the new binary
-process all PENDING/PROCESSING outbox events, including new `update_*` monetary
-intents; confirm no active Jobs. The old renderer ignores the new fields and
-would calculate their tax under the old rule. Do not change/requeue intents or
-clear history to satisfy this guard. Otherwise keep the application safely
-stopped or forward-fix with the new version.
-
-Only consider application rollback while Store remains MOCK and current queues
-are controlled. If an Owner later selects PAD_DIRECT or there are claimed/
-PRINTING Jobs, reassess ownership/provenance and use a forward fix where needed;
-never silently replay or transform physical work.
-
-## Remaining activation sequence
-
-1. Recover browser input and complete the documented remaining synthetic UI
-   cases; fix/retest any critical product fault and refresh independent review
-   if code changes. Do not force a GO from the current partial result.
-2. Reverify exact target/old runtime, no unsafe active orders/queues, artifact
-   hashes, current source backup and rollback tuple.
-3. Use committed candidate Compose with V42 and explicit Allô production opt-in,
-   preserving DB/JWT/TLS/source metadata. Recreate only backend/frontend, wait
-   for health; retain DB container/data and old images.
-4. Keep Store mode MOCK. Explicitly enable only Store1/Org1's bulk-price
-   capability under its exact identity; record this configuration change.
-   Do not apply a price batch.
-5. Owner-authorized checked Add-on dry-run must show expected13 groups/94 paid
-   leaves, no conflicts, current revision and fingerprint. Apply those exact
-   guards without `confirmed_prices`. Confirm all raw names/FR/prices/IDs and
-   other94 physical leaves unchanged, catalog13, checked replay zero writes.
-   Any conflict stops this step for investigation, not a guessed price choice.
-6. Compare all34 base prices and historical order/item/option/Job/outbox hashes.
-   Read-only website/login/admin/menu/category/Add-on/pricing/printer/policy/
-   Frontdesk/history/health/WSS/log smoke. No test sale/reprint/price operation.
-7. Record activation time, actual image/commit/Flyway and smoke results, then
-   update this report and final status. None of these post-activation results is
-   claimed by the present staged-only evidence.
-
-Android Worker and physical output remain NOT TESTED. Dessert kitchen routing
-default remains included until Owner chooses otherwise. Automatic off-host
-backup synchronization and the remaining dev dependency maintenance are
-separate non-blocking follow-ups.
+PRODUCT REPAIR: six features in c242, monetarydelta repair ine7, one readOnly
+transaction boundary in23f3 with meaningful behavior regression. All serve the
+original Allô outcome. No framework/globalOSIV/pool expansion was introduced.
+TOOLING / GOVERNANCE: reused existing Compose, backup/recovery and HTTP/WSS
+paths; required fixed-batch guards/one-time orchestration and concise evidence.
+Two helper-only corrections were bounded (printertable name during prepare;
+categoryGET path during readonlysmoke); no application rebuild/redeploy followed.
+Current execution authority is only CURRENT_STATE.yml. Deployment is complete;
+no main merge, real hardware pairing/printing or nextPhase is implied.

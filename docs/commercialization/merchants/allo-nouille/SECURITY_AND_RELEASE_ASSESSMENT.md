@@ -8,7 +8,7 @@
 | 本次已核对依赖与发布配置 | **ACCEPT WITH LIMITATIONS**；未发现新增应用 P0/P1 |
 | 前端 audit 修复后 | 全量 **7 moderate / 0 high / 0 critical**；`--omit=dev` **0** |
 | Backend 全量 SCA / 容器 OS 扫描 | **未执行，未声称通过** |
-| Production Release GO | **PENDING**；最终浏览器、当前源备份/配置、不可变产物与发布前核验仍须闭合 |
+| Production Release | **DEPLOYED / POST_SMOKE_PASS**；16:09UTC固定23f3批次已激活，工具受限UI保持NOT_RUN并经独立风险复核为非阻断 |
 | 真实 Pad、Android Worker、打印机/纸张输出 | **NOT TESTED** |
 
 本报告是证据评估，不是部署授权或 Gate 状态修改。Reviewer 只读源码、保存的扫描/
@@ -181,5 +181,4 @@ e7dde0a6e27adf3be00baa9972fee06cdcc5482c adds only the bounded Allô update-rece
 monetary repair, its tests and contract documentation. Dependency lockfiles and
 frontend source are unchanged. The independent review separately checked this
 new code and actual saved-snapshot amount regression; see INDEPENDENT_REVIEW.md
-and UPDATE_RECEIPT_AMOUNT_REGRESSION.md. Complete backend1519total/1402pass/
-117skip/0errors; Production activation remains NO-GO pending browser acceptance.
+and UPDATE_RECEIPT_AMOUNT_REGRESSION.md. Final23f3 adds only the read-only transaction repair with unchanged dependencies. Backend1520total/1403pass/117skip/0errors; final fixed-batch review and actual Production smoke passed. See the deployment report for runtime evidence; remaining browser coverage limits and hardware NOT_TESTED are preserved.

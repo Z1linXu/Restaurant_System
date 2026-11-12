@@ -26,5 +26,49 @@
   "qa-dessert-off.jpg": {
     "sha256": "f010475fb34aa2611c66a77695380b1e1014976e6bad8105c444af535389334e",
     "provenance": "CUA browser screenshot of isolated SYNTHETIC Allo QA; JPEG bytes returned by screenshot API, copied unchanged"
+  },
+  "qa-resume-addon-disabled.jpg": {
+    "sha256": "0bd54f42247fc7eb859191dbbb310d91d671b788dc4e7f79d1f59c0fb884fa66",
+    "provenance": "Unmodified CUA screenshot bytes; actual isolated SYNTHETIC Allo QA interaction2026-11-12 resume"
+  },
+  "qa-resume-station-saved.jpg": {
+    "sha256": "4af391e7471558f49c44c749fed535e95ed81e4cef8784e79aab035f487bc486",
+    "provenance": "Unmodified CUA screenshot bytes; actual isolated SYNTHETIC Allo QA interaction2026-11-12 resume"
+  },
+  "qa-resume-display-rules-preview.jpg": {
+    "sha256": "b4617ab752c0a622523dc509888e0ec5282d5077f6cb72b05ff143f64bf0773a",
+    "provenance": "Unmodified CUA screenshot bytes; actual isolated SYNTHETIC Allo QA interaction2026-11-12 resume"
+  },
+  "qa-resume-option-library.jpg": {
+    "sha256": "d92549ba3f8a0ba4c1b93d1db5ec2c2a35ea2d45a2b29890e54b1534bed7e04a",
+    "provenance": "Unmodified CUA screenshot bytes; actual isolated SYNTHETIC Allo QA interaction2026-11-12 resume"
+  },
+  "qa-resume-combo-loaded-fixed.jpg": {
+    "sha256": "695f7ed101c39ea1e16a5934d3448ef90d8cbf439717f011ab124c01a625e0da",
+    "provenance": "Unmodified CUA screenshot bytes; actual isolated SYNTHETIC Allo QA interaction2026-11-12 resume"
+  },
+  "qa-resume-receipt-preview-768.jpg": {
+    "sha256": "e6757fc1e245d2176b08bc92317ce281ec255013f360f97751f205af7285c4da",
+    "provenance": "Unmodified CUA screenshot bytes; actual isolated SYNTHETIC Allo QA interaction2026-11-12 resume"
+  },
+  "qa-resume-mock-reprint.jpg": {
+    "sha256": "3b6b6e4ad5e791cf5a811a046ae860d60a0afa7736831ce461aff9cd6a209e1d",
+    "provenance": "Unmodified CUA screenshot bytes; actual isolated SYNTHETIC Allo QA interaction2026-11-12 resume"
+  },
+  "qa-resume-c6-two-proteins.jpg": {
+    "sha256": "199781b94a8daf7fbb5c3e87a9a7e125decefe9ad9805e3b279eb63783697498",
+    "provenance": "Unmodified CUA screenshot bytes; actual isolated SYNTHETIC Allo QA interaction2026-11-12 resume"
+  },
+  "qa-resume-long-receipt-top-1024.jpg": {
+    "sha256": "ea6f3923d6eb867410f0d2091ffd2ba13f3cb85133ad53b6c719bfe13948ab67",
+    "provenance": "Unmodified CUA screenshot bytes; actual isolated SYNTHETIC Allo QA interaction2026-11-12 resume"
+  },
+  "qa-resume-long-receipt-bottom-1024.jpg": {
+    "sha256": "32f6c8990190ef4ae5911821006de8c3b9a4506ffc8beb76382ce2694cd8859b",
+    "provenance": "Unmodified CUA screenshot bytes; actual isolated SYNTHETIC Allo QA interaction2026-11-12 resume"
+  },
+  "qa-resume-grab-routing.jpg": {
+    "sha256": "00d18cd240a3bbf921e0a9883e172ff7b34789e3623853e68c7ba353e5ec09f1",
+    "provenance": "Unmodified CUA screenshot bytes; actual isolated SYNTHETIC Allo QA interaction2026-11-12 resume"
   }
 }

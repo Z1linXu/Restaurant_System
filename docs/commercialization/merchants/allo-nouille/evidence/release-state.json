@@ -1,38 +1,38 @@
 {
-  "at_utc": "2026-11-12T09:12:10.120509+00:00",
-  "status": "NO_GO",
-  "deployed": false,
+  "at_utc": "2026-11-12T16:12:37.316797+00:00",
+  "status": "DEPLOYED_POST_SMOKE_PASS_WITH_NON_BLOCKING_TOOL_COVERAGE_LIMITS",
+  "deployed": true,
   "target": "43.166.242.250",
-  "candidate_sha": "e7dde0a6e27adf3be00baa9972fee06cdcc5482c",
+  "candidate_sha": "23f3e804713ad633f1d95f10d1b0cfebfcf31edf",
   "candidate_images": {
     "backend": {
-      "reference": "allo-nouilles-backend:e7dde0a6e27adf3be00baa9972fee06cdcc5482c",
-      "image_id": "sha256:06438f7ebaf408a3b921b9cd00028b8b4854a35471bff9231be42a5a4ac3c591",
+      "reference": "allo-nouilles-backend:23f3e804713ad633f1d95f10d1b0cfebfcf31edf",
+      "image_id": "sha256:edd2f53a0c2c64e9218c682015763f958dc87db8fa246447db6987cbcd5f5f9f",
       "labels": {
         "com.restaurant.compatibility-patch": "915e4ff4d8a6a0698c54ae70d2567e0919c50a49a59e48bdd03fbf902321c6e0",
         "com.restaurant.release-kind": "controlled-production",
-        "com.restaurant.source-revision": "e7dde0a6e27adf3be00baa9972fee06cdcc5482c",
-        "org.opencontainers.image.revision": "e7dde0a6e27adf3be00baa9972fee06cdcc5482c",
+        "com.restaurant.source-revision": "23f3e804713ad633f1d95f10d1b0cfebfcf31edf",
+        "org.opencontainers.image.revision": "23f3e804713ad633f1d95f10d1b0cfebfcf31edf",
         "org.opencontainers.image.version": "22.04"
       }
     },
     "frontend": {
-      "reference": "allo-nouilles-frontend:e7dde0a6e27adf3be00baa9972fee06cdcc5482c",
-      "image_id": "sha256:390cb0d0a6b565dbb58bbd9c98d30f3e9ae85e07dbdc2007a4592ba04132c81c",
+      "reference": "allo-nouilles-frontend:23f3e804713ad633f1d95f10d1b0cfebfcf31edf",
+      "image_id": "sha256:1e5094013596f889b498f9438a17d3ba3dd103fb10815240051f5e8afedbeaf2",
       "labels": {
         "com.restaurant.compatibility-patch": "915e4ff4d8a6a0698c54ae70d2567e0919c50a49a59e48bdd03fbf902321c6e0",
         "com.restaurant.release-kind": "controlled-production",
-        "com.restaurant.source-revision": "e7dde0a6e27adf3be00baa9972fee06cdcc5482c",
+        "com.restaurant.source-revision": "23f3e804713ad633f1d95f10d1b0cfebfcf31edf",
         "maintainer": "NGINX Docker Maintainers <docker-maint@nginx.com>",
-        "org.opencontainers.image.revision": "e7dde0a6e27adf3be00baa9972fee06cdcc5482c"
+        "org.opencontainers.image.revision": "23f3e804713ad633f1d95f10d1b0cfebfcf31edf"
       }
     }
   },
-  "runtime_changed": false,
-  "blocker": "Supported browser input blocked by ordinary synthetic Finish confirmation; remaining real browser module/PrintCenter/Finish acceptance NOT RUN",
+  "runtime_changed": true,
+  "blocker": null,
   "backend_tests": {
-    "total": 1519,
-    "passed": 1402,
+    "total": 1520,
+    "passed": 1403,
     "skipped": 117,
     "failures": 0,
     "errors": 0
@@ -42,10 +42,34 @@
     "files": 84
   },
   "update_amounts_actual_http": "PASS",
-  "independent_review": "PASS_CODE_AND_AMOUNTS",
+  "independent_review": "PASS_23F3_CODE_CONCURRENCY_AND_FINAL_BATCH_SCRIPT",
   "hardware": "NOT_TESTED",
-  "recovery_backup_sha256": "55dd0ddf0e8a4e4f6a7f1ed22cd298d6e9501fc7d850de485f784da9f5ca0008",
+  "recovery_backup_sha256": "ad7dee0694447c566ecef239c19e453dad605d2b3d1918d0ce6e31a6bcd53eff",
   "recovery_restore_verification": "85 tables exact hashes and valid indexes/constraints, independent local socket-only recovery; NOT QA",
   "rollback": "PREPARED_NOT_EXECUTED; preserve current DB; restore matching old compose/env/images only after stopping writes and draining new financial outbox/active jobs with new binary",
-  "next_step": "Finish browser acceptance, then refresh current backup/queue/runtime gates before activation; authorization already given"
+  "next_step": "STOP_NO_NEW_PHASE_OR_HARDWARE_OR_OTHER_ENVIRONMENT_MUTATION",
+  "candidate_archive_sha256": "f12e133270db93bb913071c7e60bab4c3c04ad58014a5e37d961c4f93ff04fb1",
+  "menu_option_concurrency": "PASS 2x34 actualHTTP,4connections,20tables378rows unchanged",
+  "browser_unexecuted": [
+    "Finish confirmation/table release retry",
+    "Frontdesk role browser login",
+    "Option Library full Save"
+  ],
+  "coverage_limit_classification": "Independent dependency-based review; Owner original8.6/11.1; all remain NOT_RUN_TOOL_LIMIT, not browserPASS",
+  "deployed_sha": "23f3e804713ad633f1d95f10d1b0cfebfcf31edf",
+  "activated_at_utc": "2026-11-12T16:09:12.653166+00:00",
+  "flyway": "V42",
+  "menu_revision": 97,
+  "store_printing_mode": "MOCK",
+  "store1_category_bulk_enabled": true,
+  "canonical_addons": 13,
+  "canonical_linked_options": 94,
+  "canonical_replay_zero_writes": true,
+  "base_prices34_unchanged": true,
+  "historical_business_hashes_unchanged": true,
+  "public_https_sealed_assets_match": true,
+  "post_deploy_smoke": "PASS_HTTPS_LOGIN_AUTH_API_WSS_HEALTH",
+  "database_container_unchanged": true,
+  "staging_mutated": false,
+  "production_mutation": "ALLO_ONLY_APP_V42_STORE1_CAPABILITY_AND_CANONICAL_METADATA"
 }

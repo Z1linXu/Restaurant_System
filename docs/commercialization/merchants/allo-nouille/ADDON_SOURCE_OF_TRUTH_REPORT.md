@@ -1,6 +1,6 @@
 # Add-on source of truth repair
 
-本文件记录本地候选实现及验收契约，不代表任何环境已经部署或执行数据变更。
+本文件记录实现与验收契约。16:09UTC固定23f3已部署Allô，随后实际受保护对账13组/94叶，重放零写；34项基础价格及历史快照不变。完整当前运行证据见 ALLO_PRODUCTION_DEPLOYMENT_REPORT.md。
 
 `PRIMARY_REPAIR_GOAL`: Allô 模板 `ADD_ON`、Store Add-on 管理、前台读取、
 新选择和订单使用同一 canonical 当前价格及中英文名称，同时保留历史快照。
@@ -190,7 +190,7 @@ and B1 modal showed the same current values. A later narrowly guarded API
 cleanup restored7.99/牛肉/Beef; old order snapshots remained8.49/7.99 as originally
 submitted. This cleanup is not a UI-restore PASS. See browser/routing reports.
 
-Actual Production remains old code with0 canonical rows. Configuration-only
+The09:10pre-deployment Production baseline had old code and0canonical rows. Configuration-only
 pre-audit predicts13 groups/94 paid leaves, but lacks per-leaf zh/fr/FK details;
 it does not certify conflict-free apply. Current-price/FR/ID/history comparisons,
 checked dry-run/apply and zero-write replay remain activation steps, not executed

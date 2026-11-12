@@ -1,5 +1,10 @@
 # Allô 独立安全审查
 
+最新审查结论：23f3代码、并发证明、最终固定批次/激活与Canonical/Smoke脚本PASS；
+剩余Finish/角色UI登录/Library完整Save明确NOT_RUN_TOOL_LIMIT，依原始§8.6/§11.1和
+未变依赖图判为非阻断覆盖限制。以下保留各轮审查过程；早期仅工具受限的NO-GO解释
+已由末尾重分类段取代。实际Production运行证据由主线程[发布报告](ALLO_PRODUCTION_DEPLOYMENT_REPORT.md)记录，reviewer未SSH或部署。
+
 审查日期：2026-11-12，最终源码与测试报告核对于 08:03 UTC。
 Reviewer：`/root/independent_safety_review`，未参与实现。
 
@@ -198,3 +203,205 @@ pending/processing intent 且没有 active Job，再恢复旧应用与对应旧 
 本次约 6 分钟用于只读复核和补充记录；未执行实现、测试、部署或真实回滚。真实 Pad、
 Android Worker、打印机/纸宽/实体出纸仍为 **NOT TESTED**；Production Release GO 仍须
 由主 Agent 依据剩余实际验收与发布证据单独给出。
+
+## 最终增量独立审查：菜单选项读取事务
+
+复核时间：2026-11-12 15:40–15:43 UTC。本轮精确应用源码为
+`23f3e804713ad633f1d95f10d1b0cfebfcf31edf`；较已审 e7 应用版本，生产代码唯一增量是
+`OwnerMenuOptionServiceImpl.getOptions` 的 `@Transactional(readOnly = true)`。
+Reviewer 未参与实现，只读核对 diff、调用路径、测试 XML、日志和既有合成 HTTP 证据，
+只追加本审查段；未执行共享测试、SSH、运行环境修改或部署。
+
+**本轮 consolidated Agent 6 代码与受影响 Backend 验收审查 PASS，未关闭 P0/P1 为 0/0。**
+这不是 Production 激活或剩余浏览器用例 PASS。主 Agent 提供的 PR310 为指向 Allô
+delivery base `1f9f112` 的 draft PR，非 main；本审查不证明其已合并。
+
+### 事务增量与实际证明
+
+- Controller 的 Store/module 授权仍在原入口，随后经 Spring service proxy 进入只读
+  事务。原 JPA repository 与 canonical JDBC 投影因而复用事务连接，不需要扩大 pool
+  或关闭全局 OSIV。Add-on/Remove resolver 的 catalog 结果使用 detached projection，
+  `toResponse` 只复制字段；此次未增加读取写入、菜单 revision 或价格变化。
+- 原 `reorderOptions` 内部调用 `getOptions` 仍处于既有写事务；该 self-call 不另开
+  read-only 事务，不改变 reorder 的保存语义。其他写入口、授权、schema、订单、打印、
+  财务冻结及离线/幂等路径均无本轮代码改动，复用此前对应证据，不复跑无关历史矩阵。
+- 新 `OwnerMenuOptionReadTransactionTest` 在两连接 pool 下验证两并发只读事务、每次
+  单连接借用、canonical 值/法文投影及连接释放。该轻量测试使用 mock repository 与
+  `DataSourceTransactionManager`，不单独冒充真实 JPA/OSIV 证明。保存的去注解负向
+  日志在 `assertReadOnlyTransaction` 因事务未激活而失败；恢复注解后的 focused 日志为
+  **44 tests / 0 failures / 0 errors / 0 skips**。
+- Reviewer 直接汇总当前 **192 个 Surefire XML：1520 tests，0 failures / 0 errors /
+  117 skips，即 1403 passed**；未将环境条件 skip 计作通过。实际本机 JAR 重新计算的
+  SHA-256 为 `d4b9473fce4d7bfaf35c6a5f1ace4e83bc5dc0ab24fe9c04a616c9187154f522`，
+  与本次实际 QA 证据一致。
+- 直接解析 `qa-menu-option-read-concurrency-23f3e804-1794497982962726000.json`：
+  精确 source/JAR 的原合成 QA、pool=4，两轮各 34 个 options GET 全部 200，逐 Item
+  完整响应 hash 均等于串行基线；最慢分别为 84.765/48.574 ms，穿插与前后 health
+  全部 200，采样最多 4 条 JDBC 连接，无新增连接超时。20 张受保护业务表的完整
+  before/after 结构、行数和 hash 相等，原 Order8 保持 preparing。旧复现 thread dump
+  SHA 匹配，并独立数得 4 个 resolver/Hikari 等待线程。短时连接采样不是容量认证。
+
+实际 HTTP 证明明确为 **CLI/API_NOT_BROWSER**；正常合成 Owner 登录的 session/audit
+为已声明副作用，不混入业务零写断言。详见
+[菜单选项并发验收](MENU_OPTION_READ_CONCURRENCY.md)。真实浏览器 Combo 加载/交互及
+其他剩余用例由主 Agent 单独登记，不由本 HTTP 结果代替。
+
+### 新批次发布与回滚边界
+
+本次事务修复改变了应用源码和 JAR；新的发布身份必须绑定上述 23f3 源码和 d4b9473
+JAR，最终 bundle、镜像 ID、resolved Compose/build SHA 的封存与远端核验仍待主 Agent
+完成。旧 e7 的 archive/image ID 不能作为新批次制品证明。部署拓扑、V42 及迁移范围
+未变，可复用已审流程和稳定证据，无需扩建第二套发布工具或重做无关验收。
+
+在已获 Owner 授权的有界修复/部署范围内，完成剩余浏览器门槛后还须：
+
+1. 刷新精确 Allô 主机/project、当前源备份及回滚组合；仅更新 backend/frontend，保留
+   DB 容器/卷、JWT/TLS 和既有数据。Store1/Org1 始终 MOCK，活动硬件/设备及 printer
+   endpoint 为 0；迁移只到 V42，V1–V41 保持。当前订单/outbox/Job 状态须即时核对，
+   不能用早晨快照冒充激活前事实。
+2. `category_bulk_pricing_enabled` 只对已授权 Store1/Org1/code 身份定向开启，SQL
+   必须精确限定并核对唯一目标行及其他 policy 字段；不运行真实价格 batch apply。
+3. 新后端 fresh canonical dry-run 须实际返回 13 groups / 94 eligible paid leaves、
+   conflicts 为空，再以同次 revision/fingerprint checked apply，不传 confirmed_prices。
+   94 是叶子数，不是 menu revision。零写 replay 使用 apply 返回的最新 guards；
+   stale 或未知 HTTP 结果先读取核对，不盲目强制重做。94 目标叶允许规范化 FK/语义
+   缓存等既定字段变化，名称/法文/code/价格/ID 等保护字段及另外 94 叶须保持；34 个
+   base prices、历史订单/明细/Job/outbox 保持。
+4. 回滚到原生产 `2b44+915e` 前暂停新订单写入，由新版排空新 `update_*` 财务 intent，
+   确认无 active Job。不能把尚未形成 artifact、仍需消费/重试的新金额 intent 交给旧
+   renderer。必须配套恢复旧 Compose/env/双镜像并保留 WSS 修复、V42 和当前数据库，
+   不还原 dump、不改写/删除/重排历史来制造空队列。无法安全排空则停止或 forward fix；
+   暂时旧版期间暂停 Add-on/template 编辑。原回滚组合只是 prepared，非已执行演练。
+
+以上条件未被本报告提前标为完成。Production Release 结论仍由实际浏览器、精确新制品、
+即时 preflight、激活与只读 post-deploy smoke 证据决定；真实 Pad/Android/实体出纸继续
+**NOT TESTED**。本轮约 4 分钟只读审查与报告更新，没有实现、重测、部署或真实回滚。
+
+## 最终固定批次与一次性激活脚本复核
+
+2026-11-12 15:53–15:57 UTC，Reviewer 仅只读核对主 Agent 保存的最终封存包、staged
+manifest、prepare、回滚及恢复证据和 `activate-production-23f3e804.py`，未连接服务器
+或执行脚本。**固定批次与修复后激活脚本审查 PASS；未关闭 P0/P1 为 0/0。**
+Browser Finish 原生确认框仍未完成，**Release 继续 BLOCKED_BROWSER，不得执行 activate**；
+本审查不将 prepare 结果改写为运行切换或浏览器通过。
+
+| 已独立核对的批次标识 | 结果 |
+| --- | --- |
+| Source | `23f3e804713ad633f1d95f10d1b0cfebfcf31edf` |
+| Archive 实算 SHA-256 | `f12e133270db93bb913071c7e60bab4c3c04ad58014a5e37d961c4f93ff04fb1`；manifest 的 59 个 payload 逐项匹配 |
+| JAR / Compose | JAR 为上述 `d4b9473f…4f522`；Compose 实算 `6672b3277ab87b39da37d6313d8694b238599de29fb41f3c6635754a7bc94177`，等于当前已审 Compose |
+| Backend staged image | `sha256:edd2f53a0c2c64e9218c682015763f958dc87db8fa246447db6987cbcd5f5f9f` |
+| Frontend staged image | `sha256:1e5094013596f889b498f9438a17d3ba3dd103fb10815240051f5e8afedbeaf2` |
+| 15:48:32 UTC 新备份实算 SHA-256 | `ad7dee0694447c566ecef239c19e453dad605d2b3d1918d0ce6e31a6bcd53eff`；保存的独立 socket-only 恢复验证为85表哈希匹配、约束/索引有效，临时恢复库已移除且未用作 QA |
+| 修复后激活脚本 SHA-256 | `3450cb4efc582e5e43cb7d091f1e88e41521b10dad42439ebca34044793adc3f` |
+| 定向 capability SQL SHA-256 | `e9b5b41b301bc71991a4942ce2e168f4eec792392b69bedb0ac8f4e8f6f279c8`；与15:55:35 UTC 最新 prepare 结果一致 |
+
+保存的15:47:43 UTC production preflight 仍为原三容器/旧镜像/V41、Store1/Org1
+MOCK、0 devices；10 completed orders、无活动 Job/outbox。Reviewer 直接比较其34项
+菜单价格和7张受保护业务表的计数/哈希，与此前基线完全相等。该结果只证明其时间点，
+脚本 activate 前仍会重新核验，不将准备阶段证据充当未来事实。
+
+### 脚本边界及已关闭发现
+
+- 无参数仅生成 release 目录下 candidate env/prepare 证据；不会替换 live Compose/env、
+  recreate 服务或执行 capability UPDATE。唯一激活参数为 `activate`，浏览器门槛由
+  主 Agent 在调用前核对，脚本本身没有可替代浏览器证据的自动判定。
+- env 从已核对旧 env 仅替换两个 image refs 和 build SHA；resolved backend 环境
+  差异限制在明确 allowset 并检查新值，其余配置相等，DB service 完全相等。JWT、
+  datasource credentials、TLS/source mounts、WSS 认证及 seeder/Uber 禁用边界保留。
+  实际 image ID 在执行前与 staged manifest 对照，manifest 绑定23f3/Allô目标/V42。
+- 仅对 backend/frontend 使用 `up --no-deps --force-recreate`，逐个等待健康并检查实际
+  image ID；DB container ID 与 StartedAt 必须保持。随后确认 V42 success。没有
+  dump restore、DB 容器重建、历史 Job/outbox 重排或自动 old-binary rollback。
+- 初审发现 CAP_SQL 的精确身份 SELECT 结果未检查，UPDATE 只有 store_id 限定，
+  早期 preflight 后身份/mode 漂移时可能仍继续。该 **P2 release guard 已关闭**：
+  最新 DO 在同一事务中对 id1/Org1/code/MOCK 执行 SELECT INTO FOR UPDATE，
+  NOT FOUND 即异常；UPDATE 使用锁定的 target_store，并以 ROW_COUNT=1 强制断言。
+  激活前最后队列检查还重新核对 Store 身份/MOCK、0 devices/0 endpoint。
+- 备份摘要/文件哈希/85表及一小时 freshness 限制均在调用时校验。若浏览器等待导致
+  freshness 失败，沿既有备份/prepare 路径刷新后再评估，不能绕过断言。activate
+  中途异常可能已经切换部分应用配置/服务，应检查实际状态后有界处理，不能把旧
+  prepare 的 runtime_changed=false 当作异常后事实，也不能盲目重复执行。
+
+canonical apply 不在此激活脚本内：后续仍须 fresh API 的13组/94叶/0冲突及同次
+revision/fingerprint guards，checked replay 使用最新 guards，不执行价格决策或真实
+batch调价。已准备旧 Compose/env/双镜像组合保持不变，真实回滚尚未执行；任何回退到
+原生产旧 binary 仍须先停止新写入，由新版排空新财务 intent 且无 active Job，并保留
+V42/当前数据库。实际 Pad/Android/物理出纸继续 **NOT TESTED**。
+
+## 最终验收条款复核：工具限制与发布阻断的区别
+
+2026-11-12 16:01–16:07 UTC，主 Agent 重新提供 Owner 原始验收条款：§8.6 明确
+“如果浏览器访问受到权限策略限制，不允许绕过；记录明确的 NOT RUN，并继续执行其他
+合法测试”；§11.1 要求“Human-Like E2E 无未解决的关键故障”，同时允许普通非阻断
+问题记录后继续，禁止伪造测试通过。本节按这些原始条款及 `AGENTS.md` 的
+Risk-proportionate proof，重新评估上节将所有剩余浏览器项均视为 Release blocker
+的解释。**本节取代前文仅因浏览器工具限制而作出的 BLOCKED_BROWSER 结论；不改写
+实际测试记录，不豁免任何已知产品故障。**
+
+**独立结论：剩余 Finish/table-release、Frontdesk 正常浏览器登录和 Library full Save
+可登记为 `NOT_RUN_TOOL_LIMIT / NON_BLOCKING_COVERAGE_LIMIT`。在其余已批准的固定
+批次、即时 preflight、迁移/数据保护及 post-deploy smoke 要求保持的条件下，这三项
+覆盖限制本身不阻止本轮已验证变化部署。不将 Human-Like E2E 全项登记为 PASS。**
+
+### Finish 的 changed dependency graph
+
+Reviewer 对原部署基线 `2b44aa95d6b9f5ead343858b3a4a18c4eda3d0a9` 至本次23f3源码
+直接比较，确认以下事实，而不是仅依据“旧功能”推测安全：
+
+- `DineInPage.tsx` 和 `useTableBoard.ts` 整文件未变；`handleFinish` 的确认、调用
+  complete API、offline terminal 清理、两次 table refresh 均未变。
+- 前端 `completeOrder`、后端 Controller 授权/调用、`OrderServiceImpl.completeOrder`、
+  `requireOrderForUpdate` 的锁内刷新、`loadOrderResponse` 及 `publishOrderEvent` 均
+  与基线相同。完成路径保留订单事务、任务/饮品终态处理、completed 保存和事件。
+  table refresh 仍读取 active board，确认无该桌剩余订单后清除 occupancy。
+- 同步 `window.confirm` 在 complete API 调用之前；本次工具停在该确认框，没有
+  观察到完成请求失败、状态写错或清桌失败。新菜单读取事务、canonical 保存、加单
+  金额冻结和 Renderer/PAD transport 不在该确认步骤或完成调用的新增依赖中。
+- 保存的五组/六单实际记录含 Orders2–7 六次 `/complete` HTTP200，逐单读回
+  completed；e7 财务回归 Orders9/10 也各有 `/complete` HTTP200、completed 和正确
+  金额读回。此前已核对的保护证明保留旧 Orders1–8/Jobs1–18；23f3 并发证据仍保留
+  Order8 preparing 和完整 orders 表 hash。Reviewer 未新建请求、Finish Order8 或
+  修改任何合成/真实历史。这些是 Backend 完成证明，不能冒充 browser table-release。
+
+因此，此处未决的是受控浏览器无法接受/关闭既有原生确认框、`getJsDialog` 不返回可
+操作对象及 native CUA 替代路径被安全机制拒绝的工具覆盖限制。它不构成已证明的
+关键产品故障；不得通过未批准机制绕过，也无需为缺失覆盖修改已稳定的 Finish 产品
+代码。本判断不承诺任意浏览器/设备下 Finish 已完成端到端认证。
+
+### 另外两项未执行用例的具体风险
+
+- Frontdesk 正常浏览器登录保留 NOT RUN。Login/AuthProvider/authService/apiClient、
+  后端 auth 及本次完成入口无基线 diff；正常 Owner 浏览器登录已执行。保存的真实
+  HTTP 证据使用正常 Frontdesk 密码登录，POS catalog200、receipt配置及新增 Bulk
+  三入口403，既有 Add-on GET200；Owner cross-Store403 也已验证。角色 browser
+  navigation/视觉行为没有因此变成 PASS，但没有发现未解决的授权或登录故障。
+- Library full Save **确为受影响保存路径的覆盖缺口，不能称为未改功能**。真实浏览器
+  已加载 canonical catalog、观察名称/价格 readonly、修改 translation draft并丢弃。
+  已审 JPA 集成测试证明 canonical item 保存/陈旧值不能复写当前权威值，library 无
+  canonical link 保存失败且回滚；TemplateMenuService 的 library 独立副本/default
+  测试及前端 scoped item-save payload 测试提供补充。完整 Library 浏览器 Save 和
+  reload 持久化仍未执行，不能以这些测试伪造其 PASS；现有证据也未呈现已知保存
+  故障。原始条款允许在本工具限制下保留该非阻断覆盖差距。
+
+实际已发现的一分钱收据错误及连接 pool 饥饿均已修复并分别取得金额与实际并发证明，
+本次重分类不撤销任何产品 bug 的修复标准。Print Center、长预览滚动、MOCK原件副本、
+C6 takeout、history、assignment、availability及修复后 Combo 加载的浏览器记录仍各按
+其实际范围保留，不由本节扩成全功能/全设备 PASS。
+
+本节不新增 Owner 确认门槛，部署授权沿已明确范围执行；也不提前证明 Production 已
+部署。精确23f3镜像/包、当前源备份、Store MOCK/零活动硬件、定向 capability、canonical
+guards/replay、历史保护，以及旧 binary 回退前新版财务 intent 排空等要求全部保留。
+后续若出现真实状态/授权/金额/持久化关键故障，仍须阻断并修复。本轮只读检查及此
+报告追加未运行新测试、HTTP、SSH或部署，未修改其他报告/治理文件。
+
+随后只读检查最小私有 `production-api-23f3.py` 与 `production-config-snapshot.py`：
+**静态边界 PASS，尚未以此登记实际 Production API 运行结果。** 复用的 Nov8 源码在
+`def enc` 前只有 imports、私有 session 读取及 req/WS/denied 定义，没有执行旧订单/
+配置业务。新请求明确使用正常新登录 token；唯一允许的业务 POST 为 canonical
+reconcile，顺序为 fresh13/94/0conflicts dry-run、该 revision/fingerprint apply、
+apply 返回的新 guards replay。snapshot 仅查询，核对历史哈希、94目标叶保护字段/
+另外94叶全行、34items、groups/printers，并检查 apply 单 audit、replay 零 audit/配置
+变化。smoke 仅正常登录、GET及认证/隔离 WS 握手/订阅/无业务 payload 的拒绝验证；
+没有创建订单、batch调价、设备绑定或打印调用。Reviewer 未运行这些 helper，也未新增
+部署工具。调用中若发生失败或未知结果，应先核对实际状态，不强制重放 mutation。
