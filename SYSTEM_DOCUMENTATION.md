@@ -2298,7 +2298,7 @@ Submitted order editing now uses immutable old lines plus transactional update b
 - `is_modified_after_submit` remains a UI/KDS indicator only; it is not used to select update ticket lines.
 - GRAB update jobs use receipt type `GRAB_UPDATE`, retain `order_update_batch_id`, and render only items tagged with that exact batch.
 - FRONTDESK update jobs use receipt type `FRONTDESK_RECEIPT_UPDATE`, retain `order_update_batch_id`, and render only items tagged with that exact batch.
-- FRONTDESK update receipts are marked `UPDATED` / `Added items only`; their subtotal, tax, and total are calculated from the added batch lines rather than the full order.
+- FRONTDESK update receipts are marked `UPDATED` / `Added items only`; legacy contexts calculate subtotal, tax, and total independently from the added batch lines. New Allô contexts freeze the added subtotal and rounded whole-order total difference, so successive receipts reconcile to the unchanged authoritative order amount (see the Allô receipt amount contract below).
 - FRONTDESK receipts display combo side dishes under the combo main item, including combo side remove instructions such as `走花生`, so staff can pack takeout combo sides correctly.
 - Order-level manual reprint renders the complete current order from persisted item/option snapshots and the captured historical rule revision when available. Print-job reprint instead copies the source job's nonblank `rendered_text_snapshot`; it does not add newly configured wording to an old ticket.
 
@@ -9845,3 +9845,23 @@ data. Existing local PG25442/frontend28180 were discovered and left intact.
 Production recovery backup was separately restored/hash-verified (85 tables)
 and that recovery cluster was removed before synthetic QA. Production is not
 used for writes, test orders, repricing, reprints or physical print proof.
+
+### Allô receipt amount contract — human-browser regression repair
+
+Actual synthetic browser submit/update exposed independent batch rounding:
+initial25.48+3.82=29.30 plus update5.98+0.90=6.88 totals36.18 while the authoritative
+whole order31.46+4.71=36.17. The order amount is correct; new Allô update receipts
+now freeze `update_subtotal` and `update_total` in the existing locked outbox
+enqueue. They allocate the difference between the rounded current whole total
+and the rounded previous active subtotal's total: this case prints5.98+0.89=6.87.
+The tax label explicitly describes order rounding. No order amount, tax rate,
+per-item cent allocation, source key, state transition or other Store renderer
+contract changes.
+
+This bounded path requires the current zero-discount, fixed-rate add-only
+contract and consistent active line/whole amounts; it does not claim historical
+discount or old tax-rate support. Partial/invalid new monetary fields or a
+rendered batch subtotal mismatch fail closed. Both fields absent keep the exact
+legacy update semantics, including already saved historical Allô Jobs. Physical
+printing is never inferred from a renderer or protocol result. The latest test,
+review and activation status belongs in the merchant release reports.

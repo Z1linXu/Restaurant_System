@@ -3,6 +3,7 @@ package com.restaurant.system.delivery;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.restaurant.system.common.exception.BusinessException;
+import com.restaurant.system.common.pricing.TaxCalculator;
 import com.restaurant.system.order.entity.*;
 import com.restaurant.system.order.repository.*;
 import com.restaurant.system.printing.dto.ReceiptPresentation;
@@ -11,6 +12,8 @@ import com.restaurant.system.printing.entity.PrintJob;
 import com.restaurant.system.printing.AlloProductionPrintingPolicy;
 import com.restaurant.system.printing.repository.OrderDispatchOutboxRepository;
 import com.restaurant.system.user.entity.Store;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 import org.springframework.stereotype.Service;
 
@@ -51,7 +54,8 @@ public class ReceiptContextService {
         context.settings_revision=settings.revision;
         context.kitchen_station_codes=List.copyOf(settings.kitchen_station_codes);
         context.restaurant_name=String.valueOf(presentation.publicView(store).getOrDefault("display_name",store.name));
-        var lines=items.findAllByOrderId(orderId).stream().filter(i->batch==null||batch.equals(i.order_update_batch_id)).toList();
+        var allLines=items.findAllByOrderId(orderId);
+        var lines=allLines.stream().filter(i->batch==null||batch.equals(i.order_update_batch_id)).toList();
         context.order_item_ids=lines.stream().map(i->i.id).toList();
         if("GRAB".equals(module))context.kitchen_excluded_item_ids=lines.stream()
             .filter(i->!settings.kitchenEnabled(i.category_code_snapshot)).map(i->i.id).toList();
@@ -60,7 +64,42 @@ public class ReceiptContextService {
         if(!lines.isEmpty())for(var option:options.findAllByOrderItemIds(context.order_item_ids))
             context.option_names.put(String.valueOf(option.id),resolve(context.language,option.option_name_snapshot_zh,option.option_name_snapshot_en,option.option_name_snapshot_fr));
         context.subtotal=order.subtotal_amount;context.total=order.total_amount;
+        if (batch != null && "FRONTDESK_RECEIPT".equals(module)) {
+            freezeUpdateAmounts(context, order, allLines, batch);
+        }
         return context;
+    }
+
+    private void freezeUpdateAmounts(ReceiptPresentation context, Order order, List<OrderItem> allLines, Long batch) {
+        // Called by the existing outbox enqueue inside the locked add-only order transaction.
+        // This bounded contract supports the current zero-discount, one-rate in-store model.
+        BigDecimal previousSubtotal = BigDecimal.ZERO.setScale(2);
+        BigDecimal addedSubtotal = BigDecimal.ZERO.setScale(2);
+        for (OrderItem line : allLines) {
+            if ("cancelled".equals(line.status)) continue;
+            BigDecimal amount = receiptMoney(line.line_amount);
+            if (amount.signum() < 0) throw fail("RECEIPT_UPDATE_AMOUNTS_UNSUPPORTED");
+            if (batch.equals(line.order_update_batch_id)) addedSubtotal = addedSubtotal.add(amount);
+            else previousSubtotal = previousSubtotal.add(amount);
+        }
+        BigDecimal wholeSubtotal = receiptMoney(order.subtotal_amount);
+        BigDecimal wholeTotal = receiptMoney(order.total_amount);
+        if ((order.discount_amount != null && order.discount_amount.signum() != 0)
+                || wholeSubtotal.compareTo(previousSubtotal.add(addedSubtotal)) != 0
+                || wholeTotal.compareTo(TaxCalculator.calculateTotal(wholeSubtotal)) != 0) {
+            throw fail("RECEIPT_UPDATE_AMOUNTS_UNSUPPORTED");
+        }
+        context.update_subtotal = addedSubtotal;
+        context.update_total = wholeTotal.subtract(TaxCalculator.calculateTotal(previousSubtotal));
+    }
+
+    private BigDecimal receiptMoney(BigDecimal value) {
+        if (value == null) throw fail("RECEIPT_UPDATE_AMOUNTS_UNSUPPORTED");
+        try {
+            return value.setScale(2, RoundingMode.UNNECESSARY);
+        } catch (ArithmeticException error) {
+            throw fail("RECEIPT_UPDATE_AMOUNTS_UNSUPPORTED");
+        }
     }
     public ReceiptPresentation forEvent(Store store,String module,Long orderId,Long batch) {
         var event=events.findBySourceKey(sourceKey(module,orderId,batch)).orElse(null);

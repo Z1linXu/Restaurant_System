@@ -25,6 +25,9 @@ public class ReceiptPresentation {
     public Map<String, String> option_names = new LinkedHashMap<>();
     public BigDecimal subtotal;
     public BigDecimal total;
+    /** New Allô updates allocate tax from the rounded order delta. Absent on historical contexts. */
+    public BigDecimal update_subtotal;
+    public BigDecimal update_total;
     public String version = "ALLO_RECEIPT_V1";
 
     public void requireValid() {
@@ -34,6 +37,24 @@ public class ReceiptPresentation {
                 || order_item_ids.stream().anyMatch(id -> id == null)
                 || kitchen_station_codes == null || item_names == null || option_names == null) {
             throw new BusinessException("RECEIPT_PRESENTATION_INVALID");
+        }
+        if (hasFrozenUpdateAmounts() && (update_subtotal == null || update_total == null
+                || !exactCents(update_subtotal) || !exactCents(update_total)
+                || update_subtotal.signum() < 0 || update_total.compareTo(update_subtotal) < 0)) {
+            throw new BusinessException("RECEIPT_UPDATE_TOTALS_INVALID");
+        }
+    }
+
+    public boolean hasFrozenUpdateAmounts() {
+        return update_subtotal != null || update_total != null;
+    }
+
+    private boolean exactCents(BigDecimal value) {
+        try {
+            value.setScale(2, java.math.RoundingMode.UNNECESSARY);
+            return true;
+        } catch (ArithmeticException error) {
+            return false;
         }
     }
 
@@ -78,6 +99,7 @@ public class ReceiptPresentation {
             case "notes" -> words("备注", "Notes", "Notes");
             case "subtotal" -> words("小计", "Subtotal", "Sous-total");
             case "tax" -> words("税", "Tax", "Taxes");
+            case "update_tax" -> words("税（整单舍入）", "Tax (order rounding)", "Taxes (arrondi global)");
             case "total" -> words("合计", "Total", "Total");
             case "submitted" -> words("提交时间", "Submitted", "Envoyée");
             case "printed" -> words("打印时间", "Printed", "Imprimée");

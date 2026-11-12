@@ -529,8 +529,22 @@ Mirror keeps its separate financial-snapshot contract.
 Receipt amounts use persisted totals and `order_items.line_amount`. When the
 receipt expands quantity into per-bowl blocks, it allocates the stored line's
 integer cents, including any remainder, so those blocks sum exactly to that
-line. Full receipts derive tax from persisted total minus subtotal. Update
+line. Full receipts derive tax from persisted total minus subtotal. Legacy update
 receipts apply the same tax utility to the exact added batch's stored lines.
+
+New Allô `FRONTDESK_RECEIPT` update contexts additionally freeze
+`update_subtotal` and `update_total` inside the existing locked add-only order /
+outbox transaction. Under the current zero-discount, fixed-rate in-store
+contract, added subtotal is the sum of that active batch's stored lines and
+added total is rounded whole-order total minus the rounded previous active
+subtotal's total. Printed tax is that frozen added total minus added subtotal,
+labelled as order rounding. Example: previous25.48/29.30, new whole31.46/36.17
+produces update5.98/6.87 with tax0.89, rather than independently rounded6.88.
+This allocates cents to the existing order amount; it changes no price/tax rate
+or persisted order total. Unsupported discounts, inconsistent whole amounts,
+partial monetary fields, non-cent/negative amounts or a batch subtotal mismatch
+fail closed. Historical contexts with both new fields absent retain their
+original batch rounding; existing saved Jobs/bytes are never rewritten.
 
 ### Submit Order
 POST /orders/{id}/submit
