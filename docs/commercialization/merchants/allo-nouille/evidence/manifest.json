@@ -1,0 +1,30 @@
+{
+  "qa-pricing-desktop.jpg": {
+    "sha256": "bbe7c33642c76a20f8b637cca128bc8f46ad9885caeea4b01b5ab76fc8ffafea",
+    "provenance": "CUA browser screenshot of isolated SYNTHETIC Allo QA; JPEG bytes returned by screenshot API, copied unchanged"
+  },
+  "qa-pricing-1024.jpg": {
+    "sha256": "167c8b59b06d0100362364f28c788ce3ffbdf2be2433208d49464ebd8519d22d",
+    "provenance": "CUA browser screenshot of isolated SYNTHETIC Allo QA; JPEG bytes returned by screenshot API, copied unchanged"
+  },
+  "qa-frontdesk-price-sync-1024.jpg": {
+    "sha256": "cd8c32f7e8a1d031cd9ff3ea9fe40194d2938daab6cbe10ee507b30222ff3797",
+    "provenance": "CUA browser screenshot of isolated SYNTHETIC Allo QA; JPEG bytes returned by screenshot API, copied unchanged"
+  },
+  "qa-pricing-preview-768.jpg": {
+    "sha256": "57682fe11dc11c63c873b19f9d277ce112d71e2fb404e8359d44bf21cb7fd254",
+    "provenance": "CUA browser screenshot of isolated SYNTHETIC Allo QA; JPEG bytes returned by screenshot API, copied unchanged"
+  },
+  "qa-addon-saved-768.jpg": {
+    "sha256": "b8d0724f793c720e5554074b95bd65954d1ab820bb3a1c56d0f215646a550028",
+    "provenance": "CUA browser screenshot of isolated SYNTHETIC Allo QA; JPEG bytes returned by screenshot API, copied unchanged"
+  },
+  "qa-single-item-save.jpg": {
+    "sha256": "d04ea7c7975a33f743ca599c96a948e4e7b2a1521021e3e50d0341a6fcb7db21",
+    "provenance": "CUA browser screenshot of isolated SYNTHETIC Allo QA; JPEG bytes returned by screenshot API, copied unchanged"
+  },
+  "qa-dessert-off.jpg": {
+    "sha256": "f010475fb34aa2611c66a77695380b1e1014976e6bad8105c444af535389334e",
+    "provenance": "CUA browser screenshot of isolated SYNTHETIC Allo QA; JPEG bytes returned by screenshot API, copied unchanged"
+  }
+}
