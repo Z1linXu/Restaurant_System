@@ -1,0 +1,13 @@
+[Unit]
+Description=Allo Nouilles independent PostgreSQL backup
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+User=root
+UMask=0077
+ExecStart=/srv/allo-nouilles/bin/backup-db.sh
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

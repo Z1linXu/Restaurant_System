@@ -9,7 +9,7 @@ import type {
 } from '../types/ordering'
 import type { RealtimeUpdateMessage } from '../types/kds'
 import type { PrintJobRecord } from './printingAdminService'
-import { ApiRequestError, apiRequest } from './apiClient'
+import { ApiRequestError, apiRequest, getAccessToken } from './apiClient'
 import { manualReprint } from './manualReprintService'
 import { buildOptionSnapshots, mapOptions } from '../utils/orderPricing'
 export { mapOptions } from '../utils/orderPricing'
@@ -284,6 +284,10 @@ export function subscribeToFrontdeskOrders(
   lifecycle('BOOTSTRAP_STARTED')
   try {
     client = new Client({
+      beforeConnect: () => {
+        const token = getAccessToken()
+        if (client) client.connectHeaders = token ? { Authorization: `Bearer ${token}` } : {}
+      },
       webSocketFactory: () => {
         lifecycle('SOCKET_FACTORY_CALLED')
         return new SockJS(frontdeskRealtimeEndpoint())

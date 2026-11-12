@@ -1,0 +1,16 @@
+{
+  "source_sha": "2b44aa95d6b9f5ead343858b3a4a18c4eda3d0a9",
+  "patch_sha256": "915e4ff4d8a6a0698c54ae70d2567e0919c50a49a59e48bdd03fbf902321c6e0",
+  "release_version": "2b44aa95d6b9f5ead343858b3a4a18c4eda3d0a9-allo-ws-915e4ff4d8a6",
+  "changed_files": [
+    "backend/src/main/java/com/restaurant/system/common/config/AuthenticatedStompInterceptor.java",
+    "backend/src/main/java/com/restaurant/system/common/config/AuthenticatedStompConfiguration.java",
+    "backend/src/main/java/com/restaurant/system/template/bootstrap/TemplateTestCorsConfig.java",
+    "backend/src/test/java/com/restaurant/system/common/config/AuthenticatedStompInterceptorTest.java",
+    "backend/src/test/java/com/restaurant/system/common/config/AlloCorsConfigTest.java",
+    "frontend/src/services/orderService.ts",
+    "frontend/src/services/orderService.realtime.test.ts"
+  ],
+  "scope": "New Allo deployment only; explicit CORS and authenticated own-Store frontdesk STOMP; no schema/order/menu/pricing changes",
+  "disconnect_compatibility": "Framework-generated immutable DISCONNECT/heartbeat frames do not mutate absent native Authorization headers; regression tests added."
+}

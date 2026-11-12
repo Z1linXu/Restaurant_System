@@ -1,0 +1,12 @@
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+ARG RELEASE_VERSION
+ARG SOURCE_SHA
+ARG PATCH_SHA256
+LABEL org.opencontainers.image.revision=${RELEASE_VERSION} \
+      com.restaurant.source-revision=${SOURCE_SHA} \
+      com.restaurant.compatibility-patch=${PATCH_SHA256}
+USER 0:0
+RUN rm -rf /usr/share/nginx/html/*
+COPY --chown=101:101 dist/ /usr/share/nginx/html/
+USER 101:101

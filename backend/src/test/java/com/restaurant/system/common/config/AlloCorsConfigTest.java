@@ -13,6 +13,8 @@ class AlloCorsConfigTest {
    assertThat(c.getBeansOfType(RestCorsConfig.class)).isEmpty();
    var r=new Registry(); c.getBean(TemplateTestCorsConfig.class).addCorsMappings(r);
    assertThat(r.api().checkOrigin("https://test.lanzhounoodlesmtl.com")).isEqualTo("https://test.lanzhounoodlesmtl.com");
+   assertThat(r.api().checkOrigin("https://pos.allonouilles.com")).isEqualTo("https://pos.allonouilles.com");
+   assertThat(r.api().checkOrigin("http://pos.allonouilles.com")).isNull();
    assertThat(r.api().checkOrigin("https://attacker.invalid")).isNull();
    assertThat(r.api().checkOrigin("https://test.lanzhounoodlesmtl.com:444")).isNull();
   }

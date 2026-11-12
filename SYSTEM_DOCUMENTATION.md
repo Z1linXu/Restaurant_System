@@ -9801,3 +9801,14 @@ Menu cache integrity uses the same conditional French-name markers and ordered o
 A successful submitted-order Update awaits persistence of its confirmed server snapshot and locked server items before navigation. Hook-local saves are serialized so a prior autosave cannot restore temp additions after acknowledgment. A stale update draft whose server revision/items have advanced retains its local content and fails closed for review; it is not deduplicated by labels/prices or silently discarded. The historical server modification flag does not represent unsent local additions.
 
 Configured template option groups reuse the legacy customization ChoiceButton, CheckboxRow and AddOnQuantityRow with responsive choice grids, bilingual business labels and modifier cards. Ordinary controls precede modifier cards; configured COMBO placement is preserved. English/Chinese labels are shown together, with French/Chinese when App locale is French. Selection, defaults, cardinality, prices and submit payloads remain data-driven; no legacy noodle identifiers or modifier rules are copied into template data.
+
+## 2026-11-12 Allô controlled improvements — execution in progress
+
+This release branch starts from the actual Allô deployed source plus its recorded
+WSS compatibility patch, excluding unrelated dirty main work. Target is only
+43.166.242.250 / pos.allonouilles.com. The original Lanzhou production remains
+out of scope. Menu/category/Add-on/PAD_DIRECT and bulk-price work, synthetic QA,
+review and release gates are tracked in
+`docs/commercialization/merchants/allo-nouille/EXECUTION_CHECKLIST.md`.
+No production test orders, bulk price changes, physical printing or queue replay
+are authorized as testing. Hardware status is explicitly separate from API proof.
