@@ -5,15 +5,15 @@ repository:
   ref: origin/main
   sha: 80e888fcdad74e98326fcbeaa5df14bc0d9baed6
   sha_semantics: FRESH_REFERENCE_NOT_ALLO_RUNTIME_OR_IMPLEMENTATION_BASE
-  working_branch: codex/allo-android-apk-20261113
+  working_branch: codex/allo-android-actions-20261113
 
 phase:
   current: PHASE_6
   package: ALLO_ANDROID_APK_20261113
-  status: ANDROID_DEBUG_APK_DELIVERED_COMPATIBILITY_AND_ACCEPTANCE_PASS
+  status: ANDROID_1_0_2_CLEAN_ORDERING_ACCEPTED_INSTALLED_NO_SERVER_MUTATION
   next_phase_authorized: false
-  authorization: OWNER_20261113_INDEPENDENT_ALLO_APK_BUILD_TEST_AND_NECESSARY_VERIFIED_ALLO_COMPATIBILITY_FIX
-  implementation_base_sha: 75aa1c0e56d8bf44c9cc824303e753cedfdd31d8
+  authorization: OWNER_20261113_ANDROID_ORDERING_NO_PRINT_BANNER_OR_CACHE_INFO_KEEP_TABLE_BANNER_NO_SERVER_RELEASE
+  implementation_base_sha: c55b816ed2b2dbbb931947a460c788e538e7903b
   target: https://pos.allonouilles.com
   production_mutation_authorized: false
   production_exact_batch_sha: b7893860815fb87ef936730213e32170626ab7f2
@@ -444,21 +444,25 @@ uber_store_capability:
 allo_android:
   application_id: com.allonouilles.pos
   label: Allo_Nouilles_POS
-  version_name: 1.0.0
-  version_code: 1
+  version_name: 1.0.2
+  version_code: 3
   signing: DEBUG_NO_RELEASE_KEY_CONFIGURED
-  source_sha: b7893860815fb87ef936730213e32170626ab7f2
-  apk_sha256: 57d86226023ab284569214de0c6cc2c957e83f2718bdbf5668fc69c072414fea
-  apk_relative_path: dist/android/allo-nouilles-pos-v1.0.0-debug.apk
+  source_sha: 0b98ee271c26b56fb344868a489c4579a11e25fa
+  apk_sha256: c522f6ffc6e9d9ba02de145aa49fde4239d5a4620cd53bef279f777c465267e4
+  apk_relative_path: dist/android/allo-nouilles-pos-v1.0.2-debug.apk
   api_target: https://pos.allonouilles.com
   emulator: API35_DEDICATED_FRESH_AVD
-  hardware: NOT_TESTED_NO_BINDING_OR_PRINT
+  hardware: OWNER_API36_IN_PLACE_INSTALLED_NO_BINDING_OR_PRINT
   legacy_app_identity_signing_default_server_and_assets: VERIFIED_UNCHANGED
-  evidence: ../commercialization/merchants/allo-nouille/ANDROID_APK_REPORT_20261113.md
+  evidence: ../commercialization/merchants/allo-nouille/ANDROID_ORDERING_SIMPLIFICATION_20261113.md
+  local_draft_upgrade: PASS_SAME_DRAFT_ID_A6_QUANTITY1_PRICE7_99
+  action_hit_targets: PASS_ALL_THREE_VISIBLE_ENABLED
+  ordering_notices: HIDDEN_PRINT_HEALTH_AND_ROUTINE_CACHE_INFO_TABLE_HEALTH_RETAINED
+  native_prefs_and_indexeddb_upgrade: PASS_4_DATA_FILE_HASHES_IDENTICAL
 
 gate:
   type: TECHNICAL
-  next_action: STOP_DELIVER_APK_NO_FURTHER_RUNTIME_MUTATION
+  next_action: STOP_CLEAN_ORDERING_INSTALLED_NO_FURTHER_MUTATION
 
 authorization:
   dining_table_soft_delete: OWNER_20261024_ALL_STORE_IS_ACTIVE_SOFT_DELETE_ACTIVE_ORDER_GUARD_CACHE_AND_NEW_ORDER_BLOCK_IMPLEMENT_TEST_REVIEW_MERGE_STAGING_DIRECT_PRODUCTION_PRESERVE_HISTORY_AB_SPLIT_LABELS_PRINTING_AND_UBER_NO_REAL_TEST_ORDERS
@@ -490,4 +494,4 @@ authorization:
   allo_production: COMPLETED_OWNER_20261113_EXACT_B7893860_BACKEND_CORS_ONLY_NO_STANDING_MUTATION_AUTHORITY
 
 stop:
-  marker: ALLO_ANDROID_APK_DELIVERED_STOP_NO_LANZHOU_DEVICE_PAIRING_OR_PHYSICAL_PRINT
+  marker: ALLO_ANDROID_1_0_2_INSTALLED_STOP_NO_SERVER_DATA_CLEAR_OR_PRINT
