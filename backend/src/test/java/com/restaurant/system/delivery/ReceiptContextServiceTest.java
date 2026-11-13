@@ -82,4 +82,19 @@ class ReceiptContextServiceTest {
   item.category_code_snapshot=null;presentation.receipts(store).kitchen_category_enabled=Map.of("DESSERT",false);
   assertTrue(service.freeze(store,"GRAB",10L,null).includesKitchenItem(item.id));
  }
+ @Test void newAlloPadContextFreezesGbkCompatibleBrandWithoutChangingMockOrHistoricalIntent(){
+  enabled();when(presentation.publicView(store)).thenReturn(Map.of("display_name","Allô Nouilles"));
+  var mock=service.freeze(store,"FRONTDESK_RECEIPT",10L,null);assertEquals("Allô Nouilles",mock.restaurant_name);
+  store.printing_mode="PAD_DIRECT";when(printingPolicy.allowsPadDirect(store)).thenReturn(true);
+  var fresh=service.freeze(store,"FRONTDESK_RECEIPT",10L,null);assertEquals("Allo Nouilles",fresh.restaurant_name);
+  order.order_type="dine_in";order.table_no="TEST4";order.submitted_at=java.time.LocalDateTime.now();
+  item.status="submitted";item.quantity=1;item.unit_price=new BigDecimal("19.99");item.line_amount=new BigDecimal("19.99");
+  var request=new com.restaurant.system.printing.dto.PrintRenderRequest();request.order=order;request.order_items=List.of(item);request.order_item_options=List.of();request.receipt_context=fresh;request.happened_at=order.submitted_at;
+  String text=new com.restaurant.system.printing.renderer.FrontdeskReceiptRenderer().render(request);
+  assertTrue(text.contains("Allo Nouilles"));assertTrue(text.contains("Plat synthétique"));
+  ReceiptArtifact.requireEncodable(text,java.nio.charset.Charset.forName("GBK"));
+  var event=new OrderDispatchOutbox();event.storeId=1L;event.orderId=10L;event.moduleCode="FRONTDESK_RECEIPT";
+  mock.execution_mode="PAD_DIRECT";event.routingContext=service.serialize(mock);when(events.findBySourceKey("submit:10:FRONTDESK_RECEIPT")).thenReturn(Optional.of(event));
+  String original=event.routingContext;assertEquals("Allô Nouilles",service.forEvent(store,"FRONTDESK_RECEIPT",10L,null).restaurant_name);assertEquals(original,event.routingContext);
+ }
 }

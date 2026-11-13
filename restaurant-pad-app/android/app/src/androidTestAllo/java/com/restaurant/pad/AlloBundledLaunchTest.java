@@ -25,7 +25,7 @@ public class AlloBundledLaunchTest {
         org.junit.Assume.assumeTrue(android.os.Build.HARDWARE.contains("ranchu") || android.os.Build.HARDWARE.contains("goldfish"));
         android.app.Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
         Activity activity = instrumentation.startActivitySync(new Intent(instrumentation.getTargetContext(), MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-        try (java.net.ServerSocket server = new java.net.ServerSocket(0, 1, java.net.InetAddress.getLoopbackAddress())) {
+        try (java.net.ServerSocket server = new java.net.ServerSocket(0, 1, java.net.InetAddress.getByName("127.0.0.1"))) {
             waitForJavascript(activity, "typeof window.RestaurantPrinter?.testConnection==='function'", "native connection bridge injected");
             server.setSoTimeout(10000);
             java.util.concurrent.FutureTask<Integer> bytes = new java.util.concurrent.FutureTask<>(() -> {

@@ -2387,3 +2387,9 @@ on the store LAN. It opens/closes a socket, writes zero bytes and creates no job
 Its result is local to this screen and endpoint; other modes keep the backend
 connection-test endpoint and persisted result. A regular browser cannot probe
 PAD_DIRECT printer endpoints.
+
+New Allô PAD receipt contexts freeze the physical brand as `Allo Nouilles` when
+the configured UI name is exactly `Allô Nouilles`, because the installed GBK
+printers cannot encode `ô`. UI/MOCK branding and historical frozen contexts are
+unchanged. Strict encoding checks still reject unsupported order/item/note text;
+this is not a general lossy character replacement.
