@@ -10,21 +10,21 @@ repository:
 phase:
   current: PHASE_6
   package: ALLO_ANDROID_APK_20261113
-  status: ALLO_PRINTING_REPAIR_ACCEPTED_APK_INSTALLED_BACKEND_OWNER_GATE
+  status: ALLO_PRINTING_REPAIR_DEPLOYED_ACCEPTED_APK_1_0_3_INSTALLED
   next_phase_authorized: false
   authorization: OWNER_20261113_REPAIR_PRINTING_AND_CLEAN_CURRENT_TEST_ORDERS_QUEUES_NO_NEED_TO_PRESERVE_TEST_DATA_KEEP_DEVICE_AND_PRINTER_CONFIG
   implementation_base_sha: d54fd08264c30d69443ca942a5157e05f9c531b1
   target: https://pos.allonouilles.com
   production_mutation_authorized: false
-  production_test_cleanup_authorized: true
-  production_test_cleanup_scope: CURRENT_STORE1_TEST_ORDERS_AND_PRINT_QUEUES_OWNER_20261113_NO_DEVICE_OR_PRINTER_CONFIG_CHANGE
+  production_test_cleanup_authorized: false
+  production_test_cleanup_scope: COMPLETED_OWNER_20261113_TEST_CLEANUP_NO_STANDING_MUTATION_AUTHORITY
   production_exact_batch_sha: 4c75f960d1ad00a799c1d5054f22286149429447
   production_exact_batch_scope: ALLO_BACKEND_ONLY_PAD_DIAGNOSTIC_AND_GBK_BRAND_TEST_QUEUE_CLEANUP_NO_MIGRATION_V43
   production_batch_review: AGENT6_PASS_20261113_PRINTING_198_TESTS_AND_BOUNDED_TEST_CLEANUP_STOP_GUARD
   production_authorized_target_only: ALLO_43_166_242_250_STORE1_ORG1
   production_excludes: LANZHOU_AND_NEW_ORDER_SUBMISSION_REPRINT_PRICE_BATCH_OR_HARDWARE_PAIRING
   staging_mutation_authorized: false
-  protected_printing_core_mutation_authorized: true
+  protected_printing_core_mutation_authorized: false
   protected_printing_scope: OWNER_APPROVED_REQUIRED_CHANGE_REQUEST_ALLO_OPT_IN_ONLY
   protected_printing_request: ../delivery/allo-nouilles/REQUIRED_CHANGE_REQUEST.md
   tracker: ../delivery/allo-nouilles/DELIVERY_TRACKER.md
@@ -33,33 +33,33 @@ allo_production:
   canonical_url: https://pos.allonouilles.com
   host: 43.166.242.250
   compose_project: allo-nouilles
-  observed_at: 2026-11-13T15:54:59.051036+00:00
-  application_sha: b7893860815fb87ef936730213e32170626ab7f2
+  observed_at: 2026-11-13T19:11:28.157453+00:00
+  application_sha: 4c75f960d1ad00a799c1d5054f22286149429447
   frontend_sha: b78ab21d9d4b97bf2b6526ccc489503f486b866e
-  latest_release_scope: BACKEND_ONLY_EXACT_BUNDLED_CORS_ORIGIN_NO_MIGRATION
-  compatibility_patch_sha256: b00d49e4c7aa4b1752fe22f49041396fa4419dddfd3dca85c1968b0de3f25d61
+  latest_release_scope: BACKEND_PAD_DIAGNOSTIC_AND_GBK_BRAND_OWNER_AUTHORIZED_TEST_CLEANUP_NO_MIGRATION
+  compatibility_patch_sha256: 9bc36b15320c5db92a0d1446c77e718dd1ad6ba5f1c13466f8537c7e576cefe2
   candidate_application_sha: 4c75f960d1ad00a799c1d5054f22286149429447
   candidate_archive_sha256: d482cc9557920712c19b272e2f7a156488f1e0f04e2c27d9e331dbeef6ad886a
-  release_status: B789_CURRENT_4C75_CANDIDATE_ACCEPTED_WAITING_OWNER_GATE
-  activated_at_utc: 2026-11-13T15:53:52.135168+00:00
+  release_status: DEPLOYED_4C75_PRODUCTION_READONLY_SMOKE_PASS
+  activated_at_utc: 2026-11-13T19:10:42.833342+00:00
   menu_revision: 97
   category_bulk_enabled: true
   canonical_addons: 13
   canonical_linked_options: 94
   canonical_replay: ZERO_WRITES_REVISION_AND_AUDIT_UNCHANGED
-  historical_business_and_prices: FULL_V43_HASHES_7_BUSINESS_AND_11_CONFIG_TABLES_UNCHANGED
+  historical_business_and_prices: OWNER_AUTHORIZED_TEST_ORDER_QUEUE_TERMINAL_CLEANUP_STATIC_CONFIG_AND_DEVICE_BINDINGS_UNCHANGED
   browser_limits: FRONTDESK_ROLE_LOGIN_LIBRARY_FULLSAVE_NOT_RUN_TOOL_LIMIT_NON_BLOCKING_REVIEWED
   synthetic_qa_finish_followup: PASS_NEW_SHA_API_12_13_AND_BROWSER_4_IDLE_0_OCCUPIED_PRIOR_NATIVE_CONFIRM_PROOF_REUSED
   flyway: V43_ALL_43_SUCCESS
-  printing_mode: MOCK
-  paired_devices: 0
-  active_orders: 1
+  printing_mode: PAD_DIRECT
+  paired_devices: 2
+  active_orders: 0
   pending_print_work: 0
-  evidence: ../commercialization/merchants/allo-nouille/ANDROID_APK_REPORT_20261113.md
+  evidence: ../commercialization/merchants/allo-nouille/ANDROID_PRINTER_TEST_REPAIR_20261113.md
   synthetic_qa: LOOPBACK_PG26512_BACKEND18512_FRONTEND28182_NEW_DATA_ONLY
   old_shared_test: RETIRED_NO_RESTART_AUTHORIZED_BY_THIS_TASK
   notes_acceptance: QA_API_BROWSER_AND_PUBLIC_DOMAIN_READONLY_PASS
-  backup_sha256: c0446e7455c4a3485c06128ce134c0b61135e30edc8c46ee9ff5d0936eed5c26
+  backup_sha256: 50627c0f9e7540b770dc1dbf9d5ab435680dad37d38d2951c6505c3d998e2de0
   recovery_tables_verified: 87
 
 test:
@@ -464,8 +464,8 @@ allo_android:
   native_connection_tests: PASS_MAIN_192_168_0_184_AND_GRAB_192_168_0_121_ZERO_BYTE_PROBE
 
 gate:
-  type: OWNER
-  next_action: APPROVE_EXACT_4C75_BACKEND_BATCH_ONCE_THEN_DEPLOY_AND_READONLY_SMOKE
+  type: TECHNICAL
+  next_action: STOP_PRINTING_REPAIR_COMPLETE_NO_FURTHER_RUNTIME_OR_DATA_MUTATION
 
 authorization:
   dining_table_soft_delete: OWNER_20261024_ALL_STORE_IS_ACTIVE_SOFT_DELETE_ACTIVE_ORDER_GUARD_CACHE_AND_NEW_ORDER_BLOCK_IMPLEMENT_TEST_REVIEW_MERGE_STAGING_DIRECT_PRODUCTION_PRESERVE_HISTORY_AB_SPLIT_LABELS_PRINTING_AND_UBER_NO_REAL_TEST_ORDERS
@@ -494,7 +494,7 @@ authorization:
   staging: OWNER_AUTHORIZED_ENDPOINT_POLICY_TEST_REVIEW_MERGE_STAGING_CONFIG_AND_CONFIRMED_STORE18_BINDINGS_NO_PHYSICAL_PRINT
   staging_https_phase_1: OWNER_AUTHORIZED_INGRESS_TLS_FORWARDING_AGENT6_PR_MERGE_COMPLETE
   production: NONE
-  allo_production: OWNER_20261113_CURRENT_TEST_DATA_CLEANUP_AUTHORIZED_BACKEND_4C75_BATCH_WAITING_EXACT_APPROVAL
+  allo_production: COMPLETED_OWNER_20261113_EXACT_4C75_BACKEND_AND_TEST_CLEANUP_NO_STANDING_MUTATION_AUTHORITY
 
 stop:
-  marker: ALLO_4C75_BACKEND_READY_OWNER_GATE_APK_1_0_3_INSTALLED_TEST_CLEANUP_AUTHORIZED
+  marker: ALLO_PRINTING_4C75_DEPLOYED_APK_1_0_3_INSTALLED_STOP_NO_FURTHER_MUTATION

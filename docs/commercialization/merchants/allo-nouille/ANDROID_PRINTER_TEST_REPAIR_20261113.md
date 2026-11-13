@@ -56,3 +56,41 @@ While verifying the physical connection, independent store activity created test
 ### SCOPE_EXPANSION_CHECK
 
 Continuous onsite testing created more orders after the first cleanup, so requiring an empty shop before merely staging an image would indefinitely block the repair. The release reuses the existing backend replacement stop boundary, runs the same reviewed test-data cleanup while submissions are stopped, then starts the exact accepted artifact. Roughly 35 lines of bounded private deployment adaptation are BLOCKING for this release; no new scheduler, credential lifecycle, deployment platform, cache cleanup or general acceptance framework is added. App-code changes remain bounded to the requested connection/intent and GBK repairs.
+
+## Final production result
+
+Owner explicitly approved the exact 4c75 batch once. At 2026-11-13T19:10:42.833342Z (14:10 Toronto), Backend `4c75f960d1ad00a799c1d5054f22286149429447` became healthy with image `sha256:7141585f9b545a69afe865a38a7577fca166bda5ab3cf7a9f3a7a9925c884804`. Backend container `20580de9e8f6e9546caa3cf0e7b16a8f7c53a4dae86e50f3fb9edf742305b866`. Frontend and DB container IDs/start times remained unchanged; V43 retained.
+
+The approved replacement stop window cleared another 2 test outbox events, 1 pending test print job, 2 active test orders, 9 kitchen tasks and 5 beverage tasks. Together with the earlier cleanup: 8 outbox events, 6 pending jobs, 6 active orders, 16 kitchen tasks, 7 beverage tasks terminally cleared/cancelled. Completed history was not needed for the repair and remains in place; no database reset was performed. Static Store/printer assignments/configuration and device bindings matched before/after release. No new binding, credential reset, worker recovery or blind reprint.
+
+Post-deploy read-only acceptance PASS at 19:11:28Z: 9 API checks, 5 exact-origin CORS checks, SockJS, 5 WSS denials and authenticated own-Store subscribe; cross-Store403 and anonymous401 preserved. Three public frontend artifact hashes unchanged. Current Store1 PAD_DIRECT, 2 devices, 0 active orders and 0 pending/claimed/printing/outbox work at the observation. Business-row differences reflect the explicitly authorized cleanup and onsite tests, not an assertion that all rows stayed unchanged. Expected negative WSS checks produce denial ERROR logs; no new intent/encoding errors were observed in the short post-deploy window.
+
+Disk before preparation: 16% / 48GB free, Build Cache1.445GB. After: 17% / 47GB free, Cache1.78GB. No cleanup/prune; current/previous backend, frontend, DB and backups retained. All three runtime containers healthy.
+
+Physical paper output on the new release was not proactively triggered. Actual LAN connectivity succeeded from the physical Pad; exact rendered bytes and protocol behavior were verified in isolated QA. Other Pads can use the delivered v1.0.3 APK for the corrected Android connection-test UI.
+
+## Product repair / tooling and governance repair
+
+| Area | Files | Why required / blocker |
+| --- | --- | --- |
+| PRODUCT REPAIR | frontend `PrintingSettingsPage.tsx`, `printerConnectionService.ts`, `androidPadBridge.ts` and focused tests | Authoritative Store printer config → native socket probe, scoped result display; original connection entry was wrong. BLOCKING. |
+| PRODUCT REPAIR | backend `ReceiptArtifact.java`, `PrintJobServiceImpl.java`, `PrintDispatcherServiceImpl.java` and focused tests | Capture valid order-free diagnostic intent, retain frozen artifact/current-mode/encoding protection. BLOCKING. |
+| PRODUCT REPAIR | `ReceiptContextService.java` and test | New physical brand encodable on actual GBK printers, no historical rewrite. BLOCKING. |
+| PRODUCT DELIVERY | Android `app/build.gradle`, `AlloBundledLaunchTest.java`; ignored `dist/android` artifacts | Version1.0.3, emulator WebView probe and in-place physical upgrade. BLOCKING for delivered Android repair. |
+| TOOLING / GOVERNANCE | Private reused Allô stage/activation/backup/recovery/QA helpers, exact cleanup SQL; `CURRENT_STATE.yml`, this evidence, release batch, `SYSTEM_DOCUMENTATION.md`, `doc/API.md` | Existing release stop boundary handles disposable concurrent tests; immutable artifact, backup, audit and behavior/evidence updates. BLOCKING safety/delivery proof. No new platform or general tooling. |
+
+## Execution Time Breakdown
+
+Stages are estimated allocations; total is wall clock, from 13:26:41 Toronto through final evidence sync. Reviews/builds overlap; retries are included.
+
+| Stage | Time | Notes |
+| --- | ---: | --- |
+| Investigation / Planning | Estimated12m | Log/request/native route investigation; current GBK and test-data steering. |
+| Implementation | Estimated9m | Intent/native connection repair plus same-root physical-brand fix. |
+| Tests | Estimated5m | Backend198, frontend522, Android18+2; GBK follow-up and IPv4 fixture rerun included. Fresh-empty-login fixture failure retained separately. |
+| Agent 6 / PR / Merge | Estimated7m | Consolidated source/GBK and bounded release/cleanup reviews; PR314, no main merge. |
+| Staging Deploy | Estimated1m | Isolated local QA exact-JAR launches only; shared Staging untouched. |
+| Staging Acceptance | Estimated2m | Four-sample then six-ticket HTTP proof; zero sentinel connections, fixture restore. |
+| Production Deploy / Smoke | Estimated2m | One backend replacement after approval and read-only checks. |
+| Evidence / Governance | Estimated12m | Fresh87-table recovery proof, audit cleanup, exact release/artifact/evidence sync. |
+| Total | Approximately50m wall clock | 2026-11-13 13:26:41 to approximately14:17 Toronto. |
