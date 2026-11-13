@@ -138,6 +138,7 @@ export interface OrderLineItem {
 }
 
 export interface OrderSession {
+  orderNotes?: string
   orderId: string
   slotLabel: string
   tableLabel: string
@@ -305,6 +306,7 @@ export interface BackendFrontdeskOrderBoardItem {
 }
 
 export interface BackendOrderResponse {
+  order_notes?: string | null
   id: number
   order_no: string
   status: string

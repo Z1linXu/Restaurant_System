@@ -9802,7 +9802,7 @@ A successful submitted-order Update awaits persistence of its confirmed server s
 
 Configured template option groups reuse the legacy customization ChoiceButton, CheckboxRow and AddOnQuantityRow with responsive choice grids, bilingual business labels and modifier cards. Ordinary controls precede modifier cards; configured COMBO placement is preserved. English/Chinese labels are shown together, with French/Chinese when App locale is French. Selection, defaults, cardinality, prices and submit payloads remain data-driven; no legacy noodle identifiers or modifier rules are copied into template data.
 
-## 2026-11-12 Allô controlled improvements — execution in progress
+## Allô controlled delivery contract
 
 This release branch starts from the actual Allô deployed source plus its recorded
 WSS compatibility patch, excluding unrelated dirty main work. Target is only
@@ -9878,3 +9878,41 @@ browser and deployment proof is in the
 [Allô merchant release reports](docs/commercialization/merchants/allo-nouille/ALLO_PRODUCTION_DEPLOYMENT_REPORT.md).
 Old-binary rollback requires pausing writes and draining new monetary outbox
 intents with the new binary first; old renderers cannot reinterpret those fields.
+
+### Allô item and whole-order notes
+
+The Allô Current Order panel has one optional whole-order note below the items
+and above totals. Item cards show saved notes read-only; B and C customization
+modals use the same item-note control and existing `order_items.notes`. A/D/E
+modals and other Store panels retain their existing rules. Notes do not affect
+prices, quantities, modifiers or taxes.
+
+Additive V43 introduces nullable `orders.order_notes` and note-aware batch
+metadata. Missing/null fields from older clients preserve the current note;
+explicit blank input clears it. Existing draft and outbox namespaces, schema
+versions, identities and frozen queued payloads are retained. Nonblank initial
+notes participate in submission hashing; absent/blank notes keep old hashes.
+Rejected-draft reopening preserves notes. Submitted notes are changed only by
+the existing Update action with an expected order revision and persisted stable
+update identity. Concurrent unsent changes stay local and require review rather
+than silently overwriting another terminal. A note-only update adds no items,
+tasks or money and produces only a kitchen note-update ticket.
+The existing local draft also freezes the complete submitted update payload.
+After a lost response, refresh/reopen first confirms the same key, expected
+revision and payload; editing waits for confirmation. Existing Update remains
+the retry action. No second queue or database lifecycle is introduced. A
+note-only update never recalculates historical amount, discount or tax snapshots.
+
+The actual Allô GRAB renderer omits the restaurant-name row and naturally sorts
+each batch by stable snapshot SKU, A–E then numeric suffix. Invalid/missing codes
+fall back stably after recognized codes without losing lines; order storage and
+FRONTDESK ordering are unchanged. Newly frozen GRAB contexts capture whole-order
+notes once after the item lines, labelled current/updated/cleared on updates.
+Item notes remain attached to their own line. Old context/artifact interpretation
+and saved original-copy bytes are preserved. ESC/POS consumes this same renderer
+text; MOCK proof does not certify physical paper or codepage behavior.
+
+Rollback retains additive V43 and new orders. Frontend rollback can retain the
+new backend; an old backend cannot safely consume queued note-aware submissions
+or updates. Such work must first be confirmed/drained by the new backend rather
+than restoring a database or silently dropping its fields.

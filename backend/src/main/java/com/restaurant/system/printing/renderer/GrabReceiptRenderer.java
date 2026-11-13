@@ -48,16 +48,13 @@ public class GrabReceiptRenderer implements ReceiptRenderer {
             ExternalOrderReceiptHeader.append(builder, request.order);
             builder.append("\n\n\n\n");
             if (Boolean.TRUE.equals(request.is_update_ticket)) {
-                builder.append(PrintMarkup.large(presentation == null ? "UPDATED" : presentation.label("updated"))).append("\n");
+                builder.append(PrintMarkup.large(presentation == null ? "UPDATED" : presentation.label(presentation.hasNoteOnlyUpdate() ? "notes_update" : "updated"))).append("\n");
                 builder.append("--------------------------------\n");
             }
             String topLabel = presentation == null ? resolveTopDisplayLabel(order) : presentedTopLabel(order, presentation);
             if (topLabel != null) {
                 builder.append(PrintMarkup.large(topLabel)).append("\n");
             }
-        }
-        if (presentation != null && presentation.restaurant_name != null && !presentation.restaurant_name.isBlank()) {
-            builder.append(PrintMarkup.doubleHeight(presentation.restaurant_name)).append("\n");
         }
         builder.append("--------------------------------\n");
 
@@ -89,11 +86,14 @@ public class GrabReceiptRenderer implements ReceiptRenderer {
                 }
                 return task;
             })
-            .sorted(Comparator.comparingInt((KitchenTask task) -> resolveSortPriority(task, orderItemById.get(task.order_item_id)))
-                .thenComparing((KitchenTask task) -> task.created_at, Comparator.nullsLast(Comparator.naturalOrder()))
-                .thenComparing(task -> task.id))
+            .sorted(presentation != null
+                ? Comparator.comparing((KitchenTask task) -> alloCode(orderItemById.get(task.order_item_id)),
+                    Comparator.nullsLast(Comparator.naturalOrder()))
+                : Comparator.comparingInt((KitchenTask task) -> resolveSortPriority(task, orderItemById.get(task.order_item_id)))
+                    .thenComparing((KitchenTask task) -> task.created_at, Comparator.nullsLast(Comparator.naturalOrder()))
+                    .thenComparing(task -> task.id))
             .toList();
-        if (tasks.isEmpty()) {
+        if (tasks.isEmpty() && (presentation == null || !presentation.hasNoteChange())) {
             return "";
         }
 
@@ -157,6 +157,7 @@ public class GrabReceiptRenderer implements ReceiptRenderer {
         ExternalKitchenFallbackContent.append(builder, request.order_items,
                 tasks.stream().map(t -> t.order_item_id).collect(java.util.stream.Collectors.toSet()));
         ExternalOrderNoteContent.append(builder, order);
+        appendOrderNotes(builder, presentation, Boolean.TRUE.equals(request.is_update_ticket));
         builder.append("--------------------------------\n");
         if (isTakeout(order)) {
             builder.append(PrintMarkup.large(presentation == null ? "外卖" : presentation.label("takeout"))).append("\n");
@@ -183,7 +184,37 @@ public class GrabReceiptRenderer implements ReceiptRenderer {
 
     private String presentedDineInHeader(Order order, boolean update, ReceiptPresentation presentation) {
         String label = fallback(order.table_display_name, PrintTableDisplayFormatter.formatSplitTableLabel(order.table_no), presentation.label("walk_in"));
-        return PrintMarkup.withTopFeed(PrintMarkup.large(label) + (update ? " (" + presentation.label("updated") + ")" : ""));
+        return PrintMarkup.withTopFeed(PrintMarkup.large(label) + (update ? " (" + presentation.label(presentation.hasNoteOnlyUpdate() ? "notes_update" : "updated") + ")" : ""));
+    }
+
+    private static final java.util.regex.Pattern ALLO_SORT_CODE = java.util.regex.Pattern.compile("^AN_([A-E])([1-9][0-9]*)$");
+    private record AlloCode(char category, java.math.BigInteger number) implements Comparable<AlloCode> {
+        public int compareTo(AlloCode other) {
+            int group = Character.compare(category, other.category);
+            return group != 0 ? group : number.compareTo(other.number);
+        }
+    }
+    private AlloCode alloCode(OrderItem item) {
+        if (item == null || item.item_sku_snapshot == null) return null;
+        var match = ALLO_SORT_CODE.matcher(item.item_sku_snapshot.trim());
+        return match.matches() ? new AlloCode(match.group(1).charAt(0), new java.math.BigInteger(match.group(2))) : null;
+    }
+
+    private void appendOrderNotes(StringBuilder builder, ReceiptPresentation presentation, boolean update) {
+        if (presentation == null || !Boolean.TRUE.equals(presentation.order_notes_captured)) return;
+        String notes = presentation.order_notes;
+        if ((notes == null || notes.isBlank()) && !presentation.hasNoteChange()) return;
+        builder.append("--------------------------------\n");
+        if (notes == null || notes.isBlank()) {
+            appendPrintLines(builder, List.of(presentation.label("order_notes_cleared")));
+            return;
+        }
+        String key = !update ? "order_notes" : presentation.hasNoteChange() ? "order_notes_updated" : "order_notes_current";
+        String[] lines = notes.replace("[[", "[ [").split("\\R", -1);
+        List<String> output = new ArrayList<>();
+        output.add(presentation.label(key) + ": " + lines[0]);
+        for (int i = 1; i < lines.length; i++) output.add(lines[i]);
+        appendPrintLines(builder, output);
     }
 
     private String presentedTopLabel(Order order, ReceiptPresentation presentation) {

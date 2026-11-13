@@ -1,4 +1,5 @@
 import type { BackendOrderResponse, OrderLineItem } from '../types/ordering'
+import type { FrozenOrderUpdatePayload } from '../services/orderService'
 import { createClientId } from '../utils/randomId'
 import {
   OFFLINE_STORES,
@@ -50,6 +51,9 @@ export interface LocalDraftRecord extends LocalDraftScope {
   serverOrderId: number | null
   serverOrderSnapshot: BackendOrderResponse | null
   items: OrderLineItem[]
+  orderNotes?: string
+  updateIdempotencyKey?: string
+  updatePayload?: FrozenOrderUpdatePayload
   menuRevision: number
   createdAt: string
   updatedAt: string
@@ -89,7 +93,7 @@ export function localDraftKey(scope: LocalDraftScope, contextKey: string) {
 
 export function localDraftPayload(record: Pick<
   LocalDraftRecord,
-  'clientOrderId' | 'organizationId' | 'storeId' | 'context' | 'items' | 'menuRevision' | 'mode' | 'serverOrderId'
+  'clientOrderId' | 'organizationId' | 'storeId' | 'context' | 'items' | 'menuRevision' | 'mode' | 'serverOrderId' | 'orderNotes'
 >) {
   return {
     clientOrderId: record.clientOrderId,
@@ -97,6 +101,7 @@ export function localDraftPayload(record: Pick<
     storeId: record.storeId,
     context: record.context,
     items: record.items,
+    ...(record.orderNotes?.trim() ? { orderNotes: record.orderNotes.trim() } : {}),
     menuRevision: record.menuRevision,
     mode: record.mode,
     serverOrderId: record.serverOrderId,
@@ -200,6 +205,7 @@ export function reopenRejectedLocalDraft(record: LocalDraftRecord, now = new Dat
   return withDraftPayloadHash({
     ...next,
     items: record.items,
+    ...(record.orderNotes !== undefined ? { orderNotes: record.orderNotes } : {}),
   })
 }
 

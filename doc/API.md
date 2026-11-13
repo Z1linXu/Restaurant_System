@@ -557,6 +557,7 @@ Order detail should include:
 - kitchen progression when applicable
 - beverage progression when applicable
 - item notes and instructions
+- nullable `order_notes` for the enabled Allô in-store receipt contract
 - modified-after-submit flags when applicable
 - order header and timestamps
 
@@ -581,9 +582,38 @@ POST `/orders/{id}/updates`
 
 Request:
 - `idempotency_key` (required)
-- `items` (required, new items only)
+- `items` (new items only; may be empty for a changed Allô whole-order note)
+- `order_notes` (optional Allô in-store string, at most 2000 characters;
+  missing/null preserves the current note, empty/blank explicitly clears it)
+- `expected_revision` (required whenever `order_notes` is supplied)
 
 The same `order_id + idempotency_key` returns the previously created batch and does not duplicate items, tasks, inventory deductions, or print jobs.
+
+Allô note-aware updates lock the order and compare `expected_revision` to
+`current_revision`; stale content returns409 `ORDER_REVISION_STALE`. They
+persist a hash of the notes, expected revision and new item payload. An identical
+retry returns the original batch before the revision check; reusing its key for
+different content returns409 `IDEMPOTENCY_CONFLICT`. Legacy add-only clients
+retain their existing behavior and never clear a note they did not send.
+A note-only update preserves existing lines, tasks, amounts and status, advances
+the normal update revision and dispatches only a clearly labelled GRAB update.
+It does not generate a zero-amount FRONTDESK receipt. Initial creation,
+idempotent submission and draft-header replacement also accept `order_notes`.
+Blank/absent initial notes keep the previous submission hashes compatible.
+The frontend stores the complete frozen update request in the existing local
+draft before sending it. Refresh/reopen confirms that same request before new
+edits; an unknown transport result never rotates its identity or payload.
+
+New Allô GRAB contexts freeze the whole-order note with an explicit capture
+marker. GRAB and GRAB_UPDATE omit the restaurant-name line and stably sort
+eligible lines by snapshot SKU `AN_A1` through `AN_E…`, comparing the numeric
+suffix numerically. Missing/invalid codes follow valid codes in their original
+relative order; distinct modifier/note lines remain distinct. Update output
+contains only the current batch. Item notes remain under their own line. A
+nonblank whole-order note appears once after all lines: initial, current or
+updated labels distinguish its meaning; an explicit clear prints a clear notice.
+Old contexts without the marker do not read live notes, and saved original-copy
+artifacts remain unchanged. FRONTDESK ordering, header and amounts are unchanged.
 
 ### Order Print Options
 GET `/orders/{id}/print-options`

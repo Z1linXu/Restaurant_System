@@ -41,6 +41,9 @@ public class Order {
     @Column(name = "external_order_note_snapshot", columnDefinition = "TEXT")
     public String external_order_note_snapshot;
 
+    @Column(name = "order_notes", columnDefinition = "TEXT")
+    public String order_notes;
+
     @Column(name = "created_by")
     public Long created_by;
 

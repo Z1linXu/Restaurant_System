@@ -20,6 +20,8 @@ import org.springframework.stereotype.Service;
 /** Closed Allô receipt seam. Existing events without a context keep their legacy interpretation. */
 @Service
 public class ReceiptContextService {
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private OrderUpdateBatchRepository noteBatches;
     private final StorePresentationService presentation;
     private final OrderRepository orders;
     private final OrderItemRepository items;
@@ -59,6 +61,14 @@ public class ReceiptContextService {
         context.order_item_ids=lines.stream().map(i->i.id).toList();
         if("GRAB".equals(module))context.kitchen_excluded_item_ids=lines.stream()
             .filter(i->!settings.kitchenEnabled(i.category_code_snapshot)).map(i->i.id).toList();
+        if ("GRAB".equals(module)) {
+            context.order_notes_captured = true;
+            context.order_notes = order.order_notes;
+            context.order_notes_changed = batch != null && noteBatches != null && noteBatches.findById(batch)
+                .map(b -> Boolean.TRUE.equals(b.order_notes_changed)).orElse(false);
+            context.order_notes_only = Boolean.TRUE.equals(context.order_notes_changed)
+                && lines.stream().noneMatch(i -> settings.kitchenEnabled(i.category_code_snapshot));
+        }
         context.item_names=new LinkedHashMap<>();context.option_names=new LinkedHashMap<>();
         for(var item:lines)context.item_names.put(String.valueOf(item.id),MenuCodeFormatter.display(item.item_sku_snapshot,resolve(context.language,item.item_name_snapshot_zh,item.item_name_snapshot_en,item.item_name_snapshot_fr)));
         if(!lines.isEmpty())for(var option:options.findAllByOrderItemIds(context.order_item_ids))

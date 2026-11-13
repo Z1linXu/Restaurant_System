@@ -41,6 +41,8 @@ public class OrderSubmissionHashServiceImpl implements OrderSubmissionHashServic
         payload.put("order_type", normalize(request.order_type));
         payload.put("table_no", normalize(request.table_no));
         payload.put("pickup_no", normalize(request.pickup_no));
+        // Preserve every historical no-note hash, including old queued submissions.
+        if (normalize(request.order_notes) != null) payload.put("order_notes", normalize(request.order_notes));
         if (legacy) payload.put("menu_revision", request.menu_revision);
         payload.put("expected_subtotal_amount", request.expected_subtotal_amount == null
             ? null
@@ -73,6 +75,20 @@ public class OrderSubmissionHashServiceImpl implements OrderSubmissionHashServic
         List<CreateOrderItemOptionRequest> options = item.options == null ? List.of() : item.options;
         payload.put("options", options.stream().map(option -> optionPayload(option, legacy)).toList());
         return payload;
+    }
+
+    @Override
+    public String hashNotesUpdate(com.restaurant.system.order.dto.CreateOrderUpdateRequest request) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("order_notes", normalize(request.order_notes));
+        payload.put("expected_revision", request.expected_revision);
+        payload.put("items", (request.items == null ? List.<CreateOrderItemRequest>of() : request.items)
+            .stream().map(item -> itemPayload(item, false)).toList());
+        try {
+            return hex(MessageDigest.getInstance("SHA-256").digest(objectMapper.writeValueAsBytes(payload)));
+        } catch (JsonProcessingException | NoSuchAlgorithmException error) {
+            throw new IllegalStateException("Unable to hash order note update", error);
+        }
     }
 
     private Map<String, Object> optionPayload(CreateOrderItemOptionRequest option, boolean legacy) {

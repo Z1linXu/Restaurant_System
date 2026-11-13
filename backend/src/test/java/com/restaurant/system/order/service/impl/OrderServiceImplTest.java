@@ -1488,4 +1488,56 @@ class OrderServiceImplTest {
         request.quantity = quantity;
         return request;
     }
+
+    private OrderResponse submittedWithWholeNotes() {
+        var receipts = org.mockito.Mockito.mock(com.restaurant.system.delivery.ReceiptContextService.class);
+        when(receipts.enabled(any(), org.mockito.ArgumentMatchers.eq("GRAB"))).thenReturn(true);
+        org.springframework.test.util.ReflectionTestUtils.setField(orderService,"orderNoteReceipts",receipts);
+        org.springframework.test.util.ReflectionTestUtils.setField(orderService,"orderNoteHashes",new OrderSubmissionHashServiceImpl(new com.fasterxml.jackson.databind.ObjectMapper()));
+        var request=new CreateOrderRequest();request.store_id=1L;request.order_type="dine_in";request.table_no="T5";
+        request.order_notes="原始整单备注";
+        var line=new CreateOrderItemRequest();line.menu_item_id=20L;line.quantity=1;request.items=List.of(line);
+        return orderService.submitOrder(orderService.createOrder(request).id);
+    }
+    @Test void noteOnlyUpdatesAreGuardedIdempotentAndDoNotCreateMoneyReceiptsOrNewItems() {
+        var original=submittedWithWholeNotes(); var request=new CreateOrderUpdateRequest();
+        request.idempotency_key="note-update";request.expected_revision=1;request.order_notes="不要酱汁\nTogether";
+        var result=orderService.createOrderUpdate(original.id,request,1L);
+        assertEquals(request.order_notes,result.order.order_notes);assertEquals(original.total_amount,result.order.total_amount);
+        assertEquals(original.items.size(),result.order.items.size());assertEquals(2,result.order.current_revision);
+        assertTrue(orderService.createOrderUpdate(original.id,request,1L).already_processed);
+        org.mockito.Mockito.verify(printDispatcherService,org.mockito.Mockito.times(1)).dispatchOrderUpdateAfterCommit("GRAB",1L,original.id,result.update_batch_id);
+        org.mockito.Mockito.verify(printDispatcherService,org.mockito.Mockito.never()).dispatchOrderUpdateAfterCommit(org.mockito.ArgumentMatchers.eq("FRONTDESK_RECEIPT"),anyLong(),anyLong(),anyLong());
+        request.order_notes="different retry";assertThrows(OrderSubmissionException.class,()->orderService.createOrderUpdate(original.id,request,1L));
+        var clear=new CreateOrderUpdateRequest();clear.idempotency_key="clear-note";clear.expected_revision=2;clear.order_notes="";
+        assertEquals(null,orderService.createOrderUpdate(original.id,clear,1L).order.order_notes);
+    }
+    @Test void staleNotesCannotOverwriteAndLegacyAdditionPreservesExistingWholeNote() {
+        var original=submittedWithWholeNotes();var stale=new CreateOrderUpdateRequest();
+        stale.idempotency_key="stale";stale.expected_revision=99;stale.order_notes="overwrite";
+        assertThrows(OrderSubmissionException.class,()->orderService.createOrderUpdate(original.id,stale,1L));
+        assertEquals("原始整单备注",orders.get(original.id).order_notes);assertTrue(orderUpdateBatches.isEmpty());
+        var oldClient=new CreateOrderUpdateRequest();oldClient.idempotency_key="legacy-no-note-field";
+        var line=new CreateOrderItemRequest();line.menu_item_id=20L;line.quantity=1;oldClient.items=List.of(line);
+        assertEquals("原始整单备注",orderService.createOrderUpdate(original.id,oldClient,1L).order.order_notes);
+    }
+    @Test void noteOnlyUpdatePreservesHistoricalMoneyAndCanBeConfirmedAfterFinish() {
+        var original = submittedWithWholeNotes();
+        var saved = orders.get(original.id);
+        saved.subtotal_amount = new BigDecimal("100.00");
+        saved.discount_amount = new BigDecimal("7.00");
+        saved.total_amount = new BigDecimal("105.09");
+        var status = saved.status;
+        var request = new CreateOrderUpdateRequest();
+        request.idempotency_key = "historical-money-note"; request.expected_revision = 1;
+        request.order_notes = "Preserve snapshots";
+        var result = orderService.createOrderUpdate(original.id, request, 1L);
+        assertEquals(new BigDecimal("100.00"), saved.subtotal_amount);
+        assertEquals(new BigDecimal("7.00"), saved.discount_amount);
+        assertEquals(new BigDecimal("105.09"), result.order.total_amount);
+        assertEquals(status, saved.status);
+        saved.status = "completed";
+        assertTrue(orderService.createOrderUpdate(original.id, request, 1L).already_processed);
+        assertEquals(1, orderUpdateBatches.size());
+    }
 }

@@ -63,7 +63,7 @@ services:
       SPRING_FLYWAY_ENABLED: 'true'
       SPRING_FLYWAY_VALIDATE_ON_MIGRATE: 'true'
       SPRING_FLYWAY_BASELINE_ON_MIGRATE: 'false'
-      SPRING_FLYWAY_TARGET: '42'
+      SPRING_FLYWAY_TARGET: '43'
       APP_AUTH_JWT_SECRET: ${JWT_SECRET:?fresh independent secret required}
       JWT_SECRET: ${JWT_SECRET:?fresh independent secret required}
       APP_AUTH_X_USER_ID_FALLBACK_ENABLED: 'false'

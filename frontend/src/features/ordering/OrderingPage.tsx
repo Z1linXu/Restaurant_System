@@ -93,7 +93,8 @@ function kickPadDirectPrintWorker(reason: string, orderId: number, updateBatchId
 }
 
 export function OrderingPage(props: OrderingPageProps) {
-  return <DiningTableOrderGate storeId={props.storeId} tableNo={props.slotLabel} enabled={(props.orderType ?? 'dine_in') === 'dine_in'} onBack={props.onBack}><OrderingWorkspace {...props} /></DiningTableOrderGate>
+  const key = `${props.storeId}:${props.orderType ?? 'dine_in'}:${props.slotLabel}:${props.tableLabel}:${props.pickupLabel ?? ''}`
+  return <DiningTableOrderGate storeId={props.storeId} tableNo={props.slotLabel} enabled={(props.orderType ?? 'dine_in') === 'dine_in'} onBack={props.onBack}><OrderingWorkspace key={key} {...props} /></DiningTableOrderGate>
 }
 
 function OrderingWorkspace({
@@ -112,7 +113,8 @@ function OrderingWorkspace({
 }: OrderingPageProps) {
   const { t, label } = useLocale()
   const { user } = useAuth()
-  const { organizationId, presentation } = useCurrentStore()
+  const { organizationId, presentation, storeCode } = useCurrentStore()
+  const unifiedOrderNotes = storeCode === 'ALLO_NOUILLES_TEST'
   const {
     categories,
     items,
@@ -152,22 +154,26 @@ function OrderingWorkspace({
     addItem,
     updateItem,
     updateItemNote,
+    updateOrderNotes,
     incrementItem,
     decrementItem,
     removeItem,
     cancelOrder,
     submitOrder,
+    getConfirmedUpdateBatchId,
     refreshOrder,
     updateHeader,
     saveLocalDraftNow,
     localSubmitState,
     outboxRecord,
     draftSubmissionLocked,
+    draftEditingLocked,
     retryQueuedOrder,
     returnQueuedOrderToDraft,
   } = useDraftOrder(storeId, slotLabel, tableLabel, orderType, pickupLabel, items, {
     accountId: user?.id ?? null,
     organizationId,
+    orderNotesEnabled: unifiedOrderNotes,
     menuRevision: catalog.catalog?.menuRevision ?? 0,
   })
   const refreshOrderRef = useRef(refreshOrder)
@@ -309,8 +315,8 @@ function OrderingWorkspace({
   )
 
   const handleSelectMenuItem = (item: MenuItem) => {
-    if (draftSubmissionLocked) return
-    if (isQuickAddItem(item)) {
+    if (draftEditingLocked) return
+    if (isQuickAddItem(item, unifiedOrderNotes)) {
       void addItem(item, buildDefaultDraft(item))
       return
     }
@@ -322,7 +328,7 @@ function OrderingWorkspace({
   }
 
   const handleQuickAddItem = async (item: MenuItem) => {
-    if (draftSubmissionLocked) return
+    if (draftEditingLocked) return
     setQuickAddStates((current) => ({
       ...current,
       [item.id]: 'adding',
@@ -349,8 +355,8 @@ function OrderingWorkspace({
   }
 
   const handleMenuCardAdd = async (item: MenuItem) => {
-    if (draftSubmissionLocked) return
-    if (isQuickAddItem(item)) {
+    if (draftEditingLocked) return
+    if (isQuickAddItem(item, unifiedOrderNotes)) {
       await handleQuickAddItem(item)
       return
     }
@@ -389,7 +395,7 @@ function OrderingWorkspace({
   }
 
   const handleModalSubmit = async () => {
-    if (!customizationState || draftSubmissionLocked) {
+    if (!customizationState || draftEditingLocked) {
       return
     }
 
@@ -434,7 +440,7 @@ function OrderingWorkspace({
       handledSubmittedOrderIdsRef.current.add(submittedOrder.id)
       const isUpdate = session?.status !== 'draft'
       const updateBatchId = isUpdate
-        ? submittedOrder.items
+        ? getConfirmedUpdateBatchId() ?? submittedOrder.items
           .filter((item) => item.added_revision === submittedOrder.current_revision)
           .map((item) => item.order_update_batch_id)
           .find((batchId): batchId is number => batchId != null)
@@ -637,8 +643,8 @@ function OrderingWorkspace({
                     onDecrement={() => handleDecrementMenuItem(item.id)}
                     quickAddState={quickAddStates[item.id] ?? 'idle'}
                     orderedQuantity={orderedQuantityByMenuItemId.get(item.id) ?? 0}
-                    canDecrement={!draftSubmissionLocked && latestMutableItemByMenuItemId.has(item.id)}
-                    disabled={draftSubmissionLocked}
+                    canDecrement={!draftEditingLocked && latestMutableItemByMenuItemId.has(item.id)}
+                    disabled={draftEditingLocked}
                     disabledReason={draftSubmissionLockMessage ?? undefined}
                     compact={isIpadLandscape}
                   />
@@ -650,6 +656,8 @@ function OrderingWorkspace({
           {session ? (
             <OrderSummaryPanel
               session={session}
+              unifiedOrderNotes={unifiedOrderNotes}
+              onUpdateOrderNotes={updateOrderNotes}
               slotDisplayName={orderType === 'dine_in' ? order?.table_display_name || slotDisplayName : session.slotLabel}
               subtotal={subtotal}
               tax={tax}
@@ -658,6 +666,7 @@ function OrderingWorkspace({
               localSubmitState={localSubmitState}
               showSubmissionStatus={outboxRecord != null}
               orderLocked={draftSubmissionLocked}
+              itemsLocked={draftEditingLocked}
               lastBackendSuccessAt={connection.lastSuccessAt}
               submissionErrorCode={outboxRecord?.lastErrorCode}
               nextRetryAt={outboxRecord?.nextRetryAt}
@@ -695,6 +704,7 @@ function OrderingWorkspace({
 
       {customizationState ? (
         <ItemCustomizationModal
+          allowRiceNotes={unifiedOrderNotes}
           item={customizationState.item}
           draft={customizationState.draft}
           mode={customizationState.mode}
@@ -702,7 +712,7 @@ function OrderingWorkspace({
           onClose={closeCustomizationModal}
           onChange={(nextDraft) => setCustomizationState((current) => (current ? { ...current, draft: nextDraft } : null))}
           onSubmit={() => void handleModalSubmit()}
-          submitDisabled={draftSubmissionLocked}
+          submitDisabled={draftEditingLocked}
           submitDisabledReason={draftSubmissionLockMessage ?? undefined}
         />
       ) : null}

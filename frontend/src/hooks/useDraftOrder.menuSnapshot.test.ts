@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { buildFrozenSubmitPayload, buildLocalLineItem } from './useDraftOrder'
 import { createLocalDraftRecord } from '../offline/localDrafts'
+import { createOrderOutboxRecord, beginOrderOutboxAttempt } from '../offline/orderOutbox'
 import type { ItemCustomizationDraft, MenuItem } from '../types/ordering'
 
 const menuItem: MenuItem = {
@@ -52,6 +53,20 @@ const draft: ItemCustomizationDraft = {
 }
 
 describe('offline order menu snapshots', () => {
+  it('freezes bilingual whole-order notes in the existing outbox while keeping old drafts field-free', () => {
+    const record = createLocalDraftRecord({ accountId: 7, organizationId: 9, storeId: 1 },
+      { orderType: 'dine_in', slotLabel: 'T1', tableLabel: 'T1', tableNo: 'T1', pickupNo: null }, 4)
+    const line = buildLocalLineItem(menuItem, draft)
+    expect(buildFrozenSubmitPayload(record, [line], [menuItem])).not.toHaveProperty('order_notes')
+    const noted = { ...record, orderNotes: '一起上菜\nServe together' }
+    const queued = createOrderOutboxRecord(noted, buildFrozenSubmitPayload(noted, [line], [menuItem]))
+    noted.orderNotes = 'Unsent later edit'
+    const attempt = beginOrderOutboxAttempt(queued)
+    expect(attempt.clientOrderId).toBe(record.clientOrderId)
+    expect(attempt.frozenPayload.order_notes).toBe('一起上菜\nServe together')
+    expect(attempt.payloadHash).toBe(queued.payloadHash)
+    expect(attempt.frozenPayload.idempotency_key).toBe(queued.frozenPayload.idempotency_key)
+  })
   it('keeps the name, price, routing, and option snapshots captured when the item was added', () => {
     const line = buildLocalLineItem(menuItem, draft)
     const record = createLocalDraftRecord(

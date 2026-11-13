@@ -244,6 +244,18 @@ describe('frontdesk print-job coordinator', () => {
     mockedApiRequest.mockReset()
   })
 
+  it('reports a failed note-only GRAB update using its API batch despite no new item lines', async () => {
+    vi.useFakeTimers()
+    const failed = { ...printJob('FAILED', 'GRAB'), order_update_batch_id: 42 }
+    mockedApiRequest
+      .mockResolvedValueOnce([printOption('GRAB'), printOption('FRONTDESK_RECEIPT')] as never)
+      .mockResolvedValueOnce([printJob('PRINTED', 'GRAB'), printJob('PRINTED', 'FRONTDESK_RECEIPT'), failed] as never)
+    const onAttention = vi.fn()
+    startOrderPrintJobCoordinator({ storeId: 7, orderId: 91, updateBatchId: 42, delaysMs: [0], onAttention })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(onAttention).toHaveBeenCalledWith([failed])
+  })
+
   it('keeps one coordinator per Store/order even when the update batch changes', async () => {
     vi.useFakeTimers()
     mockedApiRequest

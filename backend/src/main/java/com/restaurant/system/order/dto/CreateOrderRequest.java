@@ -20,6 +20,9 @@ public class CreateOrderRequest {
 
     public String pickup_no;
 
+    @jakarta.validation.constraints.Size(max = 2000)
+    public String order_notes;
+
     /** Frozen whole-order instructions; accepted only by trusted external-order creation. */
     public String external_order_note_snapshot;
 

@@ -28,12 +28,17 @@ public class ReceiptPresentation {
     /** New Allô updates allocate tax from the rounded order delta. Absent on historical contexts. */
     public BigDecimal update_subtotal;
     public BigDecimal update_total;
+    /** Captured only for new GRAB intents; absence on old contexts never reads current notes. */
+    public Boolean order_notes_captured;
+    public String order_notes;
+    public Boolean order_notes_changed;
+    public Boolean order_notes_only;
     public String version = "ALLO_RECEIPT_V1";
 
     public void requireValid() {
         if (!"ALLO_RECEIPT_V1".equals(version) || language == null
                 || !Set.of("zh-CN", "en", "fr-CA").contains(language)
-                || order_item_ids == null || order_item_ids.isEmpty()
+                || order_item_ids == null || (order_item_ids.isEmpty() && !hasNoteOnlyUpdate())
                 || order_item_ids.stream().anyMatch(id -> id == null)
                 || kitchen_station_codes == null || item_names == null || option_names == null) {
             throw new BusinessException("RECEIPT_PRESENTATION_INVALID");
@@ -47,6 +52,14 @@ public class ReceiptPresentation {
 
     public boolean hasFrozenUpdateAmounts() {
         return update_subtotal != null || update_total != null;
+    }
+
+    public boolean hasNoteChange() {
+        return Boolean.TRUE.equals(order_notes_captured) && Boolean.TRUE.equals(order_notes_changed);
+    }
+
+    public boolean hasNoteOnlyUpdate() {
+        return hasNoteChange() && Boolean.TRUE.equals(order_notes_only);
     }
 
     private boolean exactCents(BigDecimal value) {
@@ -97,6 +110,11 @@ public class ReceiptPresentation {
             case "takeout" -> words("外带", "Takeout", "À emporter");
             case "order_type" -> words("订单类型", "Order Type", "Type de commande");
             case "notes" -> words("备注", "Notes", "Notes");
+            case "order_notes" -> words("整单备注", "Order notes", "Notes de commande");
+            case "order_notes_current" -> words("整单备注（当前）", "Order notes (current)", "Notes de commande (actuelles)");
+            case "order_notes_updated" -> words("整单备注已更新", "Order notes updated", "Notes de commande modifiées");
+            case "order_notes_cleared" -> words("整单备注已清除", "Order notes cleared", "Notes de commande supprimées");
+            case "notes_update" -> words("备注更新", "NOTES UPDATED", "NOTES MODIFIÉES");
             case "subtotal" -> words("小计", "Subtotal", "Sous-total");
             case "tax" -> words("税", "Tax", "Taxes");
             case "update_tax" -> words("税（整单舍入）", "Tax (order rounding)", "Taxes (arrondi global)");
