@@ -8,7 +8,6 @@ import { useDraftOrder } from '../../hooks/useDraftOrder'
 import { calculateDraftLineSubtotal } from '../../utils/orderPricing'
 import type { ItemCustomizationDraft, MenuItem, OrderingCatalog } from '../../types/ordering'
 import { FrontdeskTopNav } from '../frontdesk/components/FrontdeskTopNav'
-import { PrintWorkerHealthBanner } from '../frontdesk/components/PrintWorkerHealthBanner'
 import { TakeoutEntryDialog } from '../dinein/components/TakeoutEntryDialog'
 import { CategoryNav } from './components/CategoryNav'
 import { ItemCustomizationModal } from './components/ItemCustomizationModal'
@@ -121,7 +120,6 @@ function OrderingWorkspace({
     loading: catalogLoading,
     error: catalogError,
     source: catalogSource,
-    lastUpdatedAt: catalogLastUpdatedAt,
     updating: catalogUpdating,
     updateError: catalogUpdateError,
     refreshStatus: catalogRefreshStatus,
@@ -253,19 +251,11 @@ function OrderingWorkspace({
     setMenuNoticeCollapsed(true)
   }
 
-  const menuRefreshStatusLabel = catalogRefreshStatus === 'CHECKING'
-    ? translate('menu.checking')
-    : catalogRefreshStatus === 'UPDATED'
-      ? translate('menu.updated')
-      : catalogRefreshStatus === 'CURRENT'
-        ? translate('menu.current')
-        : catalogRefreshStatus === 'AUTH_REQUIRED'
-          ? translate('menu.authRefresh')
-          : catalogRefreshStatus === 'BACKEND_UNREACHABLE'
-            ? t('menu.failedRefresh')
-            : catalogRefreshStatus === 'FAILED'
-              ? translate('menu.failedRefresh')
-              : null
+  const menuRefreshStatusLabel = catalogRefreshStatus === 'AUTH_REQUIRED'
+    ? translate('menu.authRefresh')
+    : catalogRefreshStatus === 'BACKEND_UNREACHABLE' || catalogRefreshStatus === 'FAILED'
+      ? t('menu.failedRefresh')
+      : null
 
   const draftSubmissionLockMessage = draftSubmissionLocked
     ? localSubmitState === 'SUBMITTING'
@@ -479,52 +469,11 @@ function OrderingWorkspace({
     <div className={`ordering-page-safe min-h-screen bg-[var(--surface)] ${isIpadLandscape ? 'px-3 py-3' : 'px-5 py-4 md:px-7 xl:px-8'}`}>
       <div className={`mx-auto ${isIpadLandscape ? 'max-w-none space-y-3' : 'max-w-[1720px] space-y-6'}`}>
         {isIpadLandscape ? <FrontdeskTopNav activeItem="menu" /> : null}
-        {isIpadLandscape ? <PrintWorkerHealthBanner /> : null}
 
         {connectionWarning(connection.state) ? (
           <div className="rounded-[20px] border border-[rgba(151,34,34,0.25)] bg-[rgba(151,34,34,0.1)] px-5 py-4 text-[1rem] font-bold text-[rgb(116,22,22)]">
             {connectionWarning(connection.state)}
           </div>
-        ) : null}
-
-        {catalogSource === 'CACHE' ? (
-          menuNoticeCollapsed && !catalogUpdateError ? (
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-[rgba(92,106,69,0.28)] bg-[rgba(92,106,69,0.1)] px-4 py-2.5 text-[0.86rem] font-bold text-[rgb(59,73,40)]">
-              <span>
-                {t('menu.cached')}
-                {catalogLastUpdatedAt ? ` · ${t('menu.lastUpdated', { time: new Date(catalogLastUpdatedAt).toLocaleString() })}` : ''}
-              </span>
-              <div className="flex flex-wrap gap-2">
-                <button type="button" onClick={() => setMenuNoticeCollapsed(false)} className="rounded-full bg-white/70 px-3 py-1.5 text-xs font-black">
-                  {t('common.expand')}
-                </button>
-                <button type="button" onClick={() => refreshCatalog()} disabled={catalogUpdating} className="rounded-full bg-white/70 px-3 py-1.5 text-xs font-black disabled:opacity-50">
-                  {catalogUpdating ? t('common.loading') : translate('menu.refresh')}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className={`rounded-[20px] border px-5 py-3 text-[0.95rem] font-bold ${cacheStale ? 'border-[rgba(151,34,34,0.3)] bg-[rgba(151,34,34,0.1)] text-[rgb(116,22,22)]' : 'border-[rgba(92,106,69,0.28)] bg-[rgba(92,106,69,0.1)] text-[rgb(59,73,40)]'}`}>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <span>
-                  {t('menu.cached')}
-                  {catalogLastUpdatedAt ? ` · ${t('menu.lastUpdated', { time: new Date(catalogLastUpdatedAt).toLocaleString() })}` : ''}
-                  {catalogUpdating ? ` · ${t('menu.checking')}` : ''}
-                  {cacheStale ? ` · ${t('menu.old')}` : ''}
-                </span>
-                <div className="flex flex-wrap gap-2">
-                  <button type="button" onClick={() => refreshCatalog()} disabled={catalogUpdating} className="rounded-full bg-white/70 px-3 py-1.5 text-xs font-black disabled:opacity-50">
-                    {catalogUpdating ? t('common.loading') : translate('menu.refresh')}
-                  </button>
-                  {!catalogUpdateError ? (
-                    <button type="button" onClick={dismissMenuNotice} className="rounded-full bg-white/70 px-3 py-1.5 text-xs font-black">
-                      {t('common.collapse')}
-                    </button>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-          )
         ) : null}
 
         {catalogUpdateError ? (

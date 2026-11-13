@@ -8489,8 +8489,12 @@ Android bridge additions:
 
 Frontdesk visibility:
 
-- `/frontdesk` table board and Android landscape ordering pages show a print
-  health banner.
+- The `/frontdesk` table board shows the print health banner. The ordering page
+  omits it to preserve space for items and order actions; native worker behavior
+  and the board/Print Center recovery controls remain unchanged.
+- Routine cached-menu, checking and up-to-date messages are omitted on the
+  ordering page. Background caching/refresh, actionable refresh/auth/network
+  failures and actual menu-revision change notices remain intact.
 - In Android Pad App, the banner shows whether automatic printing is running,
   recovering, stopped, or disabled, plus the latest worker/device/store status.
 - In a normal desktop/iPad browser without the Android bridge, the banner says
