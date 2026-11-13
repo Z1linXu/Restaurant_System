@@ -21,6 +21,16 @@ const tableContext = {
 }
 
 describe('local draft records', () => {
+  it('keeps old empty hashes compatible and preserves whole-order notes when reopening a rejected draft', () => {
+    const record = createLocalDraftRecord(scope, tableContext, 12)
+    expect(withDraftPayloadHash({ ...record, orderNotes: '' }).payloadHash).toBe(record.payloadHash)
+    expect(withDraftPayloadHash({ ...record, orderNotes: '  ' }).payloadHash).toBe(record.payloadHash)
+    const noted = withDraftPayloadHash({ ...record, orderNotes: '一起上菜\nServe together' })
+    expect(noted.payloadHash).not.toBe(record.payloadHash)
+    const reopened = reopenRejectedLocalDraft(noted)
+    expect(reopened.orderNotes).toBe(noted.orderNotes)
+    expect(reopened.clientOrderId).not.toBe(noted.clientOrderId)
+  })
   it('creates stable ids and a store/account/context-scoped key', () => {
     const record = createLocalDraftRecord(scope, tableContext, 12, new Date('2026-07-13T10:00:00Z'))
 

@@ -34,6 +34,9 @@ public class IdempotentOrderSubmitRequest {
 
     public String pickup_no;
 
+    @jakarta.validation.constraints.Size(max = 2000)
+    public String order_notes;
+
     @NotNull
     public Long menu_revision;
 

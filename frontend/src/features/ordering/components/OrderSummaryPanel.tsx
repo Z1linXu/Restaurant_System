@@ -10,6 +10,8 @@ import { useLocale } from '../../../i18n/useLocale'
 import type { MessageKey } from '../../../i18n/messages'
 
 interface OrderSummaryPanelProps {
+  unifiedOrderNotes?: boolean
+  onUpdateOrderNotes?: (notes: string) => void
   session: OrderSession
   slotDisplayName?: string
   subtotal: number
@@ -19,6 +21,7 @@ interface OrderSummaryPanelProps {
   localSubmitState: LocalDraftSubmitState
   showSubmissionStatus?: boolean
   orderLocked?: boolean
+  itemsLocked?: boolean
   lastBackendSuccessAt: string | null
   submissionErrorCode?: string | null
   nextRetryAt?: string | null
@@ -36,6 +39,8 @@ interface OrderSummaryPanelProps {
 }
 
 export function OrderSummaryPanel({
+  unifiedOrderNotes = false,
+  onUpdateOrderNotes,
   session,
   slotDisplayName,
   subtotal,
@@ -45,6 +50,7 @@ export function OrderSummaryPanel({
   localSubmitState,
   showSubmissionStatus = false,
   orderLocked = false,
+  itemsLocked = false,
   lastBackendSuccessAt,
   submissionErrorCode,
   nextRetryAt,
@@ -118,13 +124,14 @@ export function OrderSummaryPanel({
             <OrderLineItemRow
               key={item.id}
               item={item}
+              readOnlyNotes={unifiedOrderNotes}
               compact={compact}
               onIncrement={() => onIncrementItem(item.id)}
               onDecrement={() => onDecrementItem(item.id)}
               onEdit={() => onEditItem(item.id)}
               onRemove={() => onRemoveItem(item.id)}
               onUpdateNote={(notes) => onUpdateItemNote(item.id, notes)}
-              disabled={orderLocked}
+              disabled={orderLocked || itemsLocked}
             />
           ))
         ) : (
@@ -135,6 +142,14 @@ export function OrderSummaryPanel({
       </div>
 
       <div className={`order-summary-footer-safe shrink-0 border-t border-[rgba(26,28,25,0.06)] bg-[rgba(255,255,255,0.92)] ${compact ? 'space-y-2.5 pt-3' : 'space-y-3.5 pt-4'}`}>
+        {unifiedOrderNotes ? <label className="block">
+          <span className="text-sm font-bold text-[var(--muted)]">{t('order.orderNotes')}</span>
+          <textarea aria-label={t('order.orderNotes')} value={session.orderNotes ?? ''}
+            onChange={(event) => onUpdateOrderNotes?.(event.target.value)} disabled={orderLocked || itemsLocked || busy}
+            maxLength={2000} rows={compact ? 2 : 3}
+            className="mt-1 w-full resize-y rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-white px-3 py-2 text-base" />
+          {!isDraft ? <span className="text-xs text-[var(--muted)]">{t(itemsLocked ? 'order.updatePendingHint' : 'order.orderNotesUpdateHint')}</span> : null}
+        </label> : null}
         <div className={`rounded-[18px] bg-[rgba(26,28,25,0.04)] ${compact ? 'space-y-1.5 px-4 py-3' : 'space-y-2.5 px-5 py-4'}`}>
           <div className={`flex items-center justify-between font-bold text-[rgba(83,58,50,0.82)] ${compact ? 'text-[0.85rem]' : 'text-base'}`}>
             <span>{t('common.quantity')}: {itemCount}</span>
@@ -151,10 +166,10 @@ export function OrderSummaryPanel({
         </div>
 
         <div className={`grid grid-cols-2 ${compact ? 'gap-2' : 'gap-3'}`}>
-          <Button variant="secondary" className={compact ? 'min-h-11 rounded-[16px] text-[0.84rem]' : 'min-h-14 rounded-[20px]'} onClick={onSaveDraft} disabled={orderLocked}>
+          <Button variant="secondary" className={compact ? 'min-h-11 rounded-[16px] text-[0.84rem]' : 'min-h-14 rounded-[20px]'} onClick={onSaveDraft} disabled={orderLocked || itemsLocked}>
             {busy ? t('common.saving') : t('order.saveLocal')}
           </Button>
-          <Button variant="secondary" className={compact ? 'min-h-11 rounded-[16px] text-[0.84rem]' : 'min-h-14 rounded-[20px]'} onClick={onCancelOrder} disabled={orderLocked}>
+          <Button variant="secondary" className={compact ? 'min-h-11 rounded-[16px] text-[0.84rem]' : 'min-h-14 rounded-[20px]'} onClick={onCancelOrder} disabled={orderLocked || itemsLocked}>
             {t('order.cancel')}
           </Button>
         </div>

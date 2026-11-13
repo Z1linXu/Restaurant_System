@@ -1,25 +1,25 @@
 schema_version: 1
-updated_at: 2026-11-12
+updated_at: 2026-11-13
 
 repository:
   ref: origin/main
   sha: 80e888fcdad74e98326fcbeaa5df14bc0d9baed6
   sha_semantics: FRESH_REFERENCE_NOT_ALLO_RUNTIME_OR_IMPLEMENTATION_BASE
-  working_branch: codex/allo-production-improvements-20261112
+  working_branch: codex/allo-grab-notes-20261113
 
 phase:
   current: PHASE_6
-  package: ALLO_NOUILLES_CONTROLLED_PRODUCTION_IMPROVEMENTS
-  status: DEPLOYED_AND_ACCEPTED_WITH_NON_BLOCKING_TOOL_COVERAGE_LIMITS
+  package: ALLO_GRAB_AND_ORDER_NOTES_20261113
+  status: COMPLETE_POST_DEPLOY_ACCEPTANCE_PASS
   next_phase_authorized: false
-  authorization: COMPLETED_OWNER_20261112_ALLO_ONLY_FIXED_BATCH_NO_FURTHER_MUTATION
-  implementation_base_sha: 2b44aa95d6b9f5ead343858b3a4a18c4eda3d0a9
+  authorization: COMPLETED_OWNER_20261113_GRAB_SORT_HEADER_C_NOTES_ORDER_NOTES_TEST_REVIEW_AND_DIRECT_ALLO_DEPLOYMENT
+  implementation_base_sha: 23f3e804713ad633f1d95f10d1b0cfebfcf31edf
   target: https://pos.allonouilles.com
   production_mutation_authorized: false
   production_authorized_target_only: ALLO_43_166_242_250_STORE1_ORG1
   production_excludes: LANZHOU_AND_ANY_TEST_ORDER_REPRINT_PRICE_BATCH_OR_HARDWARE_PAIRING
   staging_mutation_authorized: false
-  protected_printing_core_mutation_authorized: true
+  protected_printing_core_mutation_authorized: false
   protected_printing_scope: OWNER_APPROVED_REQUIRED_CHANGE_REQUEST_ALLO_OPT_IN_ONLY
   protected_printing_request: ../delivery/allo-nouilles/REQUIRED_CHANGE_REQUEST.md
   tracker: ../delivery/allo-nouilles/DELIVERY_TRACKER.md
@@ -28,29 +28,32 @@ allo_production:
   canonical_url: https://pos.allonouilles.com
   host: 43.166.242.250
   compose_project: allo-nouilles
-  observed_at: 2026-11-12T16:12:37.316797+00:00
-  application_sha: 23f3e804713ad633f1d95f10d1b0cfebfcf31edf
+  observed_at: 2026-11-13T08:06:31.192829+00:00
+  application_sha: b78ab21d9d4b97bf2b6526ccc489503f486b866e
   compatibility_patch_sha256: 915e4ff4d8a6a0698c54ae70d2567e0919c50a49a59e48bdd03fbf902321c6e0
-  candidate_application_sha: 23f3e804713ad633f1d95f10d1b0cfebfcf31edf
-  candidate_archive_sha256: f12e133270db93bb913071c7e60bab4c3c04ad58014a5e37d961c4f93ff04fb1
-  release_status: DEPLOYED_POST_SMOKE_PASS_WITH_EXPLICIT_TOOL_COVERAGE_LIMITS
-  activated_at_utc: 2026-11-12T16:09:12.653166+00:00
+  candidate_application_sha: b78ab21d9d4b97bf2b6526ccc489503f486b866e
+  candidate_archive_sha256: 3ec50f9a6b205dc76a3b38ccbeca6d8a3ce9869d2c4b650ceb352436135f0307
+  release_status: DEPLOYED_PRODUCTION_ACCEPTANCE_PASS
+  activated_at_utc: 2026-11-13T08:04:12.831945+00:00
   menu_revision: 97
   category_bulk_enabled: true
   canonical_addons: 13
   canonical_linked_options: 94
   canonical_replay: ZERO_WRITES_REVISION_AND_AUDIT_UNCHANGED
-  historical_business_and_prices: FULL_HASHES_AND_34_PRICES_UNCHANGED
+  historical_business_and_prices: OLD_COLUMN_HASHES_7_TABLES_AND_34_PRICES_UNCHANGED
   browser_limits: FRONTDESK_ROLE_LOGIN_LIBRARY_FULLSAVE_NOT_RUN_TOOL_LIMIT_NON_BLOCKING_REVIEWED
-  synthetic_qa_finish_followup: PASS_OWNER_ASSISTED_CONFIRM_BROWSER_COMPLETED_4_IDLE_0_OCCUPIED_HISTORY_36_17_UNCHANGED
-  flyway: V42_ALL_42_SUCCESS
+  synthetic_qa_finish_followup: PASS_NEW_SHA_API_12_13_AND_BROWSER_4_IDLE_0_OCCUPIED_PRIOR_NATIVE_CONFIRM_PROOF_REUSED
+  flyway: V43_ALL_43_SUCCESS
   printing_mode: MOCK
   paired_devices: 0
-  active_orders: 0
+  active_orders: 1
   pending_print_work: 0
-  evidence: ../commercialization/merchants/allo-nouille/ALLO_PRODUCTION_DEPLOYMENT_REPORT.md
+  evidence: ../commercialization/merchants/allo-nouille/GRAB_ORDER_NOTES_REPORT_20261113.md
   synthetic_qa: LOOPBACK_PG26512_BACKEND18512_FRONTEND28182_NEW_DATA_ONLY
   old_shared_test: RETIRED_NO_RESTART_AUTHORIZED_BY_THIS_TASK
+  notes_acceptance: QA_API_BROWSER_AND_PUBLIC_DOMAIN_READONLY_PASS
+  backup_sha256: a2e108c051cf19099c28a0d0ed3147012f6ac812d0379d56dbe9c8efe41f6197
+  recovery_tables_verified: 87
 
 test:
   canonical_url: https://test.lanzhounoodlesmtl.com
@@ -434,8 +437,8 @@ uber_store_capability:
   production_mutation: OWNER_20261021_LOCAL_MODULES_1_3_PREPARED_WORKER_FALSE
 
 gate:
-  type: CLOSED
-  next_action: STOP_NO_FURTHER_RUNTIME_MUTATION_AUTHORIZED
+  type: OWNER
+  next_action: AWAIT_OWNER_NEXT_BOUNDED_REQUEST_NO_FURTHER_PRODUCTION_MUTATION
 
 authorization:
   dining_table_soft_delete: OWNER_20261024_ALL_STORE_IS_ACTIVE_SOFT_DELETE_ACTIVE_ORDER_GUARD_CACHE_AND_NEW_ORDER_BLOCK_IMPLEMENT_TEST_REVIEW_MERGE_STAGING_DIRECT_PRODUCTION_PRESERVE_HISTORY_AB_SPLIT_LABELS_PRINTING_AND_UBER_NO_REAL_TEST_ORDERS
@@ -463,8 +466,8 @@ authorization:
   printing_reliability: OWNER_AUTHORIZED_IMPLEMENTATION_TEST_AGENT6_PR_MERGE_STAGING_NON_PAPER_AND_APK_BUILD
   staging: OWNER_AUTHORIZED_ENDPOINT_POLICY_TEST_REVIEW_MERGE_STAGING_CONFIG_AND_CONFIRMED_STORE18_BINDINGS_NO_PHYSICAL_PRINT
   staging_https_phase_1: OWNER_AUTHORIZED_INGRESS_TLS_FORWARDING_AGENT6_PR_MERGE_COMPLETE
-  production: NONE_FOR_LANZHOU
-  allo_production: COMPLETED_20261112_23F3_FIXED_BATCH_V42_STORE1_CANONICAL_AND_CAPABILITY_POST_SMOKE_PASS_NO_FURTHER_MUTATION
+  production: NONE
+  allo_production: COMPLETED_OWNER_20261113_EXACT_B78AB21D_BATCH_NO_STANDING_MUTATION_AUTHORITY
 
 stop:
-  marker: ALLO_PRODUCTION_23F3_DEPLOYED_SMOKE_PASS_STOP_NO_REAL_HARDWARE_OR_OTHER_ENVIRONMENT_MUTATION
+  marker: ALLO_GRAB_ORDER_NOTES_PRODUCTION_COMPLETE_STOP_NO_FURTHER_MUTATION

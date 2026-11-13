@@ -15,6 +15,8 @@ public class OrderResponse {
     public String table_no;
     public String table_display_name;
     public String pickup_no;
+
+    public String order_notes;
     public BigDecimal subtotal_amount;
     public BigDecimal discount_amount;
     public BigDecimal total_amount;

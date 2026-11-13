@@ -11,6 +11,7 @@ interface OrderLineItemRowProps {
   onEdit: () => void
   onRemove: () => void
   onUpdateNote: (notes: string) => void
+  readOnlyNotes?: boolean
   compact?: boolean
   disabled?: boolean
 }
@@ -22,6 +23,7 @@ export function OrderLineItemRow({
   onEdit,
   onRemove,
   onUpdateNote,
+  readOnlyNotes = false,
   compact = false,
   disabled = false,
 }: OrderLineItemRowProps) {
@@ -34,7 +36,7 @@ export function OrderLineItemRow({
   }, [item.notes])
 
   useEffect(() => {
-    if (editingDisabled) {
+    if (editingDisabled || readOnlyNotes) {
       return undefined
     }
     if (noteValue === item.notes) {
@@ -44,7 +46,7 @@ export function OrderLineItemRow({
       onUpdateNote(noteValue)
     }, 450)
     return () => window.clearTimeout(timeoutId)
-  }, [editingDisabled, item.notes, noteValue, onUpdateNote])
+  }, [editingDisabled, readOnlyNotes, item.notes, noteValue, onUpdateNote])
 
   return (
     <div className={`bg-[var(--surface-container-lowest)] shadow-[0_12px_30px_rgba(26,28,25,0.05)] ${compact ? 'rounded-[20px] p-3.5' : 'rounded-[26px] p-5'}`}>
@@ -84,7 +86,7 @@ export function OrderLineItemRow({
         </div>
       ) : null}
 
-      <label className={`block ${compact ? 'mt-2' : 'mt-3'}`}>
+      {readOnlyNotes ? (item.notes ? <p className="mt-3 whitespace-pre-wrap text-sm font-semibold text-[var(--muted)]">{t('order.note')}: {item.notes}</p> : null) : <label className={`block ${compact ? 'mt-2' : 'mt-3'}`}>
         <span className={`font-semibold text-[var(--muted)] ${compact ? 'text-[0.72rem]' : 'text-[0.82rem]'}`}>
           {t('order.note')}
         </span>
@@ -96,7 +98,7 @@ export function OrderLineItemRow({
           rows={compact ? 1 : 2}
           className={`mt-1 w-full resize-none rounded-[14px] border border-[rgba(26,28,25,0.08)] bg-[rgba(255,255,255,0.78)] px-3 py-2 font-medium text-[var(--on-surface)] outline-none focus:border-[rgba(97,0,0,0.38)] ${compact ? 'text-[0.82rem]' : 'text-[0.92rem]'}`}
         />
-      </label>
+      </label>}
 
       {!editingDisabled ? <div className={`${compact ? 'mt-3' : 'mt-4'} flex items-center justify-between gap-4`}>
         <div className={`inline-flex items-center bg-[var(--surface-container-low)] p-1 ${compact ? 'rounded-[16px]' : 'rounded-[20px]'}`}>

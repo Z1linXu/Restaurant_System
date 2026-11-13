@@ -89,6 +89,12 @@ import org.springframework.data.domain.PageRequest;
 @Service
 public class OrderServiceImpl implements OrderService {
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.restaurant.system.order.service.OrderSubmissionHashService orderNoteHashes;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.restaurant.system.delivery.ReceiptContextService orderNoteReceipts;
+
     private com.restaurant.system.menu.template.TemplateMenuService templateMenus;
     private com.restaurant.system.printing.routing.TemplateRoutingService templateRouting;
     @org.springframework.beans.factory.annotation.Autowired
@@ -277,6 +283,7 @@ public class OrderServiceImpl implements OrderService {
 
         Order order = new Order();
         order.store_id = request.store_id;
+        applyOrderNotes(order, request.order_notes);
         order.created_by = request.created_by;
         if (externalOrderId != null) {
             order.external_source = "UBER_EATS";
@@ -360,6 +367,7 @@ public class OrderServiceImpl implements OrderService {
         if (request.pickup_no != null) {
             order.pickup_no = request.pickup_no;
         }
+        applyOrderNotes(order, request.order_notes);
         order.updated_at = LocalDateTime.now();
         orderRepository.save(order);
         return loadOrderResponse(order.id);
@@ -579,6 +587,7 @@ public class OrderServiceImpl implements OrderService {
             existingDraft.order_type = request.order_type;
             existingDraft.table_no = request.table_no;
             existingDraft.pickup_no = request.pickup_no;
+            applyOrderNotes(existingDraft, request.order_notes);
             if (request.created_by != null) {
                 existingDraft.created_by = request.created_by;
             }
@@ -601,10 +610,6 @@ public class OrderServiceImpl implements OrderService {
             throw new BusinessException("Order not found: " + id);
         }
         requireInStoreOrder(order);
-        if (!MODIFIABLE_AFTER_SUBMIT_ORDER_STATUSES.contains(order.status)) {
-            throw new BusinessException("Only submitted, preparing, or ready orders can receive an update batch");
-        }
-
         String idempotencyKey = request.idempotency_key == null ? "" : request.idempotency_key.trim();
         if (idempotencyKey.isEmpty()) {
             throw new BusinessException("idempotency_key is required");
@@ -613,26 +618,47 @@ public class OrderServiceImpl implements OrderService {
             .findByOrderIdAndIdempotencyKey(order.id, idempotencyKey)
             .orElse(null);
         if (existingBatch != null) {
+            if (request.order_notes != null || existingBatch.notes_request_hash != null) {
+                if (request.order_notes == null || !Objects.equals(existingBatch.notes_request_hash, orderNoteHashes.hashNotesUpdate(request))) {
+                    throw new OrderSubmissionException("IDEMPOTENCY_CONFLICT", HttpStatus.CONFLICT,
+                        "This update key was already used with different order content");
+                }
+            }
             return buildOrderUpdateResponse(order.id, existingBatch, true);
         }
-        if (request.items == null || request.items.isEmpty()) {
+        if (!MODIFIABLE_AFTER_SUBMIT_ORDER_STATUSES.contains(order.status)) {
+            throw new BusinessException("Only submitted, preparing, or ready orders can receive an update batch");
+        }
+        int currentRevision = order.current_revision == null ? 1 : order.current_revision;
+        String previousNotes = order.order_notes;
+        if (request.order_notes != null) {
+            if (!Objects.equals(request.expected_revision, currentRevision)) {
+                throw new OrderSubmissionException("ORDER_REVISION_STALE", HttpStatus.CONFLICT,
+                    "Order changed; review the current order before updating its notes");
+            }
+            applyOrderNotes(order, request.order_notes);
+        }
+        boolean notesChanged = !Objects.equals(previousNotes, order.order_notes);
+        boolean notesOnly = request.items == null || request.items.isEmpty();
+        if (notesOnly && !notesChanged) {
             throw new BusinessException("At least one new item is required for Update Order");
         }
 
         LocalDateTime now = LocalDateTime.now();
-        int currentRevision = order.current_revision == null ? 1 : order.current_revision;
         int nextRevision = currentRevision + 1;
 
         OrderUpdateBatch batch = new OrderUpdateBatch();
         batch.order_id = order.id;
         batch.revision = nextRevision;
         batch.idempotency_key = idempotencyKey;
+        batch.order_notes_changed = notesChanged;
+        batch.notes_request_hash = request.order_notes == null ? null : orderNoteHashes.hashNotesUpdate(request);
         batch.created_by = userId;
         batch.created_at = now;
         batch = orderUpdateBatchRepository.save(batch);
 
         List<OrderItem> addedItems = new ArrayList<>();
-        for (CreateOrderItemRequest itemRequest : request.items) {
+        for (CreateOrderItemRequest itemRequest : request.items == null ? List.<CreateOrderItemRequest>of() : request.items) {
             OrderItem addedItem = addDraftOrderItemInternal(order, itemRequest, now);
             addedItem.added_revision = nextRevision;
             addedItem.order_update_batch_id = batch.id;
@@ -640,27 +666,47 @@ public class OrderServiceImpl implements OrderService {
             addedItems.add(orderItemRepository.save(addedItem));
         }
 
-        if (templateMenus != null) templateMenus.validateRefillEligibility(order, orderItemRepository.findAllByOrderId(order.id));
-        List<OrderItemOption> addedOptions = loadOptionsForOrderItems(addedItems);
-        List<KitchenTask> kitchenTasks = createKitchenTasks(order, addedItems, addedOptions, now);
-        List<FrontdeskBeverageItem> beverageItems = createFrontdeskBeverageItems(order, addedItems, addedOptions, now);
-        createProductionTasks(order, kitchenTasks, beverageItems, now);
-        deductInventory(order, addedItems, addedOptions, now);
+        List<OrderItemOption> addedOptions = notesOnly ? List.of() : loadOptionsForOrderItems(addedItems);
+        if (!notesOnly) {
+            if (templateMenus != null) templateMenus.validateRefillEligibility(order, orderItemRepository.findAllByOrderId(order.id));
+            List<KitchenTask> kitchenTasks = createKitchenTasks(order, addedItems, addedOptions, now);
+            List<FrontdeskBeverageItem> beverageItems = createFrontdeskBeverageItems(order, addedItems, addedOptions, now);
+            createProductionTasks(order, kitchenTasks, beverageItems, now);
+            deductInventory(order, addedItems, addedOptions, now);
+        }
 
         order.current_revision = nextRevision;
         order.modified_after_submit_by = userId;
         markSubmittedModification(order, now);
-        recalculateOrderAmounts(order, now);
-        recalculateOrderStatusAfterSubmittedModification(order, now);
+        if (notesOnly) {
+            order.updated_at = now;
+            orderRepository.save(order);
+        } else {
+            recalculateOrderAmounts(order, now);
+            recalculateOrderStatusAfterSubmittedModification(order, now);
+        }
         publishOrderEvent("order.updated", order, null, null, null);
 
         boolean configuredKitchen = templateRouting != null && templateRouting.enabled(order.store_id);
-        if(configuredKitchen) templateRouting.enqueue(order,batch.id,addedItems,addedOptions);
+        if(configuredKitchen && !notesOnly) templateRouting.enqueue(order,batch.id,addedItems,addedOptions);
         else printDispatcherService.dispatchOrderUpdateAfterCommit(PrintModuleCode.GRAB,order.store_id,order.id,batch.id);
-        printDispatcherService.dispatchOrderUpdateAfterCommit(PrintModuleCode.FRONTDESK_RECEIPT,order.store_id,order.id,batch.id);
-        if(!configuredKitchen && printDispatcherService.hasPrintableUpdateContent(PrintModuleCode.HOT_KITCHEN,order.store_id,order.id,batch.id))
+        if (!notesOnly) printDispatcherService.dispatchOrderUpdateAfterCommit(PrintModuleCode.FRONTDESK_RECEIPT,order.store_id,order.id,batch.id);
+        if(!notesOnly && !configuredKitchen && printDispatcherService.hasPrintableUpdateContent(PrintModuleCode.HOT_KITCHEN,order.store_id,order.id,batch.id))
             printDispatcherService.dispatchOrderUpdateAfterCommit(PrintModuleCode.HOT_KITCHEN,order.store_id,order.id,batch.id);
         return buildOrderUpdateResponse(order.id, batch, false);
+    }
+
+    private void applyOrderNotes(Order order, String requested) {
+        if (requested == null) return; // Old clients never clear a note they cannot see.
+        Store store = storeRepository.findById(order.store_id)
+            .orElseThrow(() -> new BusinessException("Store not found: " + order.store_id));
+        if (order.kitchenMirror() || orderNoteReceipts == null || !orderNoteReceipts.enabled(store, PrintModuleCode.GRAB)) {
+            throw new BusinessException("ORDER_NOTES_UNAVAILABLE");
+        }
+        if (requested.length() > 2000 || requested.chars().anyMatch(c -> Character.isISOControl(c) && c != '\n' && c != '\r' && c != '\t')) {
+            throw new BusinessException("ORDER_NOTES_INVALID");
+        }
+        order.order_notes = requested.isBlank() ? null : requested.trim();
     }
 
     @Override
@@ -1882,6 +1928,7 @@ public class OrderServiceImpl implements OrderService {
         response.table_no = order.table_no;
         response.table_display_name = tableDisplayName(order);
         response.pickup_no = order.pickup_no;
+        response.order_notes = order.order_notes;
         response.subtotal_amount = defaultIfNull(order.subtotal_amount);
         response.discount_amount = defaultIfNull(order.discount_amount);
         response.total_amount = defaultIfNull(order.total_amount);

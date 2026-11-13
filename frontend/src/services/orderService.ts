@@ -103,6 +103,7 @@ export interface IdempotentOrderItemPayload {
 }
 
 export interface IdempotentOrderSubmitPayload {
+  order_notes?: string
   client_order_id: string
   idempotency_key: string
   local_draft_id?: string | null
@@ -455,19 +456,36 @@ export async function addDraftOrderItem(orderId: number, menuItem: MenuItem, dra
   })
 }
 
+export interface FrozenOrderUpdatePayload {
+  idempotency_key: string
+  order_notes?: string
+  expected_revision?: number
+  items: IdempotentOrderItemPayload[]
+}
+
+export function buildOrderUpdatePayload(
+  idempotencyKey: string, items: OrderLineItem[], catalogItems: MenuItem[],
+  noteUpdate?: { orderNotes: string; expectedRevision: number },
+): FrozenOrderUpdatePayload {
+  return {
+    idempotency_key: idempotencyKey,
+    ...(noteUpdate ? { order_notes: noteUpdate.orderNotes.trim(), expected_revision: noteUpdate.expectedRevision } : {}),
+    items: items.map((item) => mapFrozenOrderItem(item, catalogItems)),
+  }
+}
+
 export async function submitOrderUpdate(
   orderId: number,
   idempotencyKey: string,
   items: OrderLineItem[],
   catalogItems: MenuItem[],
+  noteUpdate?: { orderNotes: string; expectedRevision: number },
+  frozenPayload?: FrozenOrderUpdatePayload,
 ) {
   return request<BackendOrderUpdateResponse>(`/api/v1/orders/${orderId}/updates`, {
     method: 'POST',
     headers: buildHeaders(),
-    body: JSON.stringify({
-      idempotency_key: idempotencyKey,
-      items: items.map((item) => mapFrozenOrderItem(item, catalogItems)),
-    }),
+    body: JSON.stringify(frozenPayload ?? buildOrderUpdatePayload(idempotencyKey, items, catalogItems, noteUpdate)),
   })
 }
 

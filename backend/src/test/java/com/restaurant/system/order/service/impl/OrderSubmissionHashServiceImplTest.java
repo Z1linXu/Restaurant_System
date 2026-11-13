@@ -60,4 +60,11 @@ class OrderSubmissionHashServiceImplTest {
         request.items = List.of(item);
         return request;
     }
+    @Test void newOrderNotesPreserveOldEmptyHashesAndParticipateInBothHashContracts() {
+        var request = request(null); String before=service.hash(request), legacy=service.legacyHash(request);
+        request.order_notes="  "; assertEquals(before,service.hash(request)); assertEquals(legacy,service.legacyHash(request));
+        request.order_notes="请一起上菜\nServe together";
+        assertNotEquals(before,service.hash(request)); assertNotEquals(legacy,service.legacyHash(request));
+        String captured=service.hash(request); request.order_notes="Other note"; assertNotEquals(captured,service.hash(request));
+    }
 }

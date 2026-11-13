@@ -112,6 +112,7 @@ public class IdempotentOrderSubmissionServiceImpl implements IdempotentOrderSubm
         createRequest.order_type = request.order_type.trim();
         createRequest.table_no = trimToNull(request.table_no);
         createRequest.pickup_no = trimToNull(request.pickup_no);
+        createRequest.order_notes = request.order_notes;
         createRequest.items = request.items;
 
         OrderResponse order = orderService.createOrReplaceDraftAndSubmit(createRequest, request.server_order_id);

@@ -35,6 +35,12 @@ public class OrderUpdateBatch {
     @Column(name = "idempotency_key", nullable = false)
     public String idempotency_key;
 
+    @Column(name = "order_notes_changed", nullable = false)
+    public Boolean order_notes_changed = false;
+
+    @Column(name = "notes_request_hash")
+    public String notes_request_hash;
+
     @Column(name = "created_by")
     public Long created_by;
 

@@ -17,7 +17,8 @@ export function hasRequiredCustomization(item: MenuItem) {
   return Boolean(sizeRequiresChoice || item.customization?.soupBases?.required)
 }
 
-export function isQuickAddItem(item: MenuItem) {
+export function isQuickAddItem(item: MenuItem, allowRiceNotes = false) {
+  if (allowRiceNotes && /^AN_C[1-9][0-9]*$/.test(item.sku ?? '')) return false
   if (item.optionGroups != null) {
     return !activeTemplateGroups(item).some((group) => group.required || (group.min_select ?? 0) > 0 || group.options.some((option) => option.is_active)) && !item.customization?.combo
   }

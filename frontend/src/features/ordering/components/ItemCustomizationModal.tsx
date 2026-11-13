@@ -55,6 +55,7 @@ function comboDraftWithSelection(draft: ItemCustomizationDraft, group: ComboChoi
 }
 
 interface ItemCustomizationModalProps {
+  allowRiceNotes?: boolean
   item: MenuItem
   draft: ItemCustomizationDraft
   mode: 'add' | 'edit'
@@ -190,6 +191,7 @@ export function ItemCustomizationModal({
   onClose,
   onChange,
   onSubmit,
+  allowRiceNotes = false,
   submitDisabled = false,
   submitDisabledReason,
 }: ItemCustomizationModalProps) {
@@ -577,7 +579,7 @@ export function ItemCustomizationModal({
               </section>
             ) : null}
 
-            {isNoodleItem ? (
+            {isNoodleItem || (allowRiceNotes && /^AN_C[1-9][0-9]*$/.test(item.sku ?? '')) ? (
               <section className={`bg-[rgba(26,28,25,0.03)] ${compact ? 'space-y-2 rounded-[20px] p-4' : 'space-y-3 rounded-[24px] p-5'}`}>
                 <div>
                   <h3 className={`${compact ? 'text-[1.05rem]' : 'text-[1.35rem]'} font-bold tracking-[-0.03em]`}>
