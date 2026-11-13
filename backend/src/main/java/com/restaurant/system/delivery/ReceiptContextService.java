@@ -56,6 +56,11 @@ public class ReceiptContextService {
         context.settings_revision=settings.revision;
         context.kitchen_station_codes=List.copyOf(settings.kitchen_station_codes);
         context.restaurant_name=String.valueOf(presentation.publicView(store).getOrDefault("display_name",store.name));
+        // The installed GBK receipt printers cannot encode ô. Freeze the physical
+        // merchant label once; existing intents and historical artifacts stay unchanged.
+        if ("PAD_DIRECT".equals(context.execution_mode) && "Allô Nouilles".equals(context.restaurant_name)) {
+            context.restaurant_name = "Allo Nouilles";
+        }
         var allLines=items.findAllByOrderId(orderId);
         var lines=allLines.stream().filter(i->batch==null||batch.equals(i.order_update_batch_id)).toList();
         context.order_item_ids=lines.stream().map(i->i.id).toList();

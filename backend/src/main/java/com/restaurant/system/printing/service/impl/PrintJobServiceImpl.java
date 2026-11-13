@@ -161,7 +161,7 @@ public class PrintJobServiceImpl implements PrintJobService {
     ) {
         PrintJob target = requireJob(job.id);
         boolean receiptContext = com.restaurant.system.delivery.ReceiptContextService.hasContext(target);
-        boolean protectedArtifact = receiptContext || ReceiptArtifact.isTemplateJob(target);
+        boolean protectedArtifact = ReceiptArtifact.protects(target);
         boolean padActive = protectedArtifact && alloPrintingPolicy.padDirectActive(target.store_id);
         if (padActive && target.reprintSourceJobId == null) ReceiptArtifact.requirePadIntent(target);
         if (protectedArtifact && (!PrintJobStatus.PENDING.equals(target.status)
@@ -218,9 +218,8 @@ public class PrintJobServiceImpl implements PrintJobService {
     public PrintJob markPadDirectQueued(PrintJob job, PrinterConfig printer, String fontSize) {
         PrintJob target = requireJob(job.id);
         if (!PrintJobStatus.PENDING.equals(target.status)) throw new BusinessException("An existing active or terminal job cannot be requeued; create a new manual reprint");
-        boolean receiptContext = com.restaurant.system.delivery.ReceiptContextService.hasContext(target);
-        boolean protectedArtifact = receiptContext || ReceiptArtifact.isTemplateJob(target);
-        if (!receiptContext && ("GRAB".equals(target.module_code) || "FRONTDESK_RECEIPT".equals(target.module_code))
+        boolean protectedArtifact = ReceiptArtifact.protects(target);
+        if (!protectedArtifact && ("GRAB".equals(target.module_code) || "FRONTDESK_RECEIPT".equals(target.module_code))
                 && alloPrintingPolicy.allowsPadDirect(target.store_id)) throw new BusinessException("RECEIPT_PAD_INTENT_REQUIRED");
         if (protectedArtifact) {
             if (!alloPrintingPolicy.padDirectActive(target.store_id)) throw new BusinessException("ALLO_PAD_DIRECT_RUNTIME_NOT_ALLOWED");

@@ -1,6 +1,7 @@
 import { appI18n } from '../../i18n/engine'
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+import { testConfiguredPrinterConnection } from '../../services/printerConnectionService'
 import { PrintingSettingsPage } from './PrintingSettingsPage'
 import { PrintingDisplayRulesPanel } from './PrintingDisplayRulesPanel'
 import { fetchWorkspaces } from '../../services/storeWorkspaceService'
@@ -8,6 +9,10 @@ import { fetchPrintCenterOverview, fetchPrintJobs, fetchStoreDevices, fetchPrint
 
 const scope = vi.hoisted(() => ({ storeId: 2, station: false }))
 vi.mock('../store/useStoreContext', () => ({ useCurrentStore: () => ({ storeId: scope.storeId, storeName: `Store ${scope.storeId}`, storeCode: `S${scope.storeId}`, organizationId: 1, roleCode: 'OWNER', presentation: scope.station ? { kitchen_configuration: 'STATION' } : undefined }) }))
+vi.mock('../../services/printerConnectionService', async () => {
+ const actual = await vi.importActual<typeof import('../../services/printerConnectionService')>('../../services/printerConnectionService')
+ return { ...actual, testConfiguredPrinterConnection: vi.fn() }
+})
 vi.mock('../auth/useAuth', () => ({ useAuth: () => ({ user: { id: 7 }, isOfflineRestricted: false }) }))
 vi.mock('../feature-flags/featureConfig', () => ({ isFeatureEnabled: () => true }))
 vi.mock('../../services/storeWorkspaceService', () => ({ fetchWorkspaces: vi.fn() }))
@@ -59,4 +64,20 @@ it('uses existing printer controls for explicit Station stores without a second 
   expect(json).not.toContain('Persistent kitchen ticket diagnostics')
   expect(json).not.toContain('Kitchen ticket groups')
   expect(fetchPrintJobs).toHaveBeenCalledWith({ storeId: 2 })
+})
+
+
+it('shows native connection success and then failure on the printer card, without keeping an old success badge', async () => {
+  const printer = { id: 3, store_id: 2, name: 'Local printer', ip_address: '192.0.2.10', port: 9100, enabled: true, timeout_ms: 1000, printer_type: 'ESC_POS_TCP', paper_width_mm: 80 }
+  vi.mocked(fetchPrintCenterOverview).mockResolvedValue({ store_id: 2, printing_enabled: true, printing_mode: 'PAD_DIRECT', printers: [printer], assignments: [] })
+  await act(async () => { view = create(<PrintingSettingsPage />) })
+  const button = () => view!.root.findAllByType('button').find((node) => node.children.join('').toLowerCase().includes('connection test'))!
+  vi.mocked(testConfiguredPrinterConnection).mockResolvedValue({ success: true, message: 'Connected', checked_at: '2026-11-13T18:00:00Z', local_printer: printer })
+  await act(async () => button().props.onClick())
+  expect(testConfiguredPrinterConnection).toHaveBeenCalledWith(2, 3)
+  expect(JSON.stringify(view!.toJSON())).toContain(appI18n.t('printing.connectionOK'))
+  vi.mocked(testConfiguredPrinterConnection).mockResolvedValue({ success: false, message: 'Connect timed out', checked_at: '2026-11-13T18:01:00Z', local_printer: printer })
+  await act(async () => button().props.onClick())
+  expect(JSON.stringify(view!.toJSON())).toContain('Connect timed out')
+  expect(JSON.stringify(view!.toJSON())).not.toContain(appI18n.t('printing.connectionOK'))
 })

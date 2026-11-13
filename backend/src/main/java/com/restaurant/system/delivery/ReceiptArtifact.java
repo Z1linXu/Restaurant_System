@@ -27,14 +27,48 @@ public final class ReceiptArtifact {
         return job != null && TemplateRoutingService.EVENT.equals(job.module_code);
     }
 
+    /** Server-created, order-free Print Center samples; never grants intent to historical jobs. */
+    public static String withDiagnosticIntent(String snapshot, String mode) {
+        try {
+            ObjectNode payload = (ObjectNode) MAPPER.readTree(snapshot);
+            ObjectNode intent = payload.putObject("diagnostic_intent");
+            intent.put("version", "ALLO_PRINT_TEST_V1");
+            intent.put("execution_mode", mode);
+            return MAPPER.writeValueAsString(payload);
+        } catch (Exception invalid) { throw new BusinessException("RECEIPT_DIAGNOSTIC_INTENT_INVALID"); }
+    }
+
+    public static boolean isDiagnosticJob(PrintJob job) {
+        if (job == null || job.payload_snapshot == null) return false;
+        JsonNode payload;
+        try { payload = MAPPER.readTree(job.payload_snapshot); }
+        catch (Exception legacy) { return false; }
+        if (payload == null || !payload.has("diagnostic_intent")) return false;
+        try {
+            boolean printerTest = "ADMIN_TEST_PRINT".equals(payload.path("source").asText())
+                && "TEST_PRINT".equals(job.receipt_type);
+            boolean moduleTest = "ADMIN_MODULE_TEST_PRINT".equals(payload.path("source").asText())
+                && (job.module_code + "_TEST").equals(job.receipt_type);
+            if ((!printerTest && !moduleTest) || job.order_id != null || job.order_update_batch_id != null
+                    || !payload.path("order_id").isNull()
+                    || job.store_id == null || payload.path("store_id").asLong(-1) != job.store_id
+                    || !java.util.Objects.equals(job.module_code, payload.path("module_code").asText())
+                    || !"ALLO_PRINT_TEST_V1".equals(payload.path("diagnostic_intent").path("version").asText())) {
+                throw new IllegalArgumentException();
+            }
+            return true;
+        } catch (Exception invalid) { throw new BusinessException("RECEIPT_DIAGNOSTIC_INTENT_INVALID"); }
+    }
+
     public static boolean protects(PrintJob job) {
-        return isTemplateJob(job) || ReceiptContextService.hasContext(job);
+        return isTemplateJob(job) || ReceiptContextService.hasContext(job) || isDiagnosticJob(job);
     }
 
     public static void requirePadIntent(PrintJob job) {
         try {
             JsonNode payload = MAPPER.readTree(job.payload_snapshot);
-            JsonNode intent = isTemplateJob(job) ? payload : payload.path("receipt_context");
+            JsonNode intent = isTemplateJob(job) ? payload
+                : payload.path(isDiagnosticJob(job) ? "diagnostic_intent" : "receipt_context");
             if (!"PAD_DIRECT".equals(intent.path("execution_mode").asText())) {
                 throw new IllegalArgumentException();
             }

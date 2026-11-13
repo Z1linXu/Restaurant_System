@@ -111,6 +111,7 @@ class PrintDispatcherServiceImplTest {
     @Mock
     private com.restaurant.system.station.service.DiningTableDisplayService diningTableDisplayService;
 
+    private final com.restaurant.system.printing.AlloProductionPrintingPolicy alloPolicy = org.mockito.Mockito.mock(com.restaurant.system.printing.AlloProductionPrintingPolicy.class);
     private PrintDispatcherServiceImpl service;
 
     @BeforeEach
@@ -153,7 +154,8 @@ class PrintDispatcherServiceImplTest {
             moduleCapabilityProvider,
             printingRoleRequirementService,
             printingDisplayRuleService,
-            diningTableDisplayService
+            diningTableDisplayService,
+            alloPolicy
         );
     }
 
@@ -1067,5 +1069,44 @@ class PrintDispatcherServiceImplTest {
         assertEquals(true, options.stream().filter(option -> PrintModuleCode.GRAB.equals(option.module_code)).findFirst().orElseThrow().available);
         assertEquals(false, options.stream().filter(option -> PrintModuleCode.FRONTDESK_RECEIPT.equals(option.module_code)).findFirst().orElseThrow().available);
         assertEquals(false, options.stream().filter(option -> PrintModuleCode.HOT_KITCHEN.equals(option.module_code)).findFirst().orElseThrow().available);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"GRAB", "FRONTDESK_RECEIPT"})
+    void alloPadDiagnosticTestsQueueProtectedArtifactsWithoutAnOrderOrBackendTransport(String module) {
+        var store = new Store(); store.id=1L; store.organization_id=1L; store.code="ALLO_NOUILLES_TEST"; store.name="Allô Nouilles";
+        var printer = new PrinterConfig(); printer.id=3L; printer.store_id=1L; printer.enabled=true;
+        printer.ip_address="192.0.2.10"; printer.port=9100; printer.text_encoding="GBK"; printer.font_size="MEDIUM"; printer.paper_width_mm=80; printer.name="Main Printer";
+        var assignment = new PrinterAssignment(); assignment.store_id=1L; assignment.module_code=module;
+        assignment.printer_id=3L; assignment.enabled=true; assignment.font_size="SMALL";
+        when(storeRepository.findById(1L)).thenReturn(Optional.of(store));
+        when(printerConfigRepository.findById(3L)).thenReturn(Optional.of(printer));
+        when(printerAssignmentRepository.findByStoreIdAndModuleCode(1L,module)).thenReturn(Optional.of(assignment));
+        when(printerConfigService.getStorePrintingMode(1L)).thenReturn("PAD_DIRECT");
+        when(alloPolicy.allowsPadDirect(store)).thenReturn(true);
+        when(alloPolicy.allowsPadDirect(1L)).thenReturn(true);when(alloPolicy.padDirectActive(1L)).thenReturn(true);
+        var actualGrab = new com.restaurant.system.printing.renderer.GrabReceiptRenderer();
+        var actualFront = new com.restaurant.system.printing.renderer.FrontdeskReceiptRenderer();
+        when(grabRenderer.render(any())).thenAnswer(i -> actualGrab.render(i.getArgument(0)));
+        when(frontdeskRenderer.render(any())).thenAnswer(i -> actualFront.render(i.getArgument(0)));
+        var saved = new java.util.LinkedHashMap<Long,PrintJob>();
+        when(printJobRepository.save(any())).thenAnswer(i -> { PrintJob j=i.getArgument(0);if(j.id==null)j.id=(long)saved.size()+1;saved.put(j.id,j);return j; });
+        when(printJobRepository.findById(any())).thenAnswer(i->Optional.ofNullable(saved.get(i.getArgument(0))));
+        var actualJobs = new PrintJobServiceImpl(printJobRepository, org.mockito.Mockito.mock(com.restaurant.system.printing.repository.PrintJobAttemptRepository.class),printerConfigRepository,alloPolicy);
+        org.springframework.test.util.ReflectionTestUtils.setField(service,"printJobService",actualJobs);
+        var request = new com.restaurant.system.printing.dto.PrinterTestRequest();request.store_id=1L;request.printer_id=3L;request.module_code=module;
+        assertEquals(true,service.testPrint(request).success);
+        var moduleRequest = new com.restaurant.system.printing.dto.ModuleAssignmentTestRequest();moduleRequest.store_id=1L;moduleRequest.module_code=module;
+        assertEquals(true,service.testAssignedModulePrint(moduleRequest).success);
+        assertEquals(2,saved.size());
+        for(var job:saved.values()) {
+            assertEquals("PENDING",job.status);assertEquals("PAD_DIRECT",job.executionMode);assertEquals(module,job.module_code);
+            org.junit.jupiter.api.Assertions.assertNull(job.order_id);com.restaurant.system.delivery.ReceiptArtifact.requirePadArtifact(job);
+        }
+        assertEquals("GBK",com.restaurant.system.delivery.ReceiptArtifact.validate(saved.get(1L)).path("encoding").asText());
+        org.junit.jupiter.api.Assertions.assertTrue(saved.get(1L).rendered_text_snapshot.contains("ALLO_NOUILLES_TEST (#1)"));
+        org.junit.jupiter.api.Assertions.assertTrue(saved.get(2L).rendered_text_snapshot.contains("T2"));
+        assertEquals("SMALL",com.restaurant.system.delivery.ReceiptArtifact.validate(saved.get(2L)).path("font").asText());
+        verifyNoInteractions(printerTransport,orderRepository,orderDispatchOutboxService);
     }
 }

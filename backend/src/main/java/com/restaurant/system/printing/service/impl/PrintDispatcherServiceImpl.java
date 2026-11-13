@@ -101,6 +101,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
     private final StorePrintingRoleRequirementService printingRoleRequirementService;
     private final PrintingDisplayRuleService printingDisplayRuleService;
     private final DiningTableDisplayService diningTableDisplayService;
+    private final com.restaurant.system.printing.AlloProductionPrintingPolicy alloPrintingPolicy;
 
     @org.springframework.beans.factory.annotation.Autowired(required=false)
     private com.restaurant.system.delivery.ReceiptContextService receiptContexts;
@@ -126,7 +127,8 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         StoreModuleCapabilityProvider moduleCapabilityProvider,
         StorePrintingRoleRequirementService printingRoleRequirementService,
         PrintingDisplayRuleService printingDisplayRuleService,
-        DiningTableDisplayService diningTableDisplayService
+        DiningTableDisplayService diningTableDisplayService,
+        com.restaurant.system.printing.AlloProductionPrintingPolicy alloPrintingPolicy
     ) {
         this.printerConfigService = printerConfigService;
         this.printerConfigRepository = printerConfigRepository;
@@ -149,6 +151,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         this.printingRoleRequirementService = printingRoleRequirementService;
         this.printingDisplayRuleService = printingDisplayRuleService;
         this.diningTableDisplayService = diningTableDisplayService;
+        this.alloPrintingPolicy = alloPrintingPolicy;
     }
 
     @Override
@@ -254,10 +257,11 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             request.module_code == null || request.module_code.isBlank() ? "TEST_PRINT" : request.module_code,
             "TEST_PRINT",
             null,
-            buildPayloadSnapshot(request.module_code == null ? "TEST_PRINT" : request.module_code, request.store_id, null, "ADMIN_TEST_PRINT")
+            buildDiagnosticSnapshot(request.module_code == null || request.module_code.isBlank() ? "TEST_PRINT" : request.module_code, store, printingMode, "ADMIN_TEST_PRINT")
         );
         try {
-            String content = buildTestPrintContent(store, printer, request.module_code);
+            String content = buildTestPrintContent(store, printer, request.module_code,
+                PrintingMode.PAD_DIRECT.equals(printingMode) && alloPrintingPolicy.allowsPadDirect(store));
             job = printJobService.attachRenderedContent(job, printer.id, content);
             if (PrintingMode.PAD_DIRECT.equals(printingMode)) {
                 job = printJobService.markPadDirectQueued(job, printer, printer.font_size);
@@ -536,7 +540,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                 request.module_code,
                 request.module_code + "_TEST",
                 null,
-                buildPayloadSnapshot(request.module_code, request.store_id, null, "ADMIN_MODULE_TEST_PRINT")
+                buildDiagnosticSnapshot(request.module_code, store, printingMode, "ADMIN_MODULE_TEST_PRINT")
             );
             job = printJobService.attachRenderedContent(job, printer == null ? null : printer.id, content);
             if (PrintingMode.PAD_DIRECT.equals(printingMode)) {
@@ -1316,6 +1320,12 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         throw new BusinessException("receiptType must be GRAB, FRONTDESK_RECEIPT, or HOT_KITCHEN");
     }
 
+    private String buildDiagnosticSnapshot(String moduleCode, Store store, String mode, String source) {
+        String snapshot = buildPayloadSnapshot(moduleCode, store.id, null, source);
+        return alloPrintingPolicy.allowsPadDirect(store)
+            ? com.restaurant.system.delivery.ReceiptArtifact.withDiagnosticIntent(snapshot, mode) : snapshot;
+    }
+
     private String buildPayloadSnapshot(String moduleCode, Long storeId, Long orderId, String source) {
         return "{\"source\":\"" + source + "\",\"module_code\":\"" + moduleCode + "\",\"store_id\":" + storeId + ",\"order_id\":" + orderId + "}";
     }
@@ -1432,13 +1442,22 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         );
     }
 
-    private String buildTestPrintContent(Store store, PrinterConfig printer, String moduleCode) {
+    private String buildTestPrintContent(Store store, PrinterConfig printer, String moduleCode, boolean padDiagnostic) {
+        // Diagnostic identity remains readable on GBK devices even when a display name
+        // contains unsupported accents. Real receipts retain strict, unchanged encoding.
+        String storeLabel = store.name == null ? "Store" : store.name;
+        String printerLabel = printer.name == null ? "Printer #" + printer.id : printer.name;
+        if (padDiagnostic) {
+            var charset = com.restaurant.system.delivery.ReceiptArtifact.physicalCharset(printer);
+            if (!charset.newEncoder().canEncode(storeLabel)) storeLabel = store.code + " (#" + store.id + ")";
+            if (!charset.newEncoder().canEncode(printerLabel)) printerLabel = "Printer #" + printer.id;
+        }
         StringBuilder builder = new StringBuilder();
         builder.append("\n");
         builder.append("PRINT CENTER TEST\n");
         builder.append("--------------------------------\n");
-        builder.append("Store: ").append(store.name == null ? "Store" : store.name).append("\n");
-        builder.append("Printer: ").append(printer.name).append("\n");
+        builder.append("Store: ").append(storeLabel).append("\n");
+        builder.append("Printer: ").append(printerLabel).append("\n");
         if (moduleCode != null && !moduleCode.isBlank()) {
             builder.append("Module: ").append(moduleCode).append("\n");
         }

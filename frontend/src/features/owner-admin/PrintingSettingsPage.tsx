@@ -16,7 +16,6 @@ import {
   reprintPrintJob,
   revokeStoreDevice,
   savePrinterConfig,
-  triggerPrinterConnectionTest,
   triggerCurrentFontSizeTest,
   triggerAssignedModulePrintTest,
   triggerGrabFontTest,
@@ -42,6 +41,7 @@ import {
   parseAndroidBridgeJson,
   type AndroidPadDeviceStatus,
 } from '../../types/androidPadBridge'
+import { testConfiguredPrinterConnection, connectionResultKey, type ConfiguredConnectionResult } from '../../services/printerConnectionService'
 import { menuManagementPath } from './menuManagementSections'
 import { ReceiptPreview } from './ReceiptPreview'
 import { KitchenRoutingPanel } from './KitchenRoutingPanel'
@@ -387,6 +387,7 @@ export function PrintingSettingsPage() {
   const canManageTemplate = ['OWNER', 'ADMIN', 'MANAGER'].includes(user?.role_code ?? '')
   const [workspaceStores, setWorkspaceStores] = useState<WorkspaceStore[]>([])
   const [printCenter, setPrintCenter] = useState<PrintCenterOverview | null>(null)
+  const [localConnections, setLocalConnections] = useState<Record<string, ConfiguredConnectionResult>>({})
   const [selectedStoreId, setSelectedStoreId] = useState(String(storeId))
   const reprintScope = useRef(0)
   useEffect(() => () => { reprintScope.current += 1; reprintFollow.current?.() }, [selectedStoreId])
@@ -657,18 +658,29 @@ export function PrintingSettingsPage() {
     }
   }
 
+  const rememberLocalConnection = (result: ConfiguredConnectionResult) => {
+    if (result.local_printer) setLocalConnections((current) => ({ ...current, [connectionResultKey(result.local_printer!)]: result }))
+  }
+
   const handleConnectionTest = async (printerId: number) => {
+    const scope = loadRequestId.current
     try {
       setToast(null)
-      const result = await triggerPrinterConnectionTest(Number(selectedStoreId), printerId)
-      setPrintCenter(await fetchPrintCenterOverview(Number(selectedStoreId)))
+      const result = await testConfiguredPrinterConnection(Number(selectedStoreId), printerId)
+      if (loadRequestId.current !== scope) return
+      rememberLocalConnection(result)
+      const overview = await fetchPrintCenterOverview(Number(selectedStoreId))
+      if (loadRequestId.current !== scope) return
+      setPrintCenter(overview)
       setToast({ kind: result.success ? 'success' : 'error', message: result.success ? '连接测试成功。' : `连接测试失败：${result.message}` })
     } catch (testError) {
+      if (loadRequestId.current !== scope) return
       setToast({ kind: 'error', message: testError instanceof Error ? testError.message : '连接测试失败' })
     }
   }
 
   const handleAllConnectionTests = async () => {
+    const scope = loadRequestId.current
     const printers = printCenter?.printers ?? []
     if (!printers.length) {
       setToast({ kind: 'error', message: translate('printing.noPrinters') })
@@ -680,9 +692,13 @@ export function PrintingSettingsPage() {
       const results = await Promise.all(
         printers
           .filter((printer) => printer.id != null)
-          .map((printer) => triggerPrinterConnectionTest(Number(selectedStoreId), printer.id!)),
+          .map((printer) => testConfiguredPrinterConnection(Number(selectedStoreId), printer.id!)),
       )
-      setPrintCenter(await fetchPrintCenterOverview(Number(selectedStoreId)))
+      if (loadRequestId.current !== scope) return
+      const overview = await fetchPrintCenterOverview(Number(selectedStoreId))
+      if (loadRequestId.current !== scope) return
+      setPrintCenter(overview)
+      results.forEach(rememberLocalConnection)
       const failedCount = results.filter((result) => !result.success).length
       setToast({
         kind: failedCount ? 'error' : 'success',
@@ -691,6 +707,7 @@ export function PrintingSettingsPage() {
           : '所有打印机连接测试成功。',
       })
     } catch (testError) {
+      if (loadRequestId.current !== scope) return
       setToast({ kind: 'error', message: testError instanceof Error ? testError.message : '批量连接测试失败' })
     } finally {
       setTestingAllConnections(false)
@@ -1298,7 +1315,12 @@ export function PrintingSettingsPage() {
 
               <div className="mt-4 space-y-3">
                 {(printCenter?.printers ?? []).map((printer) => {
-                  const connection = connectionBadge(printer)
+                  const local = printCenter?.printing_mode === 'PAD_DIRECT' ? localConnections[connectionResultKey(printer)] : undefined
+                  const connection = connectionBadge(local ? {
+                    ...printer,
+                    last_connection_success_at: local.success ? local.checked_at : null,
+                    last_connection_failed_at: local.success ? null : local.checked_at,
+                  } : printer)
                   return (
                   <div key={printer.id} className="rounded-[20px] bg-[rgba(26,28,25,0.04)] px-4 py-4">
                     <div className="flex flex-wrap items-start justify-between gap-3">
@@ -1315,9 +1337,9 @@ export function PrintingSettingsPage() {
                           <span className="rounded-full bg-white px-2.5 py-1">{t('printing.lastFailure')}: {formatDateTime(printer.last_failed_print_at)}</span>
                           <span className={`rounded-full px-2.5 py-1 ${connection.className}`}>{t('printing.connection')}: {connection.label}</span>
                         </div>
-                        {printer.last_error_message || printer.last_connection_error ? (
+                        {printer.last_error_message || (local ? !local.success : printer.last_connection_error) ? (
                           <div className="mt-2 rounded-[14px] bg-[rgba(97,0,0,0.07)] px-3 py-2 text-[0.78rem] font-medium text-[var(--primary)]">
-                            {printer.last_error_message ?? printer.last_connection_error}
+                            {printer.last_error_message ?? (local ? local.message : printer.last_connection_error)}
                           </div>
                         ) : null}
                       </div>
