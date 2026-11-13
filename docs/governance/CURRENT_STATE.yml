@@ -5,15 +5,15 @@ repository:
   ref: origin/main
   sha: 80e888fcdad74e98326fcbeaa5df14bc0d9baed6
   sha_semantics: FRESH_REFERENCE_NOT_ALLO_RUNTIME_OR_IMPLEMENTATION_BASE
-  working_branch: codex/allo-android-actions-20261113
+  working_branch: codex/allo-printer-test-20261113
 
 phase:
   current: PHASE_6
   package: ALLO_ANDROID_APK_20261113
-  status: ANDROID_1_0_2_CLEAN_ORDERING_ACCEPTED_INSTALLED_NO_SERVER_MUTATION
+  status: ALLO_PRINT_CENTER_TEST_REPAIR_IN_PROGRESS
   next_phase_authorized: false
-  authorization: OWNER_20261113_ANDROID_ORDERING_NO_PRINT_BANNER_OR_CACHE_INFO_KEEP_TABLE_BANNER_NO_SERVER_RELEASE
-  implementation_base_sha: c55b816ed2b2dbbb931947a460c788e538e7903b
+  authorization: OWNER_20261113_REPAIR_PAD_PRINT_CENTER_CONNECTION_AND_DIAGNOSTIC_INTENT_PRESERVE_PAIRING_AND_PRINT_SAFETY
+  implementation_base_sha: d54fd08264c30d69443ca942a5157e05f9c531b1
   target: https://pos.allonouilles.com
   production_mutation_authorized: false
   production_exact_batch_sha: b7893860815fb87ef936730213e32170626ab7f2
@@ -22,7 +22,7 @@ phase:
   production_authorized_target_only: ALLO_43_166_242_250_STORE1_ORG1
   production_excludes: LANZHOU_AND_ANY_TEST_ORDER_REPRINT_PRICE_BATCH_OR_HARDWARE_PAIRING
   staging_mutation_authorized: false
-  protected_printing_core_mutation_authorized: false
+  protected_printing_core_mutation_authorized: true
   protected_printing_scope: OWNER_APPROVED_REQUIRED_CHANGE_REQUEST_ALLO_OPT_IN_ONLY
   protected_printing_request: ../delivery/allo-nouilles/REQUIRED_CHANGE_REQUEST.md
   tracker: ../delivery/allo-nouilles/DELIVERY_TRACKER.md
@@ -462,7 +462,7 @@ allo_android:
 
 gate:
   type: TECHNICAL
-  next_action: STOP_CLEAN_ORDERING_INSTALLED_NO_FURTHER_MUTATION
+  next_action: FOCUSED_PRINT_TESTS_AGENT6_APK_AND_EXACT_BACKEND_CANDIDATE_NO_PRODUCTION_MUTATION
 
 authorization:
   dining_table_soft_delete: OWNER_20261024_ALL_STORE_IS_ACTIVE_SOFT_DELETE_ACTIVE_ORDER_GUARD_CACHE_AND_NEW_ORDER_BLOCK_IMPLEMENT_TEST_REVIEW_MERGE_STAGING_DIRECT_PRODUCTION_PRESERVE_HISTORY_AB_SPLIT_LABELS_PRINTING_AND_UBER_NO_REAL_TEST_ORDERS
@@ -494,4 +494,4 @@ authorization:
   allo_production: COMPLETED_OWNER_20261113_EXACT_B7893860_BACKEND_CORS_ONLY_NO_STANDING_MUTATION_AUTHORITY
 
 stop:
-  marker: ALLO_ANDROID_1_0_2_INSTALLED_STOP_NO_SERVER_DATA_CLEAR_OR_PRINT
+  marker: ALLO_PRINTER_TEST_REPAIR_NO_PRODUCTION_RELEASE_OR_PHYSICAL_PRINT

@@ -57,6 +57,7 @@ export interface AndroidPadDeviceBridge {
 declare global {
   interface Window {
     RestaurantPadDevice?: AndroidPadDeviceBridge
+    RestaurantPrinter?: { testConnection: (json: string) => string }
   }
 }
 

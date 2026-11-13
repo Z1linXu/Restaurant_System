@@ -21,6 +21,30 @@ import org.junit.runner.RunWith;
 
 @RunWith(AndroidJUnit4.class)
 public class AlloBundledLaunchTest {
+    @Test public void nativeConnectionProbeOpensSocketWithoutWritingAnyBytes() throws Exception {
+        org.junit.Assume.assumeTrue(android.os.Build.HARDWARE.contains("ranchu") || android.os.Build.HARDWARE.contains("goldfish"));
+        android.app.Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
+        Activity activity = instrumentation.startActivitySync(new Intent(instrumentation.getTargetContext(), MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        try (java.net.ServerSocket server = new java.net.ServerSocket(0, 1, java.net.InetAddress.getLoopbackAddress())) {
+            waitForJavascript(activity, "typeof window.RestaurantPrinter?.testConnection==='function'", "native connection bridge injected");
+            server.setSoTimeout(10000);
+            java.util.concurrent.FutureTask<Integer> bytes = new java.util.concurrent.FutureTask<>(() -> {
+                try (java.net.Socket socket = server.accept()) { socket.setSoTimeout(5000); return socket.getInputStream().read(); }
+            });
+            new Thread(bytes, "connection-probe-no-print").start();
+            String[] raw = {"null"}; CountDownLatch ready = new CountDownLatch(1);
+            String request = new JSONObject().put("ip", "127.0.0.1").put("port", server.getLocalPort()).put("timeoutMs", 1000).toString();
+            instrumentation.runOnMainSync(() -> {
+                WebView web = (WebView)((ViewGroup)activity.findViewById(android.R.id.content)).getChildAt(0);
+                web.evaluateJavascript("window.RestaurantPrinter.testConnection(" + JSONObject.quote(request) + ")", value -> { raw[0]=value;ready.countDown(); });
+            });
+            assertTrue("native bridge returned", ready.await(15, TimeUnit.SECONDS));
+            JSONObject result = new JSONObject(new org.json.JSONArray("[" + raw[0] + "]").getString(0));
+            assertTrue(result.toString(), result.getBoolean("success"));
+            assertEquals("socket closed without writing", -1, (int)bytes.get(5, TimeUnit.SECONDS));
+        } finally { instrumentation.runOnMainSync(activity::finish); }
+    }
+
     @Test public void independentSandboxHttpsAndBundledInjection() throws Exception {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         assertEquals("com.allonouilles.pos", context.getPackageName());

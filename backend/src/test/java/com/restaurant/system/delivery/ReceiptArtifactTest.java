@@ -88,4 +88,29 @@ class ReceiptArtifactTest {
   service.attachRenderedContent(j,5L,"Legacy text");assertThrows(RuntimeException.class,()->service.markPadDirectQueued(j,printer()));
   assertEquals("PENDING",j.status);assertNull(j.escposPayloadBase64);
  }
+ PrintJob diagnostic(long id, String mode) {
+  var j=job(id);j.receipt_type="TEST_PRINT";
+  j.payload_snapshot=ReceiptArtifact.withDiagnosticIntent("{\"source\":\"ADMIN_TEST_PRINT\",\"module_code\":\"GRAB\",\"store_id\":1,\"order_id\":null}",mode);return j;
+ }
+ @Test void newDiagnosticPadIntentUsesTheExistingFrozenArtifactAndNeverNeedsAnOrder(){
+  when(printingPolicy.allowsPadDirect(1L)).thenReturn(true);when(printingPolicy.padDirectActive(1L)).thenReturn(true);
+  var j=diagnostic(1,"PAD_DIRECT");var p=printer();service.attachRenderedContent(j,p.id,"PRINT CENTER TEST\n");service.markPadDirectQueued(j,p);
+  assertEquals("PAD_DIRECT",j.executionMode);assertEquals("PENDING",j.status);assertNull(j.order_id);ReceiptArtifact.requirePadArtifact(j);
+  assertThrows(RuntimeException.class,()->service.markPadDirectQueued(j,p));
+ }
+ @Test void diagnosticMockCannotBecomePhysicalAfterModeSwitch(){
+  var j=diagnostic(1,"MOCK");service.attachRenderedContent(j,5L,"Mock sample");String frozen=j.payload_snapshot,bytes=j.escposPayloadBase64;
+  when(printingPolicy.padDirectActive(1L)).thenReturn(true);
+  assertThrows(RuntimeException.class,()->service.markPadDirectQueued(j,printer()));assertEquals(frozen,j.payload_snapshot);assertEquals(bytes,j.escposPayloadBase64);
+ }
+ @Test void diagnosticMarkerCannotGrantIntentToBusinessOrdersOrDifferentStores(){
+  when(printingPolicy.padDirectActive(1L)).thenReturn(true);
+  var j=diagnostic(1,"PAD_DIRECT");j.order_id=123L;assertThrows(RuntimeException.class,()->service.attachRenderedContent(j,5L,"Bad"));
+  j.order_id=null;j.store_id=2L;assertThrows(RuntimeException.class,()->service.markPadDirectQueued(j,printer()));assertNull(j.escposPayloadBase64);
+ }
+ @Test void diagnosticWithoutExplicitPadModeOrWithForeignPrinterCannotPrint(){
+  when(printingPolicy.padDirectActive(1L)).thenReturn(true);var mock=diagnostic(1,"MOCK");assertThrows(RuntimeException.class,()->service.attachRenderedContent(mock,5L,"Bad"));
+  var j=diagnostic(2,"PAD_DIRECT");service.attachRenderedContent(j,5L,"Sample");var target=j;var p=printer();p.store_id=2L;
+  assertThrows(RuntimeException.class,()->service.markPadDirectQueued(target,p));assertNull(target.escposPayloadBase64);
+ }
 }

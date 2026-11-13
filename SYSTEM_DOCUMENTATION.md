@@ -7106,7 +7106,8 @@ No online payment provider integration is included in this phase.
 - Successful dispatch updates `printed_at` and printer `last_successful_print_at`.
 - Failed dispatch updates `failed_at`, `error_message`, and printer `last_failed_print_at`.
 - Manual reprint is supported from Print Center and Order Center.
-- Basic connection testing opens a TCP socket to the configured printer host/port with timeout and stores the last connection result on `printer_configs`.
+- Basic connection testing opens/closes a TCP socket without sending print bytes. REAL/MOCK use the backend endpoint and persisted `printer_configs` result. PAD_DIRECT Android reads the authorized Store printer configuration and uses the existing native `RestaurantPrinter.testConnection`; its result stays local to the screen and configured endpoint. The cloud never probes a PAD_DIRECT LAN printer.
+- New Allô order-free Print Center samples capture `ALLO_PRINT_TEST_V1` diagnostic intent and reuse frozen artifact/current-mode/encoding validation. Historical missing or MOCK intent cannot become a physical artifact; no old sample or stopped worker is automatically replayed.
 
 ### New Backend APIs
 

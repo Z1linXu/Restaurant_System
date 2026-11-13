@@ -2374,3 +2374,16 @@ Only explicitly frozen PAD intents may create physical artifacts; historical
 MOCK/unspecified intents and Jobs cannot become PAD because a live mode changed.
 New claims/start/payload require current PAD mode; authenticated owned in-flight
 completion/failure remains reportable. No physical printer success is implied.
+
+New Allô Print Center printer/module samples (no order or update batch) freeze
+`diagnostic_intent.version=ALLO_PRINT_TEST_V1` and the current `execution_mode`.
+Only `ADMIN_TEST_PRINT`/`ADMIN_MODULE_TEST_PRINT` with matching Store, module and
+sample receipt type qualify. They use the same immutable physical artifact and
+current-mode validation as receipts. Missing/MOCK historical intent is never
+upgraded or automatically replayed. Existing endpoint/auth/Store checks remain.
+In PAD_DIRECT, the Android Print Center connection button reads current
+Store-authorized configuration then invokes native `RestaurantPrinter.testConnection`
+on the store LAN. It opens/closes a socket, writes zero bytes and creates no job.
+Its result is local to this screen and endpoint; other modes keep the backend
+connection-test endpoint and persisted result. A regular browser cannot probe
+PAD_DIRECT printer endpoints.
