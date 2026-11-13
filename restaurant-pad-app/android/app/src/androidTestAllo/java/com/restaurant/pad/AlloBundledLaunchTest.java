@@ -29,7 +29,7 @@ public class AlloBundledLaunchTest {
         assertFalse(NetworkSecurityPolicy.getInstance().isCleartextTrafficPermitted("pos.allonouilles.com"));
         assertFalse(context.getSharedPreferences("restaurant_pad_settings", 0).contains("pad_direct_device_token"));
         FrontendAssetPathHandler handler = new FrontendAssetPathHandler(context,
-            () -> BuildConfig.FIXED_API_BASE_URL, () -> "", () -> "1.0.0");
+            () -> BuildConfig.FIXED_API_BASE_URL, () -> "", () -> BuildConfig.VERSION_NAME);
         String html = new String(handler.handle("/").getData().readAllBytes(), StandardCharsets.UTF_8);
         assertTrue(html.contains("Content-Security-Policy"));
         assertTrue(html.contains("wss://pos.allonouilles.com"));
@@ -108,6 +108,65 @@ public class AlloBundledLaunchTest {
             evaluate(activity, "Array.from(document.querySelectorAll('div')).find(e=>e.childElementCount===0&&/^(Print Center|打印中心|Centre d’impression)$/.test(e.innerText))?.scrollIntoView();true");
             Thread.sleep(500);
             screenshot(context, "allo-print-center.png");
+        } finally {
+            input.delete();
+            evaluate(activity, "localStorage.removeItem('allo-nouilles:restaurant_pos_access_token');localStorage.removeItem('allo-nouilles:restaurant_pos_refresh_token');true");
+            instrumentation.runOnMainSync(activity::finish);
+        }
+    }
+
+    // This opt-in fixture edits only the dedicated emulator's local draft.
+    // All business HTTP mutations are blocked, and submit/cancel are never clicked.
+    @Test public void localDraftActionsAreReachableAndSurviveUpgrade() throws Exception {
+        android.app.Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
+        Context context = instrumentation.getTargetContext();
+        File input = new File(context.getFilesDir(), "qa-login.json");
+        org.junit.Assume.assumeTrue("Optional emulator acceptance input required", input.isFile());
+        assertTrue("Dedicated emulator only", android.os.Build.HARDWARE.contains("ranchu") || android.os.Build.HARDWARE.contains("goldfish"));
+        JSONObject account;
+        try (java.io.FileInputStream stream = new java.io.FileInputStream(input)) {
+            account = new JSONObject(new String(stream.readAllBytes(), StandardCharsets.UTF_8));
+        }
+        Activity activity = instrumentation.startActivitySync(new Intent(context, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        try {
+            waitForJavascript(activity, "document.querySelectorAll('input').length===2", "empty login form");
+            String values = "[" + JSONObject.quote(account.getString("username")) + "," + JSONObject.quote(account.getString("password")) + "]";
+            evaluate(activity, "(function(){const v=" + values + ";document.querySelectorAll('input').forEach((e,i)=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(e,v[i]);e.dispatchEvent(new Event('input',{bubbles:true}));});return true;})()");
+            evaluate(activity, "document.querySelector('form').requestSubmit();true");
+            waitForJavascript(activity, "!document.querySelector('input[type=password]')&&location.pathname!='/login'", "authorized workspace");
+            evaluate(activity, "window.__qaBlockedMutations=[];const qaFetch=window.fetch;window.fetch=function(input,init){const method=((init&&init.method)||(input&&input.method)||'GET').toUpperCase();if(method!=='GET'&&method!=='HEAD'&&method!=='OPTIONS'){window.__qaBlockedMutations.push(method);return Promise.reject(new Error('QA blocks business writes'));}return qaFetch(input,init);};true");
+            navigate(activity, "/stores/1/frontdesk/menu?slot=TEST%204&table=TEST%204&type=dine_in");
+            waitForJavascript(activity, "Array.from(document.querySelectorAll('[role=button] h3')).some(e=>e.innerText.startsWith('A6 '))&&document.querySelector('.order-summary-panel')?.innerText.includes('local-draft-')", "emulator local draft and menu");
+            waitForJavascript(activity, "!!document.querySelector('h1')?.nextElementSibling&&!/加载|Loading|Chargement/.test(document.querySelector('h1').nextElementSibling.innerText)", "local draft initialization completed");
+            evaluate(activity, "if(!document.querySelector('.order-summary-list-safe').innerText.includes('A6 ')){Array.from(document.querySelectorAll('[role=button]')).find(e=>e.querySelector('h3')?.innerText.startsWith('A6 ')).querySelector('button').click();}true");
+            waitForJavascript(activity, "document.querySelector('.order-summary-list-safe').innerText.includes('A6 ')", "local item persisted");
+            Thread.sleep(500);
+            waitForJavascript(activity, "document.querySelector('.order-summary-list-safe').innerText.includes('A6 ')", "stable local draft item");
+            JSONObject state = new JSONObject((String)new org.json.JSONTokener(evaluate(activity, "JSON.stringify({draftId:document.querySelector('.order-summary-panel').innerText.match(/local-draft-[0-9a-f-]+/)?.[0],itemText:document.querySelector('.order-summary-list-safe').innerText})")).nextValue());
+            File beforeUpgrade = new File(context.getFilesDir(), "qa-draft-before-upgrade.json");
+            if (beforeUpgrade.isFile()) {
+                try (java.io.FileInputStream stream = new java.io.FileInputStream(beforeUpgrade)) {
+                    JSONObject previous = new JSONObject(new String(stream.readAllBytes(), StandardCharsets.UTF_8));
+                    assertEquals("draft identity preserved", previous.getString("draftId"), state.getString("draftId"));
+                    assertEquals("draft item and quantity preserved", previous.getString("itemText"), state.getString("itemText"));
+                }
+            } else try (FileOutputStream output = new FileOutputStream(beforeUpgrade)) { output.write(state.toString().getBytes(StandardCharsets.UTF_8)); }
+            // Scroll the document only: scrolling a hidden panel programmatically masks the bug.
+            evaluate(activity, "window.scrollTo(0,document.scrollingElement.scrollHeight);true");
+            Thread.sleep(500);
+            String geometry = evaluate(activity, "JSON.stringify({width:innerWidth,height:innerHeight,actions:Array.from(document.querySelectorAll('.order-summary-footer-safe button')).map(e=>{const r=e.getBoundingClientRect();const hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return {label:e.innerText,top:r.top,bottom:r.bottom,enabled:!e.disabled,visible:r.top>=0&&r.bottom<=innerHeight&&!!hit&&(hit===e||e.contains(hit))};}),blockedMutations:window.__qaBlockedMutations.length})");
+            JSONObject result = new JSONObject((String)new org.json.JSONTokener(geometry).nextValue());
+            try (FileOutputStream output = new FileOutputStream(new File(context.getExternalFilesDir(null), "order-actions-layout.json"))) { output.write(result.toString().getBytes(StandardCharsets.UTF_8)); }
+            screenshot(context, "order-actions.png");
+            assertEquals(0, result.getInt("blockedMutations"));
+            assertEquals(3, result.getJSONArray("actions").length());
+            for (int i=0;i<3;i++) {
+                JSONObject action = result.getJSONArray("actions").getJSONObject(i);
+                assertTrue(action.toString(), action.getBoolean("visible"));
+                assertTrue(action.toString(), action.getBoolean("enabled"));
+            }
+            evaluate(activity, "document.querySelector('.order-summary-footer-safe button').click();true");
+            assertTrue("same local draft after Save", evaluate(activity, "document.querySelector('.order-summary-panel').innerText").contains(state.getString("draftId")));
         } finally {
             input.delete();
             evaluate(activity, "localStorage.removeItem('allo-nouilles:restaurant_pos_access_token');localStorage.removeItem('allo-nouilles:restaurant_pos_refresh_token');true");

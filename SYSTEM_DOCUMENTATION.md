@@ -7969,7 +7969,7 @@ Frontend ordering behavior:
 - Drink-style items with stable metadata such as `categoryCode=DRINK`, `categoryCode=ALCOHOL`, `categoryCode=MILK_TEA`, `itemType=drink`, or `itemType=beverage` quick-add directly when they do not have required customization.
 - Fried items keep the existing no-customization quick-add behavior.
 - Noodles, combo-capable items, and any item with required customization still open the customization modal.
-- Ordering layout avoids a full-page hard fixed shell. The category list, menu list, and order panel use reasonable max heights so menu items and order rows scroll independently without compressing the order panel to a single row.
+- Ordering layout avoids a full-page hard fixed shell. The category list, menu list, and order item list use reasonable max heights and scroll independently. The outer order panel remains in normal document flow without a height cap or overflow clipping, so long notes/status content cannot hide Save, Cancel or Submit/Update below the panel boundary. Short WebViews can scroll the page to the complete footer.
 - Ordering layout reserves bottom safe-area padding so Android WebView navigation controls do not cover the order summary footer or submit/update buttons.
 
 Printing display behavior:

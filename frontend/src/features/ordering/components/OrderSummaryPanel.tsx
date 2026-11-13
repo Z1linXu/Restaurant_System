@@ -91,7 +91,7 @@ export function OrderSummaryPanel({
   const itemCount = session.items.reduce((sum, item) => sum + item.quantity, 0)
 
   return (
-    <div className={`order-summary-panel flex flex-col overflow-hidden bg-[rgba(255,255,255,0.82)] shadow-[0_18px_42px_rgba(26,28,25,0.06)] ${compact ? 'gap-3 rounded-[24px] p-3.5' : 'gap-5 rounded-[32px] p-5'}`}>
+    <div className={`order-summary-panel flex flex-col bg-[rgba(255,255,255,0.82)] shadow-[0_18px_42px_rgba(26,28,25,0.06)] ${compact ? 'gap-3 rounded-[24px] p-3.5' : 'gap-5 rounded-[32px] p-5'}`}>
       <div className={`shrink-0 bg-[rgba(26,28,25,0.04)] ${compact ? 'rounded-[18px] px-4 py-3' : 'rounded-[24px] px-5 py-4'}`}>
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">{t('order.current')}</p>
         <div className="mt-2 flex items-end justify-between gap-4">

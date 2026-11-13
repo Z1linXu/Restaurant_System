@@ -94,7 +94,8 @@ button {
 
 .order-summary-panel {
   min-height: 34rem;
-  max-height: calc(var(--ordering-viewport-height) - var(--ordering-bottom-padding) - 1.5rem);
+  /* The item list scrolls independently; metadata/notes/actions must stay in
+     document flow so short WebViews can reach the entire footer. */
 }
 
 @media (min-width: 1280px), (orientation: landscape) and (min-width: 1024px) {
@@ -109,7 +110,6 @@ button {
 
   .order-summary-panel {
     min-height: 38rem;
-    max-height: calc(var(--ordering-viewport-height) - var(--ordering-bottom-padding) - 1rem);
   }
 }
 
