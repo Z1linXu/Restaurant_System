@@ -16,7 +16,7 @@ Android WebView
   -> IndexedDB menu/drafts/outbox/workspace snapshots when offline
 ```
 
-The optional `Local Preview Web App URL` remains available in the Local Control
+In the configurable `lanzhou` flavor, the optional `Local Preview Web App URL` remains available in the Local Control
 Panel as a diagnostics and rollback path. When it is non-empty, the Pad loads
 that remote URL instead of bundled assets.
 
@@ -39,15 +39,15 @@ The pipeline performs these steps in order:
 
 1. Generates one `BUNDLED_BUILD_VERSION` and passes it to Vite.
 2. Runs `frontend` production build.
-3. deletes the previous `android/app/src/main/assets/web` directory.
-4. copies the complete new `frontend/dist` tree.
+3. deletes the previous assets directory for the selected flavor only.
+4. copies the complete new frontend dist tree for that flavor.
 5. verifies `index.html` references existing main JavaScript and CSS files.
 6. generates `asset-manifest.json` with every asset size and SHA-256.
 7. generates `build-info.json` with build/schema/manifest identity.
 8. recomputes every hash before Gradle packages the APK.
 
 Gradle `preBuild` depends on `verifyBundledFrontend`, so Android Studio or a
-direct `./gradlew :app:assembleDebug` also refuses stale, missing, extra, or
+direct `./gradlew :app:assembleLanzhouDebug` (or `:app:assembleAlloDebug`) also refuses stale, missing, extra, or
 modified bundled files. `copy-frontend-dist.sh` is safe for an already-built
 `frontend/dist`, but the full build script is the supported release path.
 
@@ -70,7 +70,8 @@ window.__RESTAURANT_APP_CONFIG__
 The app config contains loading mode, Android version, bundled build version,
 asset-manifest SHA-256, IndexedDB schema version, and paired store id. It does
 not include Web tokens, device tokens, printer credentials, or a hardcoded
-server/store address. The bundled login form also ships with empty account and
+store address. The `lanzhou` flavor retains its configurable server; the `allo`
+flavor fixes the server to `https://pos.allonouilles.com`. The bundled login form also ships with empty account and
 password fields.
 
 ## Offline Cold Start Boundary
@@ -122,7 +123,7 @@ cd ../restaurant-pad-app
 scripts/verify-frontend-assets.sh
 
 cd android
-./gradlew :app:assembleDebug
+./gradlew :app:assembleLanzhouDebug
 ```
 
 Required device checks before pilot use:
@@ -136,8 +137,70 @@ Required device checks before pilot use:
 6. Restore network and confirm session plus store membership are revalidated.
 7. Upgrade the APK without clearing app data and verify drafts/outbox, Pad
    pairing, printer test settings, and PAD_DIRECT settings remain present.
-8. Set a Local Preview Web App URL and confirm the remote rollback path still
+8. For the configurable Lanzhou flavor, set a Local Preview Web App URL and confirm the remote rollback path still
    loads; clear it to return to bundled mode.
 
 The exact packet-loss, backend-restart, multi-Pad, and long-run fault-injection
 matrix is deferred to PR8.
+
+## Independent Allô Nouilles flavor
+
+`lanzhou` preserves applicationId `com.restaurant.pad`, label `Restaurant Pad`,
+version `0.4.0-kitchen-field-fixes` (code 4), existing signing configuration and
+configurable server behavior. The default script command still selects it.
+
+`allo` uses applicationId `com.allonouilles.pos`, label `Allô Nouilles POS`,
+version `1.0.0` (code 1), the existing merchant logo and a separate Android UID,
+data directory, WebView profile, preferences and IndexedDB. It cannot read the
+legacy app's token, pairing or drafts. First install is unpaired. Android
+backup is disabled by the existing shared manifest. No signing key is added.
+
+Build an installable Debug APK (Release requires separately configured signing):
+
+```bash
+BUNDLED_BUILD_VERSION="$(git rev-parse HEAD)" \
+  restaurant-pad-app/scripts/build-bundled-apk.sh debug allo
+```
+
+Output: `restaurant-pad-app/android/app/build/outputs/apk/allo/debug/app-allo-debug.apk`.
+The Allô frontend is built in `restaurant-pad-app/web/allo-dist`, copied only to
+`android/app/src/allo/assets/web`, and verified separately. The legacy assets
+under `src/main/assets/web` are neither rebuilt nor merged into this APK.
+
+Allô always starts bundled assets at `https://restaurant-pad.local`; cloud
+HTTP calls use `https://pos.allonouilles.com` and STOMP uses the corresponding
+`wss://` origin. Its server fields are read-only. A variant-specific network
+security policy denies cleartext even for Debug, trusts only system CAs, and
+retains normal certificate validation. WebView navigation/resource checks and
+CSP restrict it to the bundled origin and the Allô cloud; native device HTTP
+requests use the fixed API origin and do not follow redirects. Native printer
+TCP remains the existing PAD_DIRECT path, governed by cloud assignments and
+device proofs; these restrictions do not create a new print lifecycle.
+
+The Allô backend profile must permit the exact bundled Origin
+`https://restaurant-pad.local`. Auth, Organization/Store scope and authenticated
+STOMP remain required. No server printing-mode change or real device pairing is
+part of APK construction. Unpaired status is handled by the existing worker
+and Print Center. Hardware printing requires separate on-site acceptance.
+
+Focused native verification, using a dedicated emulator:
+
+```bash
+cd restaurant-pad-app/android
+./gradlew :app:testAlloDebugUnitTest :app:connectedAlloDebugAndroidTest
+```
+
+Instrumentation tests verify the real WebView login shell, loaded logo, empty
+credentials, runtime API/WSS, independent app sandbox, and no cleartext or
+preinstalled device token. They do not pair a device or print an order.
+Minimum supported Android is 8.0 (API 26); the delivery report distinguishes
+the tested emulator OS from the declared minimum.
+
+SockJS endpoint resolution uses the injected HTTPS API origin for its initial
+`/ws/info` request as well as WSS, rather than the local asset origin. Frontdesk,
+KDS and Pickup read the current bearer token for each STOMP reconnect. Normal
+browser requests still resolve against their own origin. Optional emulator
+read-only acceptance can consume `files/qa-login.json` injected into the Allô
+sandbox at test time; credentials are never included in source or either APK.
+The test reads workspace, Frontdesk, menu and Print Center without submitting,
+pairing or printing, then removes its runtime input.

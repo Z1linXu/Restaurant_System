@@ -33,3 +33,6 @@ coverage/
 .merchant-private/
 
 frontend/public/merchant/
+
+# Installable local Android delivery artifacts (metadata lives in docs).
+/dist/android/

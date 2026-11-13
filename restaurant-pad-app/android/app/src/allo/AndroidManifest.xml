@@ -1,0 +1,3 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application android:icon="@mipmap/allo_launcher" android:roundIcon="@mipmap/allo_launcher" android:networkSecurityConfig="@xml/allo_network_security" />
+</manifest>

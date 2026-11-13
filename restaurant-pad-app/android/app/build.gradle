@@ -12,17 +12,51 @@ android {
         targetSdk 35
         versionCode 4
         versionName "0.4.0-kitchen-field-fixes"
+        manifestPlaceholders = [padAppLabel: "Restaurant Pad"]
+        buildConfigField "String", "FIXED_API_BASE_URL", '""'
+    }
+    buildFeatures { buildConfig true }
+    flavorDimensions "merchant"
+    productFlavors {
+        lanzhou { dimension "merchant" }
+        allo {
+            dimension "merchant"
+            applicationId "com.allonouilles.pos"
+            versionCode 1
+            versionName "1.0.0"
+            manifestPlaceholders = [padAppLabel: "Allô Nouilles POS"]
+            buildConfigField "String", "FIXED_API_BASE_URL", '"https://pos.allonouilles.com"'
+            testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        }
+    }
+    // Keep the existing bundle at its original path; never merge it into Allô.
+    sourceSets {
+        main.assets.srcDirs = []
+        lanzhou.assets.srcDirs = ["src/main/assets"]
+        allo.assets.srcDirs = ["src/allo/assets"]
     }
 }
 
 tasks.register("verifyBundledFrontend", Exec) {
     workingDir rootProject.projectDir
+    environment "BUNDLED_ANDROID_FLAVOR", "lanzhou"
+    commandLine "bash", file("${rootProject.projectDir}/../scripts/verify-frontend-assets.sh").absolutePath
+}
+tasks.register("verifyAlloBundledFrontend", Exec) {
+    workingDir rootProject.projectDir
+    environment "BUNDLED_ANDROID_FLAVOR", "allo"
     commandLine "bash", file("${rootProject.projectDir}/../scripts/verify-frontend-assets.sh").absolutePath
 }
 
-preBuild.dependsOn verifyBundledFrontend
+android.applicationVariants.all { variant ->
+    variant.preBuildProvider.configure {
+        dependsOn(variant.flavorName == "allo" ? "verifyAlloBundledFrontend" : "verifyBundledFrontend")
+    }
+}
 
 dependencies {
     implementation "androidx.webkit:webkit:1.12.1"
     testImplementation "junit:junit:4.13.2"
+    androidTestImplementation "androidx.test:runner:1.6.2"
+    androidTestImplementation "androidx.test.ext:junit:1.2.1"
 }

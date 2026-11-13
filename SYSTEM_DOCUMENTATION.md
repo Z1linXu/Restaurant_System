@@ -8939,7 +8939,11 @@ claim/printing behavior.
   asset handler still falls back to `index.html` for store routes. Android
   injects runtime API base, WebSocket base, paired store id, app/build version,
   asset-manifest hash, and IndexedDB schema version before React starts. Tokens,
-  domain/IP, printer endpoints, and secrets are not compiled into that config.
+  printer endpoints, and secrets are not compiled into that config. The original
+  `lanzhou` flavor remains server-configurable; the independent `allo` flavor
+  fixes API/WSS to `pos.allonouilles.com`, uses `com.allonouilles.pos`, its own
+  verified assets and local sandbox, Allô branding and HTTPS-only transport.
+  Its fixed cloud origin is public configuration, not a credential.
 - IndexedDB `restaurant-pos-offline` advances additively from schema version 3
   to 4 with `workspaceSnapshots`. Existing menu snapshots, local drafts, and
   `orderOutbox` records are not deleted or recreated, so APK upgrades preserve
@@ -8953,7 +8957,7 @@ claim/printing behavior.
   server `5xx`. `401` and `403` never fall back. Browser `online` and foreground
   recovery re-run `/auth/me` and store context requests so session, role, and
   membership changes replace or invalidate the snapshot.
-- The Local Preview Web App URL remains a diagnostic/rollback path. Bundled mode
+- In the configurable Lanzhou flavor, the Local Preview Web App URL remains a diagnostic/rollback path. Bundled mode
   installs no Service Worker and does not cache authentication responses,
   mutating API calls, or order submissions as HTTP responses. The bundled login
   form does not compile a default account name or password into the APK.

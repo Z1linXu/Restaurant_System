@@ -18,6 +18,7 @@ public class TemplateTestCorsConfig implements WebMvcConfigurer {
         var origins = new ArrayList<>(List.of("http://127.0.0.1:28080", "https://test.lanzhounoodlesmtl.com",
             "https://pos.allonouilles.com", "http://127.0.0.1:28180", "http://localhost:28180"));
         // An explicit synthetic QA profile cannot broaden the deployed production CORS list.
+        if (Arrays.asList(environment.getActiveProfiles()).contains("allo-test")) origins.add("https://restaurant-pad.local");
         if (Arrays.asList(environment.getActiveProfiles()).contains("allo-qa")) origins.add("http://127.0.0.1:28182");
         registry.addMapping("/api/**").allowedOrigins(origins.toArray(String[]::new))
             .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")

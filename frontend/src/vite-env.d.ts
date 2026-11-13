@@ -10,6 +10,8 @@ interface RestaurantBundledAppConfig {
   assetManifestSha256: string
   offlineDatabaseSchemaVersion: number
   storeId: number | null
+  brandName?: string
+  brandLogo?: string
 }
 
 interface Window {

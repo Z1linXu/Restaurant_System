@@ -148,6 +148,16 @@ public class FrontendAssetPathHandler implements WebViewAssetLoader.PathHandler 
             "  }\n" +
             "})();\n" +
             "</script>\n";
+        if (!BuildConfig.FIXED_API_BASE_URL.isEmpty()) {
+            String nonce = java.util.UUID.randomUUID().toString();
+            String policy = "default-src 'self'; script-src 'self' 'nonce-" + nonce
+                + "'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src "
+                + BuildConfig.FIXED_API_BASE_URL + " " + BuildConfig.FIXED_API_BASE_URL.replaceFirst("^https", "wss")
+                + "; object-src 'none'; base-uri 'self'; frame-src 'none'";
+            html = html.replace("<head>", "<head><meta http-equiv=\"Content-Security-Policy\" content=\"" + policy + "\">");
+            script = script.replace("<script>", "<script nonce=\"" + nonce + "\">")
+                .replace("    mode: 'BUNDLED_ASSETS',", "    mode: 'BUNDLED_ASSETS',\n    brandName: 'Allô Nouilles',\n    brandLogo: '/merchant/logo.png',");
+        }
         if (html.contains("</head>")) {
             return html.replace("</head>", script + "</head>");
         }

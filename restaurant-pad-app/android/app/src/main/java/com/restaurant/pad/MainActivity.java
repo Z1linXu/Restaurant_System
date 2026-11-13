@@ -192,10 +192,11 @@ public class MainActivity extends Activity {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
                 WebView.setWebContentsDebuggingEnabled(true);
             }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            if (BuildConfig.FIXED_API_BASE_URL.isEmpty() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
             }
         }
+        if (!BuildConfig.FIXED_API_BASE_URL.isEmpty()) settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         if (printerPluginBridge == null) printerPluginBridge = new PrinterPluginBridge(this::ownsActivity);
         webView.addJavascriptInterface(printerPluginBridge, "RestaurantPrinter");
         webView.addJavascriptInterface(new PadDeviceBridge(), "RestaurantPadDevice");
@@ -237,12 +238,17 @@ public class MainActivity extends Activity {
             }
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                if (!MerchantEndpointPolicy.allows(request.getUrl().toString(), BuildConfig.FIXED_API_BASE_URL)) {
+                    return new WebResourceResponse("text/plain", "UTF-8", 403, "Merchant origin blocked",
+                        java.util.Collections.emptyMap(), new java.io.ByteArrayInputStream(new byte[0]));
+                }
                 return assetLoader.shouldInterceptRequest(request.getUrl());
             }
 
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
+                if (!BuildConfig.FIXED_API_BASE_URL.isEmpty() && !MerchantEndpointPolicy.allows(uri.toString(), BuildConfig.FIXED_API_BASE_URL)) return true;
                 if (shouldOpenInApp(uri)) {
                     return false;
                 }
@@ -264,10 +270,12 @@ public class MainActivity extends Activity {
     }
 
     private String getApiBaseUrl() {
+        if (!BuildConfig.FIXED_API_BASE_URL.isEmpty()) return BuildConfig.FIXED_API_BASE_URL;
         return preferences.getString(KEY_API_BASE, "");
     }
 
     private String getWebAppUrl() {
+        if (!BuildConfig.FIXED_API_BASE_URL.isEmpty()) return "";
         return preferences.getString(KEY_WEB_APP_URL, "");
     }
 
@@ -358,6 +366,12 @@ public class MainActivity extends Activity {
         apiBaseInput.setHint("http://your-lan-ip:8080");
         apiBaseInput.setText(getApiBaseUrl());
         apiBaseInput.setSelectAllOnFocus(true);
+        if (!BuildConfig.FIXED_API_BASE_URL.isEmpty()) {
+            webUrlInput.setEnabled(false);
+            apiBaseInput.setEnabled(false);
+            webUrlLabel.setText("Allô Nouilles POS · Bundled Assets");
+            apiBaseLabel.setText("Allô Nouilles HTTPS API (fixed)");
+        }
 
         layout.addView(webUrlLabel);
         layout.addView(webUrlInput);
@@ -596,6 +610,11 @@ public class MainActivity extends Activity {
     ) {
         String webAppUrl = webUrlInput.getText().toString().trim();
         String apiBaseUrl = apiBaseInput.getText().toString().trim();
+        if (!BuildConfig.FIXED_API_BASE_URL.isEmpty()
+            && (!webAppUrl.isEmpty() || !BuildConfig.FIXED_API_BASE_URL.equals(apiBaseUrl))) {
+            Toast.makeText(this, "Allô Nouilles server is fixed for this app.", Toast.LENGTH_LONG).show();
+            return;
+        }
         String printerIp = printerIpInput.getText().toString().trim();
         int printerPort = parsePort(printerPortInput.getText().toString());
         int printerTimeoutMs = parseTimeoutMs(printerTimeoutInput.getText().toString());
@@ -1188,6 +1207,10 @@ public class MainActivity extends Activity {
     }
 
     private void testWebAppUrl(String rawUrl) {
+        if (!MerchantEndpointPolicy.allows(rawUrl, BuildConfig.FIXED_API_BASE_URL)) {
+            Toast.makeText(this, "Allô Nouilles uses its fixed HTTPS server.", Toast.LENGTH_LONG).show();
+            return;
+        }
         if (rawUrl.isBlank()) {
             Toast.makeText(this, "Set a Web App URL first.", Toast.LENGTH_LONG).show();
             return;
@@ -1198,6 +1221,7 @@ public class MainActivity extends Activity {
             try {
                 URL url = new URL(rawUrl);
                 connection = (HttpURLConnection) url.openConnection();
+                if (!BuildConfig.FIXED_API_BASE_URL.isEmpty()) connection.setInstanceFollowRedirects(false);
                 connection.setRequestMethod("GET");
                 connection.setConnectTimeout(5000);
                 connection.setReadTimeout(5000);
@@ -1252,6 +1276,7 @@ public class MainActivity extends Activity {
             try {
                 URL url = new URL(trimTrailingSlash(apiBase) + "/api/v1/stores/" + storeId + "/printing/jobs/pending?limit=25");
                 connection = (HttpURLConnection) url.openConnection();
+                if (!BuildConfig.FIXED_API_BASE_URL.isEmpty()) connection.setInstanceFollowRedirects(false);
                 connection.setRequestMethod("GET");
                 connection.setConnectTimeout(5000);
                 connection.setReadTimeout(8000);
@@ -2948,6 +2973,7 @@ public class MainActivity extends Activity {
         URL url = new URL(trimTrailingSlash(apiBase) + path);
         Log.d(WORKER_TAG, "Worker API Request: " + method + " " + url);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        if (!BuildConfig.FIXED_API_BASE_URL.isEmpty()) connection.setInstanceFollowRedirects(false);
         connection.setRequestMethod(method);
         connection.setConnectTimeout(5000);
         connection.setReadTimeout(10000);

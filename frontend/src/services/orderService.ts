@@ -15,6 +15,7 @@ import { buildOptionSnapshots, mapOptions } from '../utils/orderPricing'
 export { mapOptions } from '../utils/orderPricing'
 import { Client } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
+import { sockJsEndpoint } from './sockJsEndpoint'
 import { networkDiagnosticsDisplayEnabled } from './networkStatus'
 
 const READ_RETRY_DELAYS_MS = [0, 250, 750]
@@ -262,13 +263,6 @@ function observeFrontdeskRealtime(event: FrontdeskRealtimeLifecycleEvent, onLife
   }
 }
 
-function frontdeskRealtimeEndpoint() {
-  if (typeof window === 'undefined') {
-    return '/ws'
-  }
-  return new URL('/ws', window.location.href).toString()
-}
-
 export function subscribeToFrontdeskOrders(
   storeId: number,
   onMessage: (message: RealtimeUpdateMessage) => void,
@@ -291,7 +285,7 @@ export function subscribeToFrontdeskOrders(
       },
       webSocketFactory: () => {
         lifecycle('SOCKET_FACTORY_CALLED')
-        return new SockJS(frontdeskRealtimeEndpoint())
+        return new SockJS(sockJsEndpoint())
       },
       reconnectDelay: 3_000,
       connectionTimeout: 10_000,

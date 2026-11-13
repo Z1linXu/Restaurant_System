@@ -5,6 +5,8 @@ android/app/build/
 
 # Bundled frontend artifact copied during PR3+ POC
 web/dist/
+web/allo-dist/
+android/app/src/allo/assets/web/
 
 # Local device/runtime config
 *.local

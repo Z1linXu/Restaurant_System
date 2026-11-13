@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { subscribeToFrontdeskOrders } from './orderService'
+import { subscribeToNoodleDisplay } from './kdsService'
+import { subscribeToServingShelf } from './pickupService'
 
 interface FakeFrame { body: string }
 interface FakeSubscription { unsubscribe: ReturnType<typeof vi.fn> }
@@ -96,6 +98,33 @@ describe('frontdesk SockJS/STOMP lifecycle', () => {
     expect(client.connectHeaders).toEqual({ Authorization: 'Bearer rotated-token' })
     client.config.webSocketFactory()
     expect(sock.constructor).toHaveBeenCalledWith('https://pos.allonouilles.com/ws')
+    token = null
+    client.config.beforeConnect?.()
+    expect(client.connectHeaders).toEqual({})
+    cancel()
+  })
+
+  it.each([
+    ['frontdesk', subscribeToFrontdeskOrders],
+    ['noodle display', subscribeToNoodleDisplay],
+    ['serving shelf', subscribeToServingShelf],
+  ] as const)('routes bundled %s SockJS HTTP bootstrap and authenticated reconnects to the cloud', async (_name, subscribe) => {
+    let token: string | null = 'bundled-token'
+    vi.stubGlobal('window', {
+      location: { href: 'https://restaurant-pad.local/stores/1/frontdesk' },
+      __RESTAURANT_API_BASE_URL__: 'https://pos.allonouilles.com',
+      localStorage: { getItem: () => token },
+    })
+    const cancel = subscribe(1, vi.fn())
+    await vi.waitFor(() => expect(stomp.instances).toHaveLength(1))
+    const client = stomp.instances[0]
+    client.config.webSocketFactory()
+    expect(sock.constructor).toHaveBeenCalledWith('https://pos.allonouilles.com/ws')
+    client.config.beforeConnect?.()
+    expect(client.connectHeaders).toEqual({ Authorization: 'Bearer bundled-token' })
+    token = 'rotated'
+    client.config.beforeConnect?.()
+    expect(client.connectHeaders).toEqual({ Authorization: 'Bearer rotated' })
     token = null
     client.config.beforeConnect?.()
     expect(client.connectHeaders).toEqual({})
