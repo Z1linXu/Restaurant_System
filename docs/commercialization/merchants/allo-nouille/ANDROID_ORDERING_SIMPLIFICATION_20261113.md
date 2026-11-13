@@ -11,4 +11,43 @@ PRODUCT REPAIR：OrderingPage移除PrintWorkerHealthBanner、完整的缓存来�
 
 TOOLING / GOVERNANCE REPAIR：复用既有原生升级/按钮命中用例，增加桌台有打印控件、点单无打印控件和缓存信息条的实际DOM断言与截图；更新技术说明、CURRENT_STATE与本报告。无新框架、服务器或订单规则改动。
 
-Validation：Frontend508项PASS；Agent6、exact-SHA APK、实际模拟器页面/草稿升级及Owner设备覆盖更新结果在完成后同步。
+Validation：Frontend86 files/508项PASS，TypeScript/Vite/Gradle及Agent6源码和最终产物审查PASS。
+
+- 实际原生验收6.065秒PASS：桌台页保留打印健康/检查按钮；点单页没有打印控件、缓存来源或“已是最新”信息。两张真实WebView截图已人工查看。
+- 原TEST4本机草稿ID/A6数量1和7.99金额跨升级保持，三个操作按钮仍visible/enabled，保存可用，blocked business HTTP mutations=0。
+- Owner Android16设备同签名adb-r更新1.0.2/code3成功；UID10318及dataDir不变。IndexedDB的3项数据文件和native preferences共4项SHA-256逐项一致；打印配对、设备Token和ERROR_STOPPED记录未重置，不自动恢复打印。
+- 未对实体Pad运行instrumentation、未清数据/卸载、未提交或取消真实订单、未配对/打印。受限的Owner恢复副本只用于恢复保留，未用于QA；运行时只读复制不冒称原子快照。
+- 旧Lanzhou资源51项哈希保持，旧App身份/签名/default server未改。
+
+| Artifact | Value |
+| --- | --- |
+| Version / Code | 1.0.2 / 3 |
+| Application ID | com.allonouilles.pos |
+| Source SHA | 0b98ee271c26b56fb344868a489c4579a11e25fa |
+| APK SHA256 | c522f6ffc6e9d9ba02de145aa49fde4239d5a4620cd53bef279f777c465267e4 |
+| Bytes | 4,062,787 |
+| Signing | DEBUG；有效；与旧包同一证书eefc3470dfeb1d118a69c2d0ba011c2f8a158e79bc23395caf0ea3ef8d35e106 |
+| Asset Manifest SHA256 | ee7ac21aeba52d60c3d69c250db14fa0b2aca80a436a3e3eb22f3c7fe739af7e |
+| Bundled Assets | 53项，集合及每项SHA与本次干净生成dist完全一致 |
+| API | https://pos.allonouilles.com |
+| PR | https://github.com/Z1linXu/Restaurant_System/pull/313；同一修复PR，未合并main |
+
+APK：`/Users/xuzilin/.codex/worktrees/allo-production-improvements/Restaurant_System/dist/android/allo-nouilles-pos-v1.0.2-debug.apk`。同目录INSTALL.txt、build-info.json、按版本metadata/SHA已同步。构建一次精确SHA应用，证据变化未重建APK。
+
+Production / Staging服务器mutation：NONE。Backend保持b7893860、Web Frontend保持b78ab21d，本轮只更新Android客户端。没有操作Lanzhou环境。
+当前Gate：TECHNICAL完成；STOP_CLEAN_ORDERING_INSTALLED_NO_FURTHER_MUTATION。
+Stop：`ALLO_ANDROID_1_0_2_INSTALLED_STOP_NO_SERVER_DATA_CLEAR_OR_PRINT`。
+
+Execution Time Breakdown（分项Estimated，含并行）：
+
+| Stage | Time | Notes |
+| --- | ---: | --- |
+| Investigation / Planning | 2 min | fresh authority、页面展示与worker独立性 |
+| Implementation | 1 min | 删除提示UI、Allô版本、复用原生断言 |
+| Tests | 2 min | 508项及真实table/ordering/草稿升级 |
+| Agent 6 / PR / Merge | 2 min | 两次审查PASS；同PR313，未merge |
+| Staging Deploy | N/A | 不需服务器发布 |
+| Staging Acceptance | N/A | 既有独立模拟器本机草稿 |
+| APK Build / Device Upgrade | 1 min | 同证书更新、UID/4项数据哈希校验 |
+| Evidence / Governance | 2 min | 复用authority/link校验与交付metadata同步 |
+| Total | ~10 min wall-clock rounded | Start16:33:35 UTC; final evidence 16:42:37 UTC |

@@ -10,7 +10,7 @@ repository:
 phase:
   current: PHASE_6
   package: ALLO_ANDROID_APK_20261113
-  status: OWNER_ORDERING_BANNER_SIMPLIFICATION_IN_PROGRESS
+  status: ANDROID_1_0_2_CLEAN_ORDERING_ACCEPTED_INSTALLED_NO_SERVER_MUTATION
   next_phase_authorized: false
   authorization: OWNER_20261113_ANDROID_ORDERING_NO_PRINT_BANNER_OR_CACHE_INFO_KEEP_TABLE_BANNER_NO_SERVER_RELEASE
   implementation_base_sha: c55b816ed2b2dbbb931947a460c788e538e7903b
@@ -444,23 +444,25 @@ uber_store_capability:
 allo_android:
   application_id: com.allonouilles.pos
   label: Allo_Nouilles_POS
-  version_name: 1.0.1
-  version_code: 2
+  version_name: 1.0.2
+  version_code: 3
   signing: DEBUG_NO_RELEASE_KEY_CONFIGURED
-  source_sha: 40ddc684de685195cca5409104a6e7a4af9ff8ec
-  apk_sha256: bfd01bcc4a0e712f3a1bc7faf30b0efb92bccf5e981523ca059a81b762bf2412
-  apk_relative_path: dist/android/allo-nouilles-pos-v1.0.1-debug.apk
+  source_sha: 0b98ee271c26b56fb344868a489c4579a11e25fa
+  apk_sha256: c522f6ffc6e9d9ba02de145aa49fde4239d5a4620cd53bef279f777c465267e4
+  apk_relative_path: dist/android/allo-nouilles-pos-v1.0.2-debug.apk
   api_target: https://pos.allonouilles.com
   emulator: API35_DEDICATED_FRESH_AVD
   hardware: OWNER_API36_IN_PLACE_INSTALLED_NO_BINDING_OR_PRINT
   legacy_app_identity_signing_default_server_and_assets: VERIFIED_UNCHANGED
-  evidence: ../commercialization/merchants/allo-nouille/ANDROID_ACTION_BUTTONS_REPAIR_20261113.md
+  evidence: ../commercialization/merchants/allo-nouille/ANDROID_ORDERING_SIMPLIFICATION_20261113.md
   local_draft_upgrade: PASS_SAME_DRAFT_ID_A6_QUANTITY1_PRICE7_99
   action_hit_targets: PASS_ALL_THREE_VISIBLE_ENABLED
+  ordering_notices: HIDDEN_PRINT_HEALTH_AND_ROUTINE_CACHE_INFO_TABLE_HEALTH_RETAINED
+  native_prefs_and_indexeddb_upgrade: PASS_4_DATA_FILE_HASHES_IDENTICAL
 
 gate:
   type: TECHNICAL
-  next_action: REVIEW_BUILD_VERIFY_CLEAN_ORDERING_APK_PRESERVE_DRAFTS
+  next_action: STOP_CLEAN_ORDERING_INSTALLED_NO_FURTHER_MUTATION
 
 authorization:
   dining_table_soft_delete: OWNER_20261024_ALL_STORE_IS_ACTIVE_SOFT_DELETE_ACTIVE_ORDER_GUARD_CACHE_AND_NEW_ORDER_BLOCK_IMPLEMENT_TEST_REVIEW_MERGE_STAGING_DIRECT_PRODUCTION_PRESERVE_HISTORY_AB_SPLIT_LABELS_PRINTING_AND_UBER_NO_REAL_TEST_ORDERS
@@ -492,4 +494,4 @@ authorization:
   allo_production: COMPLETED_OWNER_20261113_EXACT_B7893860_BACKEND_CORS_ONLY_NO_STANDING_MUTATION_AUTHORITY
 
 stop:
-  marker: ALLO_ORDERING_CLEANUP_ONLY_NO_SERVER_OR_DATA_CLEAR
+  marker: ALLO_ANDROID_1_0_2_INSTALLED_STOP_NO_SERVER_DATA_CLEAR_OR_PRINT
