@@ -92,16 +92,21 @@ public class AlloBundledLaunchTest {
             evaluate(activity, "(function(){const v=" + values + ";document.querySelectorAll('input').forEach((e,i)=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(e,v[i]);e.dispatchEvent(new Event('input',{bubbles:true}));});return true;})()");
             evaluate(activity, "document.querySelector('form').requestSubmit();true");
             waitForJavascript(activity, "!document.querySelector('input[type=password]')&&location.pathname!='/login'&&document.body.innerText.includes('Allô')", "authorized workspace");
+            evaluate(activity, "window.__alloQaRealtime=[];window.__alloQaInfo=console.info.bind(console);console.info=function(label,details){if(label==='[frontdesk-realtime]'&&details&&details.phase)window.__alloQaRealtime.push(details.phase);window.__alloQaInfo.apply(console,arguments);};true");
             navigate(activity, "/stores/1/frontdesk");
             waitForJavascript(activity, "document.body.innerText.includes('TEST 1')", "frontdesk tables");
+            waitForJavascript(activity, "window.__alloQaRealtime.includes('CONNECTED')", "actual bundled SockJS/STOMP connection");
             navigate(activity, "/stores/1/frontdesk/menu?slot=TEST%201&table=TEST%201&type=dine_in");
-            waitForJavascript(activity, "document.body.innerText.includes('A1')&&document.body.innerText.includes('4.99')", "Allô menu and price");
+            waitForJavascript(activity, "Array.from(document.querySelectorAll('[role=button]')).some(e=>e.querySelector('h3')&&e.innerText.includes('A1')&&e.innerText.includes('4.99'))", "loaded Allô menu card and price");
+            Thread.sleep(500); // Let the compositor display the verified DOM before evidence capture.
             screenshot(context, "allo-menu.png");
             navigate(activity, "/stores/1/admin/settings/printing");
-            waitForJavascript(activity, "document.body.innerText.includes('MOCK')", "read-only Print Center");
+            waitForJavascript(activity, "Array.from(document.querySelectorAll('button')).some(e=>e.innerText.startsWith('MOCK')&&e.disabled)&&Array.from(document.querySelectorAll('button')).some(e=>e.innerText.includes('PAD_DIRECT')&&!e.disabled)", "loaded read-only Print Center in MOCK mode");
             assertEquals("true", evaluate(activity, "typeof RestaurantPrinter.printRawTcp==='function'&&typeof RestaurantPadDevice.getDeviceStatus==='function'"));
             String status = evaluate(activity, "RestaurantPadDevice.getDeviceStatus()");
             assertFalse("unpaired native device", new JSONObject((String)new org.json.JSONTokener(status).nextValue()).getBoolean("paired"));
+            evaluate(activity, "Array.from(document.querySelectorAll('div')).find(e=>e.childElementCount===0&&/^(Print Center|打印中心|Centre d’impression)$/.test(e.innerText))?.scrollIntoView();true");
+            Thread.sleep(500);
             screenshot(context, "allo-print-center.png");
         } finally {
             input.delete();
