@@ -129,15 +129,19 @@ public class AlloBundledLaunchTest {
         }
         Activity activity = instrumentation.startActivitySync(new Intent(context, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         try {
+            waitForJavascript(activity, "window.__RESTAURANT_APP_CONFIG__?.mode==='BUNDLED_ASSETS'", "bundled document ready");
+            navigate(activity, "/login");
             waitForJavascript(activity, "document.querySelectorAll('input').length===2", "empty login form");
             String values = "[" + JSONObject.quote(account.getString("username")) + "," + JSONObject.quote(account.getString("password")) + "]";
             evaluate(activity, "(function(){const v=" + values + ";document.querySelectorAll('input').forEach((e,i)=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(e,v[i]);e.dispatchEvent(new Event('input',{bubbles:true}));});return true;})()");
             evaluate(activity, "document.querySelector('form').requestSubmit();true");
             waitForJavascript(activity, "!document.querySelector('input[type=password]')&&location.pathname!='/login'", "authorized workspace");
-            evaluate(activity, "window.__qaBlockedMutations=[];const qaFetch=window.fetch;window.fetch=function(input,init){const method=((init&&init.method)||(input&&input.method)||'GET').toUpperCase();if(method!=='GET'&&method!=='HEAD'&&method!=='OPTIONS'){window.__qaBlockedMutations.push(method);return Promise.reject(new Error('QA blocks business writes'));}return qaFetch(input,init);};true");
+            evaluate(activity, "window.__qaBlockedMutations=[];window.__qaContextLoaded=false;const qaFetch=window.fetch;window.fetch=function(input,init){const method=((init&&init.method)||(input&&input.method)||'GET').toUpperCase();if(method!=='GET'&&method!=='HEAD'&&method!=='OPTIONS'){window.__qaBlockedMutations.push(method);return Promise.reject(new Error('QA blocks business writes'));}return qaFetch(input,init).then(r=>{if(r.url.includes('/orders/open-editable?'))r.clone().json().then(()=>{window.__qaContextLoaded=true;});return r;});};true");
             navigate(activity, "/stores/1/frontdesk/menu?slot=TEST%204&table=TEST%204&type=dine_in");
             waitForJavascript(activity, "Array.from(document.querySelectorAll('[role=button] h3')).some(e=>e.innerText.startsWith('A6 '))&&document.querySelector('.order-summary-panel')?.innerText.includes('local-draft-')", "emulator local draft and menu");
             waitForJavascript(activity, "!!document.querySelector('h1')?.nextElementSibling&&!/加载|Loading|Chargement/.test(document.querySelector('h1').nextElementSibling.innerText)", "local draft initialization completed");
+            waitForJavascript(activity, "window.__qaContextLoaded===true", "server context read completed before local editing");
+            Thread.sleep(200);
             evaluate(activity, "if(!document.querySelector('.order-summary-list-safe').innerText.includes('A6 ')){Array.from(document.querySelectorAll('[role=button]')).find(e=>e.querySelector('h3')?.innerText.startsWith('A6 ')).querySelector('button').click();}true");
             waitForJavascript(activity, "document.querySelector('.order-summary-list-safe').innerText.includes('A6 ')", "local item persisted");
             Thread.sleep(500);
@@ -191,6 +195,11 @@ public class AlloBundledLaunchTest {
             if ("true".equals(evaluate(activity, condition))) return;
             Thread.sleep(200);
         } while (System.currentTimeMillis()<deadline);
+        Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        screenshot(context, "acceptance-timeout.png");
+        try (FileOutputStream output = new FileOutputStream(new File(context.getExternalFilesDir(null), "acceptance-timeout.json"))) {
+            output.write(evaluate(activity, "JSON.stringify({path:location.pathname,text:document.body.innerText.slice(0,2000),inputs:document.querySelectorAll('input').length})").getBytes(StandardCharsets.UTF_8));
+        }
         fail("Timed out: " + step);
     }
 
