@@ -1,5 +1,6 @@
 import type { BackendServingShelfItem, RealtimeUpdateMessage } from '../types/kds'
-import { apiRequest } from './apiClient'
+import { apiRequest, getAccessToken } from './apiClient'
+import { sockJsEndpoint } from './sockJsEndpoint'
 
 const request = apiRequest
 
@@ -35,7 +36,11 @@ export function subscribeToServingShelf(
           : ((sockJsModule as unknown as { SockJS?: typeof SockJSImport }).SockJS ?? SockJSImport)
 
       const client = new ClientCtor({
-        webSocketFactory: () => new SockJSCtor('/ws'),
+        webSocketFactory: () => new SockJSCtor(sockJsEndpoint()),
+        beforeConnect: () => {
+          const token = getAccessToken()
+          client.connectHeaders = token ? { Authorization: `Bearer ${token}` } : {}
+        },
         reconnectDelay: 3000,
       })
 

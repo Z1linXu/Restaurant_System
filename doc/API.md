@@ -345,6 +345,13 @@ checks remain mandatory.
 > parity planning is current; no Production configuration read or runtime
 > mutation is authorized by this documentation change.
 
+> Allô Android bundled transport: the `allo-test` backend profile additionally
+> allows the exact Origin `https://restaurant-pad.local` for `/api/**`. HTTP,
+> lookalike hosts and alternate ports are not accepted. This does not broaden
+> the separate `template-test` profile or change authentication, Store scope,
+> device proof or authenticated STOMP. Allô ingress already accepts the bundled
+> Origin on `/ws`; the APK uses `wss://pos.allonouilles.com/ws`.
+
 ## Runtime acceptance boundary
 
 The synthetic Staging topology/source evidence is not a public API acceptance

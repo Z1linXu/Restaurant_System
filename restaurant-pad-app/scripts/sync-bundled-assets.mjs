@@ -17,8 +17,10 @@ import { fileURLToPath } from 'node:url'
 const scriptDirectory = dirname(fileURLToPath(import.meta.url))
 const padRoot = resolve(scriptDirectory, '..')
 const repositoryRoot = resolve(padRoot, '..')
-const frontendDist = resolve(repositoryRoot, 'frontend/dist')
-const androidAssets = resolve(padRoot, 'android/app/src/main/assets/web')
+const flavor = process.env.BUNDLED_ANDROID_FLAVOR ?? 'lanzhou'
+if (!['lanzhou', 'allo'].includes(flavor)) throw new Error('Unknown Android flavor')
+const frontendDist = resolve(repositoryRoot, flavor === 'allo' ? 'restaurant-pad-app/web/allo-dist' : 'frontend/dist')
+const androidAssets = resolve(padRoot, `android/app/src/${flavor === 'allo' ? 'allo' : 'main'}/assets/web`)
 const offlineDatabaseSource = resolve(repositoryRoot, 'frontend/src/offline/offlineDatabase.ts')
 const manifestPath = resolve(androidAssets, 'asset-manifest.json')
 const buildInfoPath = resolve(androidAssets, 'build-info.json')
@@ -124,6 +126,7 @@ async function createManifest(buildVersion) {
     offlineDatabaseSchemaVersion,
     entrypoints,
     assets,
+    ...(flavor === 'allo' ? { merchant: 'allo', apiBaseUrl: 'https://pos.allonouilles.com', deploymentNamespace: 'allo-nouilles' } : {}),
   }
   const manifestContent = `${JSON.stringify(manifest, null, 2)}\n`
   await writeFile(manifestPath, manifestContent, 'utf8')
@@ -147,6 +150,9 @@ async function verifyAssets() {
 
   if (manifest.manifestVersion !== 1) {
     fail(`unsupported manifest version: ${manifest.manifestVersion}`)
+  }
+  if (flavor === 'allo' && (manifest.merchant !== 'allo' || manifest.apiBaseUrl !== 'https://pos.allonouilles.com' || manifest.deploymentNamespace !== 'allo-nouilles')) {
+    fail('Allô merchant/API/namespace metadata mismatch')
   }
   if (!manifest.buildVersion || manifest.buildVersion !== buildInfo.buildVersion) {
     fail('build version differs between manifest and build info')
@@ -184,6 +190,16 @@ async function syncAssets() {
   await rm(androidAssets, { recursive: true, force: true })
   await mkdir(androidAssets, { recursive: true })
   await cp(frontendDist, androidAssets, { recursive: true })
+  if (flavor === 'allo') {
+    const logo = resolve(androidAssets, 'merchant/logo.png')
+    await mkdir(dirname(logo), { recursive: true })
+    await cp(resolve(padRoot, 'android/app/src/allo/res/drawable-nodpi/allo_logo.png'), logo)
+    const index = resolve(androidAssets, 'index.html')
+    const html = (await readFile(index, 'utf8'))
+      .replace(/<title>[^<]*<\/title>/, '<title>Allô Nouilles POS</title>')
+      .replace('type="image/svg+xml" href="/favicon.svg"', 'type="image/png" href="/merchant/logo.png"')
+    await writeFile(index, html)
+  }
   const buildVersion = process.env.BUNDLED_BUILD_VERSION
     || process.env.VITE_APP_BUILD_VERSION
     || defaultBuildVersion()

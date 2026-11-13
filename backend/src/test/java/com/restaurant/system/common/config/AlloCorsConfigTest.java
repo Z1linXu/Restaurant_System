@@ -14,10 +14,21 @@ class AlloCorsConfigTest {
    var r=new Registry(); c.getBean(TemplateTestCorsConfig.class).addCorsMappings(r);
    assertThat(r.api().checkOrigin("https://test.lanzhounoodlesmtl.com")).isEqualTo("https://test.lanzhounoodlesmtl.com");
    assertThat(r.api().checkOrigin("https://pos.allonouilles.com")).isEqualTo("https://pos.allonouilles.com");
+   assertThat(r.api().checkOrigin("https://restaurant-pad.local")).isEqualTo("https://restaurant-pad.local");
+   assertThat(r.api().checkOrigin("http://restaurant-pad.local")).isNull();
+   assertThat(r.api().checkOrigin("https://restaurant-pad.local:444")).isNull();
+   assertThat(r.api().checkOrigin("https://restaurant-pad.local.attacker.invalid")).isNull();
    assertThat(r.api().checkOrigin("http://pos.allonouilles.com")).isNull();
    assertThat(r.api().checkOrigin("http://127.0.0.1:28182")).isNull();
    assertThat(r.api().checkOrigin("https://attacker.invalid")).isNull();
    assertThat(r.api().checkOrigin("https://test.lanzhounoodlesmtl.com:444")).isNull();
+  }
+ }
+ @Test void bundledOriginIsNotAddedToOtherTemplateProfile() {
+  try(var c=new AnnotationConfigApplicationContext()) {
+   c.getEnvironment().setActiveProfiles("template-test");c.register(TemplateTestCorsConfig.class);c.refresh();
+   var r=new Registry();c.getBean(TemplateTestCorsConfig.class).addCorsMappings(r);
+   assertThat(r.api().checkOrigin("https://restaurant-pad.local")).isNull();
   }
  }
  @Test void productionKeepsOriginalConfiguration() {
