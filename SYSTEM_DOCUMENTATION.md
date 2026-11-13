@@ -9912,7 +9912,10 @@ Item notes remain attached to their own line. Old context/artifact interpretatio
 and saved original-copy bytes are preserved. ESC/POS consumes this same renderer
 text; MOCK proof does not certify physical paper or codepage behavior.
 
-Rollback retains additive V43 and new orders. Frontend rollback can retain the
-new backend; an old backend cannot safely consume queued note-aware submissions
-or updates. Such work must first be confirmed/drained by the new backend rather
-than restoring a database or silently dropping its fields.
+Rollback retains additive V43 and new orders. After the new UI is exposed,
+forward fix is the default: an old frontend also ignores unsent local notes and
+frozen updates, even with a new backend. Any frontend/backend downgrade requires
+proof that every affected client has no such pending draft or intent; server
+outbox checks alone are insufficient. Note-aware work must first be confirmed/
+drained with the new clients/backend. Never restore over current orders or
+silently drop these fields.
