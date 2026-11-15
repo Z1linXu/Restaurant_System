@@ -944,7 +944,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         if (PrintModuleCode.HOT_KITCHEN.equals(moduleCode) && !hasPrintableContent(moduleCode, order.store_id, order.id)) {
             throw new BusinessException("Order has no HOT_KITCHEN content to reprint");
         }
-        if (receiptContexts != null) {
+        if (receiptContexts != null && !alloPrintingPolicy.allowsPadDirect(store)) {
             var candidates = printJobRepository.findAllByStoreIdAndOrderId(order.store_id, orderId).stream()
                 .filter(j -> moduleCode.equals(j.module_code) && j.order_update_batch_id == null && j.reprintSourceJobId == null
                     && com.restaurant.system.delivery.ReceiptContextService.hasContext(j)).toList();
@@ -1199,6 +1199,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                 .toList();
         }
         PrintRenderRequest request = new PrintRenderRequest();
+        request.allo_current = alloPrintingPolicy.allowsPadDirect(store);
         request.module_code = moduleCode;
         request.store = store;
         diningTableDisplayService.apply(order);
@@ -1211,11 +1212,22 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         request.order_update_batch_id = orderUpdateBatchId;
         request.printing_rules = ruleContext;
         request.receipt_context = receiptContexts == null ? null : receiptContexts.forEvent(store,moduleCode,orderId,orderUpdateBatchId);
+        if (request.allo_current && com.restaurant.system.printing.service.ManualReprintService.currentIntent()!=null) {
+            request.order_items = com.restaurant.system.allo.AlloMoney.effectiveItems(orderItems);
+            var quantities = request.order_items.stream().collect(java.util.stream.Collectors.toMap(i->i.id,i->i.quantity));
+            var originalItems = orderItems;
+            request.kitchen_tasks = kitchenTasks.stream().filter(t->quantities.containsKey(t.order_item_id)).map(t->{
+                var copy=new KitchenTask();com.restaurant.system.allo.AlloCopies.copy(t,copy);
+                var original=originalItems.stream().filter(i->i.id.equals(t.order_item_id)).findFirst().orElseThrow();
+                copy.quantity=(t.quantity==null?1:t.quantity)*quantities.get(t.order_item_id)/original.quantity;return copy;
+            }).toList();
+            request.receipt_context = receiptContexts == null ? null : receiptContexts.freeze(store,moduleCode,orderId,null);
+        }
         if (request.receipt_context != null) {
             Set<Long> frozenIds = new java.util.HashSet<>(request.receipt_context.order_item_ids);
-            request.order_items = orderItems.stream().filter(i -> frozenIds.contains(i.id)).toList();
+            request.order_items = request.order_items.stream().filter(i -> frozenIds.contains(i.id)).toList();
             request.order_item_options = orderItemOptions.stream().filter(i -> frozenIds.contains(i.order_item_id)).toList();
-            request.kitchen_tasks = kitchenTasks.stream().filter(i -> frozenIds.contains(i.order_item_id)).toList();
+            request.kitchen_tasks = request.kitchen_tasks.stream().filter(i -> frozenIds.contains(i.order_item_id)).toList();
         }
         return request;
     }
@@ -1327,7 +1339,10 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
     }
 
     private String buildPayloadSnapshot(String moduleCode, Long storeId, Long orderId, String source) {
-        return "{\"source\":\"" + source + "\",\"module_code\":\"" + moduleCode + "\",\"store_id\":" + storeId + ",\"order_id\":" + orderId + "}";
+        String payload = "{\"source\":\"" + source + "\",\"module_code\":\"" + moduleCode + "\",\"store_id\":" + storeId + ",\"order_id\":" + orderId + "}";
+        if ("ORDER_CENTER_REPRINT".equals(source) && receiptContexts!=null && alloPrintingPolicy.allowsPadDirect(storeId))
+            return receiptContexts.withContext(payload,receiptContexts.freeze(storeRepository.findById(storeId).orElseThrow(),moduleCode,orderId,null));
+        return payload;
     }
 
     private boolean markCloudPrivatePrinterBlocked(PrintJob job, PrinterConfig printer) {

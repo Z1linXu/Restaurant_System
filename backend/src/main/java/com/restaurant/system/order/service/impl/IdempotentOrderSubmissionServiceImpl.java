@@ -115,7 +115,10 @@ public class IdempotentOrderSubmissionServiceImpl implements IdempotentOrderSubm
         createRequest.order_notes = request.order_notes;
         createRequest.items = request.items;
 
-        OrderResponse order = orderService.createOrReplaceDraftAndSubmit(createRequest, request.server_order_id);
+        OrderResponse order = com.restaurant.system.allo.AlloLegacySpice.withFrozen(
+            "ALLO_NOUILLES_TEST".equals(store.code) && request.menu_revision != null && store.menu_revision != null
+                && request.menu_revision < store.menu_revision,
+            () -> orderService.createOrReplaceDraftAndSubmit(createRequest, request.server_order_id));
         submission.organizationId = store.organization_id;
         submission.orderId = order.id;
         submission.status = STATUS_COMPLETED;

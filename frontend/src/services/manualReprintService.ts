@@ -99,8 +99,9 @@ export function followReprint(job: PrintJobRecord, update: (job: PrintJobRecord)
     if (stopped || ++polls > 30) return
     try {
       const path = job.order_id ? `/api/v1/orders/${job.order_id}/print-jobs` : `/api/v1/admin/printing/jobs?store_id=${job.store_id}`
-      const jobs = await apiRequest<PrintJobRecord[]>(path)
-      const current = jobs.find(candidate => candidate.id === job.id)
+      const current = job.receipt_type==='SALES_OVERVIEW'
+        ? await apiRequest<PrintJobRecord>(`/api/v1/allo/stores/${job.store_id}/sales/reports/jobs/${job.id}`)
+        : (await apiRequest<PrintJobRecord[]>(path)).find(candidate => candidate.id === job.id)
       if (!stopped && current) {
         update(current)
         if (['PRINTED', 'FAILED', 'CANCELLED'].includes(current.status)) return

@@ -23,9 +23,13 @@ public class ReceiptPresentation {
     public List<Long> kitchen_excluded_item_ids = new ArrayList<>();
     public Map<String, String> item_names = new LinkedHashMap<>();
     public Map<String, String> option_names = new LinkedHashMap<>();
+    public BigDecimal discount;
+    public BigDecimal tax;
     public BigDecimal subtotal;
     public BigDecimal total;
     /** New Allô updates allocate tax from the rounded order delta. Absent on historical contexts. */
+    public Boolean financial_v2;
+    public BigDecimal update_discount;
     public BigDecimal update_subtotal;
     public BigDecimal update_total;
     /** Captured only for new GRAB intents; absence on old contexts never reads current notes. */
@@ -45,7 +49,7 @@ public class ReceiptPresentation {
         }
         if (hasFrozenUpdateAmounts() && (update_subtotal == null || update_total == null
                 || !exactCents(update_subtotal) || !exactCents(update_total)
-                || update_subtotal.signum() < 0 || update_total.compareTo(update_subtotal) < 0)) {
+                || update_subtotal.signum() < 0 || (Boolean.TRUE.equals(financial_v2) ? update_total.signum() < 0 : update_total.compareTo(update_subtotal) < 0))) {
             throw new BusinessException("RECEIPT_UPDATE_TOTALS_INVALID");
         }
     }

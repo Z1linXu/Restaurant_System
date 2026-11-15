@@ -48,6 +48,7 @@ public class HotKitchenReceiptRenderer implements ReceiptRenderer {
 
     @Override
     public String render(PrintRenderRequest request) {
+        com.restaurant.system.allo.AlloReceiptSupport.merge(request);
         List<KitchenTask> tasks = eligibilityService.resolveHotKitchenTasks(request);
         PrintingDisplayRuleContext printingRules = request.printing_rules;
         if (tasks.isEmpty()) {
@@ -93,7 +94,12 @@ public class HotKitchenReceiptRenderer implements ReceiptRenderer {
         builder.append(PrintMarkup.large("HOT KITCHEN")).append("\n");
         if (!dineIn) builder.append("--------------------------------\n");
 
-        for (AggregatedHotKitchenTask task : aggregateTasks(tasks, itemById, optionsByItemId, printingRules)) {
+        List<AggregatedHotKitchenTask> output = request.allo_current ? tasks.stream().map(task -> {
+            OrderItem item=itemById.get(task.order_item_id);
+            KitchenTask displayed=applyHotKitchenDisplayRules(task,item,optionsByItemId.getOrDefault(task.order_item_id,List.of()),printingRules);
+            return new AggregatedHotKitchenTask(displayed,item,displayed.quantity == null ? 1 : displayed.quantity,null);
+        }).toList() : aggregateTasks(tasks,itemById,optionsByItemId,printingRules);
+        for (AggregatedHotKitchenTask task : output) {
             appendTask(builder, task);
         }
 

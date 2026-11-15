@@ -317,6 +317,13 @@ export interface BackendOrderResponse {
   table_display_name?: string | null
   pickup_no: string | null
   subtotal_amount: number
+  financial_version?: number
+  financial_adjusted?: boolean
+  discount_type?: string | null
+  discount_value?: number | null
+  discount_name?: string | null
+  net_amount?: number
+  tax_amount?: number
   discount_amount: number
   total_amount: number
   submitted_at: string | null

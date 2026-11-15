@@ -92,19 +92,24 @@ public class OrderController {
     public ApiResponse<OrderResponse> findOpenEditableOrder(
         @RequestParam Long store_id,
         @RequestParam(required = false) String table_no,
-        @RequestParam(required = false) String pickup_no
+        @RequestParam(required = false) String pickup_no,
+        @RequestParam(required=false) Integer financial_view
     ) {
         authorizationService.requireForStore(store_id, Capability.ORDER_VIEW_DETAIL);
         requireOrdering(store_id);
-        return ApiResponse.success(orderService.findOpenEditableOrder(store_id, table_no, pickup_no));
+        return ApiResponse.success(com.restaurant.system.allo.AlloLegacyOrderView.project(orderService.findOpenEditableOrder(store_id, table_no, pickup_no),financial_view));
     }
 
+    public ApiResponse<OrderResponse> findOpenEditableOrder(Long store, String table, String pickup) {return findOpenEditableOrder(store,table,pickup,null);}
+
     @GetMapping("/{id}")
-    public ApiResponse<OrderResponse> getOrderDetail(@PathVariable Long id) {
+    public ApiResponse<OrderResponse> getOrderDetail(@PathVariable Long id,@RequestParam(required=false) Integer financial_view) {
         authorizationService.requireOrder(id, Capability.ORDER_VIEW_DETAIL);
         requireOrdering(resolveOrderStoreId(id));
-        return ApiResponse.success(orderService.getOrderDetail(id));
+        return ApiResponse.success(com.restaurant.system.allo.AlloLegacyOrderView.project(orderService.getOrderDetail(id),financial_view));
     }
+
+    public ApiResponse<OrderResponse> getOrderDetail(Long id) { return getOrderDetail(id,null); }
 
     @PutMapping("/{id}/draft-header")
     public ApiResponse<OrderResponse> updateDraftOrderHeader(
@@ -194,13 +199,15 @@ public class OrderController {
     }
 
     @PostMapping("/{id}/complete")
-    public ApiResponse<OrderResponse> completeOrder(@PathVariable Long id, HttpServletRequest servletRequest) {
+    public ApiResponse<OrderResponse> completeOrder(@PathVariable Long id, HttpServletRequest servletRequest,@RequestParam(required=false) Integer financial_view) {
         var user = authorizationService.requireOrder(id, Capability.ORDER_COMPLETE);
         requireOrdering(resolveOrderStoreId(id));
         OrderResponse response = orderService.completeOrder(id);
         auditLogService.record(user.storeId(), user, "ORDER_FINISHED", "ORDER", id, "Finished table/order", Map.of(), servletRequest);
-        return ApiResponse.success("Order completed", response);
+        return ApiResponse.success("Order completed",com.restaurant.system.allo.AlloLegacyOrderView.project(response,financial_view));
     }
+
+    public ApiResponse<OrderResponse> completeOrder(Long id,HttpServletRequest request) {return completeOrder(id,request,null);}
 
     @PostMapping("/{id}/reprint")
     public ApiResponse<PrintJobResponse> reprintOrderReceipt(

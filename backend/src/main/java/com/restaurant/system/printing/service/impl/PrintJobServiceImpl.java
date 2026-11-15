@@ -217,6 +217,8 @@ public class PrintJobServiceImpl implements PrintJobService {
     @Transactional
     public PrintJob markPadDirectQueued(PrintJob job, PrinterConfig printer, String fontSize) {
         PrintJob target = requireJob(job.id);
+        if (target.reprintSourceJobId == null && alloPrintingPolicy.allowsPadDirect(target.store_id))
+            fontSize = com.restaurant.system.allo.AlloReceiptSupport.font(fontSize);
         if (!PrintJobStatus.PENDING.equals(target.status)) throw new BusinessException("An existing active or terminal job cannot be requeued; create a new manual reprint");
         boolean protectedArtifact = ReceiptArtifact.protects(target);
         if (!protectedArtifact && ("GRAB".equals(target.module_code) || "FRONTDESK_RECEIPT".equals(target.module_code))

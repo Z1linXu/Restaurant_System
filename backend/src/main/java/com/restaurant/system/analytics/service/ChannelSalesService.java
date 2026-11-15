@@ -47,7 +47,7 @@ public class ChannelSalesService {
                         : new Line(itemKey(item.item_sku_snapshot, "LOCAL_" + item.menu_item_id),
                             item.item_name_snapshot_zh == null ? item.item_name_snapshot_en : item.item_name_snapshot_zh,
                             SalesReporting.group(item.category_code_snapshot, item.item_sku_snapshot),
-                            item.quantity == null ? 0 : item.quantity, allocated.revenue());
+                            item.quantity == null ? 0 : com.restaurant.system.allo.AlloMoney.effectiveQuantity(item), allocated.revenue());
                 }).toList();
                 sales.add(new Sale("POS:" + order.id, storeId, order.submitted_at, false, SalesReporting.money(order.total_amount), lines));
             }

@@ -79,6 +79,7 @@ public class ReceiptContextService {
         if(!lines.isEmpty())for(var option:options.findAllByOrderItemIds(context.order_item_ids))
             context.option_names.put(String.valueOf(option.id),resolve(context.language,option.option_name_snapshot_zh,option.option_name_snapshot_en,option.option_name_snapshot_fr));
         context.subtotal=order.subtotal_amount;context.total=order.total_amount;
+        context.discount=order.discount_amount; context.tax=order.tax_amount;
         if (batch != null && "FRONTDESK_RECEIPT".equals(module)) {
             freezeUpdateAmounts(context, order, allLines, batch);
         }
@@ -86,6 +87,15 @@ public class ReceiptContextService {
     }
 
     private void freezeUpdateAmounts(ReceiptPresentation context, Order order, List<OrderItem> allLines, Long batch) {
+        if (printingPolicy.allowsPadDirect(order.store_id)) {
+            BigDecimal added=allLines.stream().filter(i->batch.equals(i.order_update_batch_id))
+                .map(com.restaurant.system.allo.AlloMoney::effectiveLine).reduce(BigDecimal.ZERO,BigDecimal::add);
+            BigDecimal previous=order.subtotal_amount.subtract(added);
+            var before=com.restaurant.system.allo.AlloMoney.calculate(previous,order.discount_type,order.discount_value,false);
+            context.financial_v2=true;context.update_subtotal=added;
+            context.update_discount=order.discount_amount.subtract(before.discount());
+            context.update_total=order.total_amount.subtract(before.total());return;
+        }
         // Called by the existing outbox enqueue inside the locked add-only order transaction.
         // This bounded contract supports the current zero-discount, one-rate in-store model.
         BigDecimal previousSubtotal = BigDecimal.ZERO.setScale(2);

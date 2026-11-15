@@ -15,6 +15,7 @@ public class CreateOrderUpdateRequest {
     public String order_notes;
 
     public Integer expected_revision;
+    public Integer financial_version;
 
     @Valid
     public List<CreateOrderItemRequest> items = new ArrayList<>();

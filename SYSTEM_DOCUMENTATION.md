@@ -9929,3 +9929,23 @@ proof that every affected client has no such pending draft or intent; server
 outbox checks alone are insufficient. Note-aware work must first be confirmed/
 drained with the new clients/backend. Never restore over current orders or
 silently drop these fields.
+
+## Allô financial and printing extension (V44)
+
+The independent Allô opt-in has a single BigDecimal order-money calculation,
+cumulative item void quantities, one pre-tax discount rule and mandatory
+transactional adjustment snapshots. Original item/option prices remain immutable;
+financial changes never cancel/requeue leases or automatically send cancellation
+or reprint tickets. Before/after snapshots retain discount type/value/name and
+observed job/outbox identities plus the explicit preserve-printing policy.
+
+Allô Dashboard and Sales Overview read the same live completed-order projection;
+reports freeze that data and enqueue one non-order FRONTDESK_RECEIPT-routed job.
+Original submitted Store-local dates determine revenue attribution, including
+historical Takeout repair. Direct Takeout completes in submission, without using
+Finish's task cancellation. Existing old Pad order/print protocols remain usable;
+new interface assets require Allô APK1.1.0/code5. Old financial displays receive
+net-allocated view copies; new adjusted-order additions require the v2 client.
+No IndexedDB migration or native Worker/Bridge source change is introduced.
+See [current API contract](doc/API.md#allô-financial-adjustments-and-sales-overview-v44)
+and [bounded delivery evidence](docs/commercialization/merchants/allo-nouille/SALES_PRINTING_20261115.md).

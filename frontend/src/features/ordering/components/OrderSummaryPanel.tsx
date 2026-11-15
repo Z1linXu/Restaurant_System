@@ -14,6 +14,7 @@ interface OrderSummaryPanelProps {
   onUpdateOrderNotes?: (notes: string) => void
   session: OrderSession
   slotDisplayName?: string
+  confirmedFinancial?: {discount:number;net:number;pending:number}
   subtotal: number
   tax: number
   total: number
@@ -43,6 +44,7 @@ export function OrderSummaryPanel({
   onUpdateOrderNotes,
   session,
   slotDisplayName,
+  confirmedFinancial,
   subtotal,
   tax,
   total,
@@ -155,6 +157,7 @@ export function OrderSummaryPanel({
             <span>{t('common.quantity')}: {itemCount}</span>
             <span>{t('order.subtotal')} ${subtotal.toFixed(2)}</span>
           </div>
+          {confirmedFinancial&&<><p className="text-sm font-semibold">当前服务器确认金额；新增菜品提交后由服务器重算。</p><div className="flex justify-between"><span>折扣</span><span>${confirmedFinancial.discount.toFixed(2)}</span></div><div className="flex justify-between"><span>税前净额</span><span>${confirmedFinancial.net.toFixed(2)}</span></div>{confirmedFinancial.pending>0&&<p>待提交新增菜品（折扣前）：${confirmedFinancial.pending.toFixed(2)}</p>}</>}
           <div className={`flex items-center justify-between text-[rgba(83,58,50,0.82)] ${compact ? 'text-[0.86rem]' : 'text-base'}`}>
             <span>{t('order.tax')} ({TAX_RATE_LABEL})</span>
             <span>${tax.toFixed(2)}</span>

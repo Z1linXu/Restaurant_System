@@ -38,6 +38,10 @@ public class TemplateMenuService {
  public void setAddonResolver(com.restaurant.system.menu.addon.StoreAddonOptionResolver value){this.addonResolver=value;}
  @org.springframework.beans.factory.annotation.Autowired
  public void setAddons(com.restaurant.system.menu.addon.StoreAddonService value){this.addons=value;}
+ @org.springframework.beans.factory.annotation.Autowired(required=false)
+ private com.restaurant.system.printing.AlloProductionPrintingPolicy alloPrinting;
+ private boolean legacySpice(Long store,MenuItem item){return com.restaurant.system.allo.AlloLegacySpice.frozen()
+   && alloPrinting!=null && alloPrinting.allowsPadDirect(store) && item.sku!=null && item.sku.matches("AN_B[1-8]");}
  public TemplateMenuService(MenuItemRepository items,MenuItemOptionRepository options,
   TemplateItemOptionGroupRepository groups,TemplateStoreConfigurationRepository configs,
   MenuRevisionService revisions,ObjectMapper mapper,Environment env,MenuCategoryRepository categories) {
@@ -215,7 +219,7 @@ public class TemplateMenuService {
    }
    if(leaf.template_group_code==null && !(hasCombo && leaf.option_group!=null && leaf.option_group.startsWith("COMBO")))
       throw failure("TEMPLATE_OPTION_NOT_BOUND");
-   if(!Boolean.TRUE.equals(leaf.is_active))throw failure(leaf.store_addon_id==null?"TEMPLATE_OPTION_UNAVAILABLE":"ADDON_ASSIGNMENT_UNAVAILABLE");
+   if(!Boolean.TRUE.equals(leaf.is_active) && !(legacySpice(storeId,item) && ("allo_spicy_"+item.sku.toLowerCase(java.util.Locale.ROOT)+"_v1").equals(leaf.template_group_code) && "SPICY_LEVEL".equals(leaf.option_group)))throw failure(leaf.store_addon_id==null?"TEMPLATE_OPTION_UNAVAILABLE":"ADDON_ASSIGNMENT_UNAVAILABLE");
    if(o.parent_option_id_snapshot!=null&&!Objects.equals(o.parent_option_id_snapshot,leaf.parent_option_id))throw failure("TEMPLATE_OPTION_PARENT_MISMATCH");
    if(o.option_price_snapshot!=null && o.option_price_snapshot.compareTo(leaf.price_delta)!=0)throw failure(leaf.store_addon_id==null?"TEMPLATE_OPTION_PRICE_CHANGED":"ADDON_CATALOG_CHANGED");
    if(leaf.template_group_code!=null && o.option_code_snapshot!=null && !o.option_code_snapshot.equals(leaf.option_code))throw failure("TEMPLATE_OPTION_CODE_CHANGED");
@@ -225,7 +229,7 @@ public class TemplateMenuService {
   if(comboSelected && comboAdapter!=null)comboAdapter.validateSelected(storeId,selected);
   for(var g:groups.forItem(item.id)){
    long n=all.values().stream().filter(o->ids.contains(o.id)&&Objects.equals(g.group_code,o.template_group_code)).count();
-   if(!g.is_active && n>0)throw failure("TEMPLATE_GROUP_DISABLED");
+   if(!g.is_active && n>0 && !(legacySpice(storeId,item) && ("allo_spicy_"+item.sku.toLowerCase(java.util.Locale.ROOT)+"_v1").equals(g.group_code) && "SPICY_LEVEL".equals(g.kind)))throw failure("TEMPLATE_GROUP_DISABLED");
    if("SINGLE".equals(g.selection_mode) && selected.stream().anyMatch(o->all.containsKey(o.option_id) && Objects.equals(g.group_code,all.get(o.option_id).template_group_code) && o.quantity!=1))
        throw failure("TEMPLATE_GROUP_SELECTION_INVALID: single choice quantity must be one");
    if(g.is_active && !"COMBO".equals(g.kind) && ((g.required&&n==0)||("SINGLE".equals(g.selection_mode)&&n>1)))throw failure("TEMPLATE_GROUP_SELECTION_INVALID: "+g.name);
@@ -250,7 +254,7 @@ public class TemplateMenuService {
     selected.option_code_snapshot=o.option_code_snapshot;selected.option_group_snapshot=o.option_group_snapshot;
     selected.option_price_snapshot=o.price_delta;selected.parent_option_id_snapshot=o.parent_option_id_snapshot;request.options.add(selected);
    }
-   validateSelection(order.store_id,request);
+   com.restaurant.system.allo.AlloLegacySpice.withFrozen(true,()->{validateSelection(order.store_id,request);return null;});
   }
  }
  public void validateRefillEligibility(com.restaurant.system.order.entity.Order order,List<com.restaurant.system.order.entity.OrderItem> lines){

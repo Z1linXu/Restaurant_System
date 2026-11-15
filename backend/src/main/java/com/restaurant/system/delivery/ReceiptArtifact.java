@@ -60,15 +60,26 @@ public final class ReceiptArtifact {
         } catch (Exception invalid) { throw new BusinessException("RECEIPT_DIAGNOSTIC_INTENT_INVALID"); }
     }
 
+    public static boolean isSalesReport(PrintJob job) {
+        if(job==null||job.payload_snapshot==null)return false;
+        try {
+            JsonNode p=MAPPER.readTree(job.payload_snapshot);
+            if(!p.has("report_intent"))return false;
+            if(!"SALES_OVERVIEW".equals(job.receipt_type)||!"FRONTDESK_RECEIPT".equals(job.module_code)||job.order_id!=null
+                ||job.order_update_batch_id!=null||job.store_id==null||p.path("store_id").asLong(-1)!=job.store_id
+                ||!"ALLO_SALES_REPORT_V1".equals(p.path("report_intent").path("version").asText())||p.path("report_id").asText().isBlank())throw new IllegalArgumentException();
+            return true;
+        }catch(Exception e){throw new BusinessException("REPORT_INTENT_INVALID");}
+    }
     public static boolean protects(PrintJob job) {
-        return isTemplateJob(job) || ReceiptContextService.hasContext(job) || isDiagnosticJob(job);
+        return isTemplateJob(job) || ReceiptContextService.hasContext(job) || isDiagnosticJob(job) || isSalesReport(job);
     }
 
     public static void requirePadIntent(PrintJob job) {
         try {
             JsonNode payload = MAPPER.readTree(job.payload_snapshot);
             JsonNode intent = isTemplateJob(job) ? payload
-                : payload.path(isDiagnosticJob(job) ? "diagnostic_intent" : "receipt_context");
+                : payload.path(isSalesReport(job) ? "report_intent" : isDiagnosticJob(job) ? "diagnostic_intent" : "receipt_context");
             if (!"PAD_DIRECT".equals(intent.path("execution_mode").asText())) {
                 throw new IllegalArgumentException();
             }

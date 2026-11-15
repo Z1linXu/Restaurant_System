@@ -2393,3 +2393,67 @@ the configured UI name is exactly `Allô Nouilles`, because the installed GBK
 printers cannot encode `ô`. UI/MOCK branding and historical frozen contexts are
 unchanged. Strict encoding checks still reject unsupported order/item/note text;
 this is not a general lossy character replacement.
+
+### Allô financial adjustments and Sales Overview (V44)
+
+Closed opt-in: the verified independent Allô runtime and Store code only; other
+merchants retain existing behavior. `/api/v1/allo/stores/{storeId}/sales` uses
+existing authenticated Store membership and ORDER_VIEW_DETAIL /
+ORDER_MODIFY_SUBMITTED capabilities, including FRONTDESK. No manager PIN or tender.
+
+- GET `/orders/{id}`: original item snapshots, cumulative void quantities,
+  determined gross/discount/net/tax/total/collected, original business date,
+  current revision and immutable adjustment ledger.
+- POST `/orders/{id}/preview` and `/orders/{id}/adjustments`: `request_key`,
+  `expected_revision`, `action` (`VOID_ORDER`, `VOID_ITEMS`, `DISCOUNT`,
+  `REMOVE_DISCOUNT`), optional item_id/quantity rows, discount_type
+  (`PERCENT`/`AMOUNT`), discount_value/name and reason. Preview performs no writes.
+  Same-key/same-body replay is read-only; changed identity/content or revision
+  returns409. A pessimistic lock refreshes OSIV state before comparison. Only
+  the Store-local original submitted date may equal the current business day.
+  Financial writes, void counts and before/after ledger are one transaction;
+  audit failure rolls back everything. No financial offline queue.
+- GET/POST `/presets`: shared server presets, id/revision-guarded modification
+  and enabled=false retirement. Applied orders retain their own rule snapshot.
+- GET `/overview?date=YYYY-MM-DD`: live completed in-store orders, using original
+  submitted date. Orders cancelled entirely do not count; valid zero sales do.
+- POST `/reports?date=...`: one immutable report id/snapshot/rendered text.
+- POST `/reports/print`: report_id + request_key; one durable non-order
+  SALES_OVERVIEW job, FRONTDESK_RECEIPT assignment/font, one copy, existing Pad
+  lease/payload/result protocol. GET `/reports/jobs/{id}` permits scoped status
+  reads without unrelated management permission. Same intent never requeues a
+  failed/uncertain physical job. Explicit new report/manual reprint is required.
+
+Money uses current TaxCalculator (14.975%, HALF_UP to cents per order): gross
+excludes void quantities; discount is one capped pre-tax rule; net=gross-discount;
+tax applies to net; total=net+tax. Collected=total for completed valid orders only,
+with the disclosure that it is Store-rule bookkeeping, not Cash/Card reconciliation.
+Daily tax sums determined order taxes. Live overview bypasses stale summary caches;
+adjustments rebuild that Store/date's legacy aggregates transactionally.
+
+New Allô direct pickup/takeout submissions become completed inside the original
+submission transaction after tasks/inventory, before print dispatch; Finish is not
+invoked and no original tasks are cancelled. Idempotent submit returns the same
+completed order. Dine-in Finish is unchanged. Historical bounded repair retains
+submitted_at and its date, stores the repair time separately and never redispatches.
+
+New Allô order jobs merge only full matching stable item/modifier/price/note/combo
+identities in rendering copies, with update batches isolated. Original-copy jobs
+retain their exact saved artifact. Explicit current-order reprint uses effective
+quantities and current determined money. New XS physical jobs map to existing
+SMALL ESC/POS `1D 21 11`; other font modes and other Stores remain unchanged.
+
+Order detail/open-editable/complete representation supports `financial_view=2`.
+New Allô responses add financial_version/financial_adjusted and determined net/tax
+and discount rule fields. An old bundled client receives a read-only net-allocated
+line display for adjusted orders, so its old tax-from-line-sum display reconciles;
+persistence and v2 gross snapshots are untouched. New add-only requests on adjusted
+orders require financial_version=2. Legacy already-committed batch replays return
+before this gate. Frozen prior requests are never rewritten. New UI shows the
+server-confirmed financial amount and separately labels any not-yet-submitted
+additions until server recalculation.
+
+Retired B1-B8 spicy groups are exactly `allo_spicy_an_b1_v1` through `b8_v1`.
+They and their bound SPICY_LEVEL options are soft-disabled with a menu revision.
+Only persisted/frozen stale selections of these identities retain compatibility;
+new selections have no required/default spice, while old order/print snapshots stay.
