@@ -229,6 +229,11 @@ public class PrintJobServiceImpl implements PrintJobService {
             ReceiptArtifact.requirePadIntent(target);
             if (target.reprintSourceJobId != null) {
                 ReceiptArtifact.requirePadSourceJob(requireJob(target.reprintSourceJobId));
+                // Allô's logical XS now renders as SMALL. Match that effective mode only
+                // for a frozen SMALL original; historic XS originals retain their bytes.
+                if (alloPrintingPolicy.allowsPadDirect(target.store_id)
+                        && "SMALL".equals(ReceiptArtifact.validate(target).path("font").asText()))
+                    fontSize = com.restaurant.system.allo.AlloReceiptSupport.font(fontSize);
                 ReceiptArtifact.requireCompatiblePadArtifact(target, printer, fontSize);
             } else {
                 if ("MOCK".equals(target.executionMode) || ReceiptArtifact.present(target) || target.escposPayloadBase64 != null) {
