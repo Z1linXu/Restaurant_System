@@ -6,6 +6,13 @@ import java.util.List;
 
 public class OrderResponse {
 
+    public Integer financial_version;
+    public Boolean financial_adjusted;
+    public String discount_type;
+    public BigDecimal discount_value;
+    public String discount_name;
+    public BigDecimal net_amount;
+    public BigDecimal tax_amount;
     public Long id;
     public String order_no;
     public String status;

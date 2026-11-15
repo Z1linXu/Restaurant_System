@@ -211,7 +211,7 @@ export async function findEditableOrderByContext(context: EditableOrderContext) 
     params.set('pickup_no', context.pickupNo)
   }
 
-  const order = await request<BackendOrderResponse | null>(`/api/v1/orders/open-editable?${params.toString()}`)
+  const order = await request<BackendOrderResponse | null>(`/api/v1/orders/open-editable?${params.toString()}&financial_view=2`)
   return order
 }
 
@@ -352,7 +352,7 @@ export async function fetchOrderDetail(orderId: number) {
     }
 
     try {
-      return await request<BackendOrderResponse>(`/api/v1/orders/${orderId}`)
+      return await request<BackendOrderResponse>(`/api/v1/orders/${orderId}?financial_view=2`)
     } catch (error) {
       lastError = error
     }
@@ -451,6 +451,7 @@ export async function addDraftOrderItem(orderId: number, menuItem: MenuItem, dra
 }
 
 export interface FrozenOrderUpdatePayload {
+  financial_version?: number
   idempotency_key: string
   order_notes?: string
   expected_revision?: number
@@ -463,6 +464,7 @@ export function buildOrderUpdatePayload(
 ): FrozenOrderUpdatePayload {
   return {
     idempotency_key: idempotencyKey,
+    financial_version: 2,
     ...(noteUpdate ? { order_notes: noteUpdate.orderNotes.trim(), expected_revision: noteUpdate.expectedRevision } : {}),
     items: items.map((item) => mapFrozenOrderItem(item, catalogItems)),
   }
@@ -543,7 +545,7 @@ export async function cancelDraftOrder(orderId: number) {
 }
 
 export async function completeOrder(orderId: number) {
-  return request<BackendOrderResponse>(`/api/v1/orders/${orderId}/complete`, {
+  return request<BackendOrderResponse>(`/api/v1/orders/${orderId}/complete?financial_view=2`, {
     method: 'POST',
   })
 }

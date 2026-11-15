@@ -1,3 +1,5 @@
+import { AlloSalesOverview } from '../allo/AlloSalesOverview'
+import { AlloOrderActions } from '../allo/AlloOrderActions'
 import { useLocale } from '../../i18n/useLocale'
 import { useEffect, useRef, useState } from 'react'
 import { followReprint, printResultMessage, reprintErrorMessage } from '../../services/manualReprintService'
@@ -20,7 +22,9 @@ import { useCurrentStore } from '../store/useStoreContext'
 export function OrdersPage() {
   const { t } = useLocale()
   const reprintFollow = useRef<(() => void) | null>(null)
-  const { storeId } = useCurrentStore()
+  const { storeId, storeCode } = useCurrentStore()
+  const [showSales,setShowSales]=useState(false)
+  const [actionOrder,setActionOrder]=useState<number|null>(null)
   const reprintScope = useRef(0)
   const isIpadLandscape = useIpadLandscape()
   const [orders, setOrders] = useState<BackendFrontdeskOrderBoardItem[]>([])
@@ -112,6 +116,9 @@ export function OrdersPage() {
 
   return (
     <div className={`min-h-screen bg-[var(--surface)] ${isIpadLandscape ? 'px-3 py-3' : 'px-5 py-4 md:px-7'}`}>
+      {storeCode==='ALLO_NOUILLES_TEST'&&<button className="m-3 min-h-12 rounded-xl bg-white px-5 py-3 font-bold" onClick={()=>setShowSales(!showSales)}>{showSales?'返回订单':'Sales Overview / 销售汇总'}</button>}
+      {showSales&&storeCode==='ALLO_NOUILLES_TEST'?<AlloSalesOverview/>:null}
+      {actionOrder&&<AlloOrderActions key={`${storeId}:${actionOrder}`} store={storeId} id={actionOrder} onClose={()=>setActionOrder(null)} onChanged={()=>{void loadToday();if(selectedOrderId)void fetchOrderDetail(selectedOrderId).then(setSelectedOrder)}}/>}
       <div className="mx-auto max-w-[1720px] space-y-4">
         <FrontdeskTopNav activeItem="orders" />
         <header className="flex items-end justify-between rounded-[24px] bg-white/75 px-5 py-4">
@@ -128,7 +135,7 @@ export function OrdersPage() {
             <div className="mb-3 flex justify-between text-sm font-bold text-[var(--muted)]"><span>{t('orders.today')}</span><span>{orders.length}</span></div>
             <div className="max-h-[calc(100vh-15rem)] space-y-2 overflow-y-auto">
               {loading ? <p className="p-4 text-center text-[var(--muted)]">{t('common.loading')}</p> : orders.length ? orders.map((order) => (
-                <OrderMiniCard key={order.order_id} order={order} selected={selectedOrderId === order.order_id} onClick={() => setSelectedOrderId(order.order_id)} compact={isIpadLandscape} />
+                <OrderMiniCard key={order.order_id} order={order} selected={selectedOrderId === order.order_id} onClick={() => setSelectedOrderId(order.order_id)} compact={isIpadLandscape} onMenu={storeCode==='ALLO_NOUILLES_TEST'?()=>setActionOrder(order.order_id):undefined} />
               )) : <p className="p-4 text-center text-[var(--muted)]">{t('orders.empty')}</p>}
             </div>
           </Card>

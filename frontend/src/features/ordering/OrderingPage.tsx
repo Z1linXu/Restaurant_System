@@ -275,7 +275,10 @@ function OrderingWorkspace({
     }
   }, [activeCategoryId, categories])
 
-  const { subtotal, tax, total } = useMemo(() => calculateTotals(session), [session])
+  const confirmedFinancial = order?.financial_version===2 && order.financial_adjusted && order.status!=='draft' ? order : null
+  const { subtotal, tax, total } = useMemo(() => confirmedFinancial
+    ? { subtotal:Number(confirmedFinancial.subtotal_amount),tax:Number(confirmedFinancial.tax_amount),total:Number(confirmedFinancial.total_amount) }
+    : calculateTotals(session), [session,confirmedFinancial])
   const orderedQuantityByMenuItemId = useMemo(() => {
     const quantities = new Map<string, number>()
     session?.items.forEach((item) => {
@@ -608,6 +611,7 @@ function OrderingWorkspace({
               unifiedOrderNotes={unifiedOrderNotes}
               onUpdateOrderNotes={updateOrderNotes}
               slotDisplayName={orderType === 'dine_in' ? order?.table_display_name || slotDisplayName : session.slotLabel}
+              confirmedFinancial={confirmedFinancial?{discount:Number(confirmedFinancial.discount_amount),net:Number(confirmedFinancial.net_amount),pending:session.items.filter(i=>!i.locked).reduce((n,i)=>n+i.lineSubtotal,0)}:undefined}
               subtotal={subtotal}
               tax={tax}
               total={total}

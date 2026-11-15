@@ -11,6 +11,8 @@ import java.util.List;
 
 public class PrintRenderRequest {
 
+    public boolean allo_current;
+    public boolean allo_merged;
     public String module_code;
     public Store store;
     public Order order;

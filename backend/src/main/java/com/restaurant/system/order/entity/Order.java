@@ -21,6 +21,15 @@ public class Order {
     public String external_customer_display_name;
     public boolean kitchenMirror() { return "EXTERNAL_PLATFORM".equals(financial_mode); }
 
+    @Column(name = "tax_amount")
+    public BigDecimal tax_amount;
+    @Column(name = "discount_type")
+    public String discount_type;
+    @Column(name = "discount_value")
+    public BigDecimal discount_value;
+    @Column(name = "discount_name")
+    public String discount_name;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")

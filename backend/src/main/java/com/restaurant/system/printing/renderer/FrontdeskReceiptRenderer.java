@@ -47,6 +47,7 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
 
     @Override
     public String render(PrintRenderRequest request) {
+        com.restaurant.system.allo.AlloReceiptSupport.merge(request);
         Order order = request.order;
         ReceiptPresentation presentation = request.receipt_context;
         if (presentation != null) presentation.requireValid();
@@ -72,8 +73,10 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
         BigDecimal total = frozenUpdate ? presentation.update_total
             : updateTicket ? TaxCalculator.calculateTotal(subtotal)
             : safeMoney(presentation == null ? order.total_amount : presentation.total);
+        BigDecimal discount = request.allo_current
+            ? safeMoney(updateTicket ? presentation == null ? null : presentation.update_discount : presentation == null ? order.discount_amount : presentation.discount) : BigDecimal.ZERO;
         BigDecimal tax = updateTicket && !frozenUpdate ? TaxCalculator.calculateTax(subtotal)
-            : total.subtract(subtotal).setScale(2, RoundingMode.HALF_UP);
+            : total.subtract(subtotal.subtract(discount)).setScale(2, RoundingMode.HALF_UP);
 
         StringBuilder builder = new StringBuilder();
         if (PrintTableDisplayFormatter.isDineIn(order)) {
@@ -109,21 +112,21 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
         for (OrderItem item : items) {
             List<OrderItemOption> options = optionsByItemId.getOrDefault(item.id, List.of());
             int displayCount = Math.max(1, item.quantity == null ? 1 : item.quantity);
-            for (int copy = 0; copy < displayCount; copy += 1) {
+            for (int copy = 0; copy < (request.allo_current ? 1 : displayCount); copy += 1) {
                 if (presentation != null) {
-                    appendSizedLine(builder, "1 x " + presentation.itemName(item));
+                    appendSizedLine(builder, (request.allo_current ? displayCount : 1) + " x " + presentation.itemName(item));
                     for (OrderItemOption option : options) {
                         if (option.quantity != null && option.quantity <= 0) continue;
-                        appendSizedLine(builder, presentation.optionName(option) + " x" + (option.quantity == null ? 1 : option.quantity));
+                        appendSizedLine(builder, presentation.optionName(option) + " x" + Math.multiplyExact(request.allo_current ? displayCount : 1, option.quantity == null ? 1 : option.quantity));
                     }
                     if (item.notes != null && !item.notes.isBlank()) {
                         appendSizedLine(builder, presentation.label("notes") + ": " + item.notes);
                     }
-                    appendSizedLine(builder, formatSingleItemMoney(item, copy));
+                    appendSizedLine(builder, request.allo_current ? formatMoney(item.line_amount) : formatSingleItemMoney(item, copy));
                     builder.append("\n");
                     continue;
                 }
-                appendSizedLine(builder, buildItemLine(item, options, 1, printingRules));
+                appendSizedLine(builder, buildItemLine(item, options, request.allo_current ? displayCount : 1, printingRules));
                 String noodleType = resolveNoodleTypeLabel(options);
                 if (noodleType != null) {
                     appendSizedLine(builder, noodleType);
@@ -153,13 +156,17 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
                 if (itemNote != null) {
                     appendSizedLine(builder, "备注：" + itemNote);
                 }
-                appendSizedLine(builder, formatSingleItemMoney(item, copy));
+                appendSizedLine(builder, request.allo_current ? formatMoney(item.line_amount) : formatSingleItemMoney(item, copy));
                 builder.append("\n");
             }
         }
 
         appendSizedLine(builder, "--------------------------------");
         appendSizedLine(builder, (presentation == null ? "Subtotal" : presentation.label("subtotal")) + ": " + formatMoney(subtotal));
+        if (request.allo_current) {
+            appendSizedLine(builder, "Discount: " + formatMoney(discount));
+            appendSizedLine(builder, "Net Sales: " + formatMoney(subtotal.subtract(discount)));
+        }
         appendSizedLine(builder, (presentation == null ? "Tax" : presentation.label(frozenUpdate ? "update_tax" : "tax")) + " (" + TaxCalculator.TAX_RATE_LABEL + "): " + formatMoney(tax));
         appendSizedLine(builder, (presentation == null ? "Total" : presentation.label("total")) + ": " + formatMoney(total));
         appendSizedLine(builder, "--------------------------------");

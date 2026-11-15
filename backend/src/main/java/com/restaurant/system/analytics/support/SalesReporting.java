@@ -54,7 +54,7 @@ public final class SalesReporting {
 
     public static boolean eligibleItem(OrderItem item) {
         // Cancellation retains the frozen line_amount for history, not sales.
-        return !"cancelled".equalsIgnoreCase(item.status);
+        return !"cancelled".equalsIgnoreCase(item.status) && (item.voided_quantity == null || item.quantity == null || item.voided_quantity < item.quantity);
     }
 
     public record AllocatedLine(OrderItem item, BigDecimal revenue) {}
@@ -70,11 +70,11 @@ public final class SalesReporting {
                 .sorted(Comparator.comparing(item -> item.id, Comparator.nullsLast(Comparator.naturalOrder())))
                 .toList();
             BigDecimal total = money(order.total_amount);
-            BigDecimal weight = lines.stream().map(item -> positive(item.line_amount)).reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal weight = lines.stream().map(item -> positive(item.voided_quantity != null && item.voided_quantity > 0 ? com.restaurant.system.allo.AlloMoney.effectiveLine(item) : item.line_amount)).reduce(BigDecimal.ZERO, BigDecimal::add);
             BigDecimal assigned = BigDecimal.ZERO;
             BigDecimal cumulative = BigDecimal.ZERO;
             for (OrderItem line : lines) {
-                cumulative = cumulative.add(positive(line.line_amount));
+                cumulative = cumulative.add(positive(line.voided_quantity != null && line.voided_quantity > 0 ? com.restaurant.system.allo.AlloMoney.effectiveLine(line) : line.line_amount));
                 BigDecimal target = weight.signum() == 0 ? BigDecimal.ZERO
                     : total.multiply(cumulative).divide(weight, 2, RoundingMode.HALF_UP);
                 result.add(new AllocatedLine(line, target.subtract(assigned)));

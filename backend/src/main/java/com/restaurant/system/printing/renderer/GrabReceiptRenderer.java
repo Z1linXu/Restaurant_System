@@ -36,6 +36,7 @@ public class GrabReceiptRenderer implements ReceiptRenderer {
 
     @Override
     public String render(PrintRenderRequest request) {
+        com.restaurant.system.allo.AlloReceiptSupport.merge(request);
         Order order = request.order;
         ReceiptPresentation presentation = request.receipt_context;
         if (presentation != null) presentation.requireValid();

@@ -23,6 +23,9 @@ public class OrderItem {
     @Column(name = "external_kitchen_snapshot_json", columnDefinition = "text")
     public com.restaurant.system.order.dto.ExternalKitchenSnapshot externalKitchenSnapshot;
 
+    @Column(name = "voided_quantity", nullable = false)
+    public Integer voided_quantity = 0;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")

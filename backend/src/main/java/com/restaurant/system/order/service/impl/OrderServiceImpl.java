@@ -102,6 +102,8 @@ public class OrderServiceImpl implements OrderService {
     @org.springframework.beans.factory.annotation.Autowired
     public void setTemplateRouting(com.restaurant.system.printing.routing.TemplateRoutingService value) {this.templateRouting=value;}
 
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    private com.restaurant.system.allo.AlloSalesService alloSales;
     private static final String ORDER_STATUS_DRAFT = "draft";
     private static final String ORDER_STATUS_SUBMITTED = "submitted";
     private static final String ORDER_STATUS_PREPARING = "preparing";
@@ -528,6 +530,11 @@ public class OrderServiceImpl implements OrderService {
         if (kitchenTasks.isEmpty()) {
             order.ready_at = now;
         }
+        if (alloSales != null && alloSales.enabled(order.store_id) && !order.kitchenMirror()
+                && order.external_source == null && Set.of("pickup", "takeout").contains(order.order_type)) {
+            order.status = ORDER_STATUS_COMPLETED;
+            order.completed_at = now;
+        }
         order.updated_at = now;
         orderRepository.save(order);
 
@@ -609,6 +616,7 @@ public class OrderServiceImpl implements OrderService {
         if (order == null) {
             throw new BusinessException("Order not found: " + id);
         }
+        if (alloSales != null && alloSales.enabled(order.store_id)) entityManager.refresh(order,jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
         requireInStoreOrder(order);
         String idempotencyKey = request.idempotency_key == null ? "" : request.idempotency_key.trim();
         if (idempotencyKey.isEmpty()) {
@@ -626,6 +634,9 @@ public class OrderServiceImpl implements OrderService {
             }
             return buildOrderUpdateResponse(order.id, existingBatch, true);
         }
+        if(alloSales!=null && alloSales.enabled(order.store_id) && !Integer.valueOf(2).equals(request.financial_version)
+            && (order.discount_type!=null || orderItemRepository.findAllByOrderId(order.id).stream().anyMatch(i->i.voided_quantity!=null&&i.voided_quantity>0)))
+            throw new OrderSubmissionException("ALLO_FINANCIAL_CLIENT_UPDATE_REQUIRED",HttpStatus.CONFLICT,"订单金额已调整，请更新 Allô App 后继续加菜；订单页仍可查看准确金额。");
         if (!MODIFIABLE_AFTER_SUBMIT_ORDER_STATUSES.contains(order.status)) {
             throw new BusinessException("Only submitted, preparing, or ready orders can receive an update batch");
         }
@@ -895,6 +906,7 @@ public class OrderServiceImpl implements OrderService {
         List<OrderItemOption> orderItemOptions = loadOptionsForOrderItems(orderItems);
         List<KitchenTask> kitchenTasks = kitchenTaskRepository.findAllByOrderId(order.id);
         List<FrontdeskBeverageItem> beverageItems = frontdeskBeverageItemRepository.findAllByOrderId(order.id);
+        if (alloSales != null && alloSales.enabled(order.store_id)) orderItems = com.restaurant.system.allo.AlloMoney.effectiveItems(orderItems);
         return toOrderResponse(order, orderItems, orderItemOptions, kitchenTasks, beverageItems);
     }
 
@@ -1316,6 +1328,10 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private void recalculateOrderAmounts(Order order, LocalDateTime now) {
+        if (alloSales != null && alloSales.enabled(order.store_id)) {
+            alloSales.recalculate(order, orderItemRepository.findAllByOrderId(order.id));
+            order.updated_at=now; orderRepository.save(order); return;
+        }
         BigDecimal subtotal = BigDecimal.ZERO;
         for (OrderItem orderItem : orderItemRepository.findAllByOrderId(order.id).stream().filter(this::isActiveOrderItem).toList()) {
             subtotal = subtotal.add(defaultIfNull(orderItem.line_amount));
@@ -1929,6 +1945,12 @@ public class OrderServiceImpl implements OrderService {
         response.table_display_name = tableDisplayName(order);
         response.pickup_no = order.pickup_no;
         response.order_notes = order.order_notes;
+        if(alloSales!=null && alloSales.enabled(order.store_id)) {
+            response.financial_version=2;
+            response.financial_adjusted=order.discount_type!=null||orderItemRepository.findAllByOrderId(order.id).stream().anyMatch(i->i.voided_quantity!=null && i.voided_quantity>0);
+            response.discount_type=order.discount_type;response.discount_value=order.discount_value;response.discount_name=order.discount_name;
+            var money=com.restaurant.system.allo.AlloMoney.determined(order);response.net_amount=money.net();response.tax_amount=money.tax();
+        }
         response.subtotal_amount = defaultIfNull(order.subtotal_amount);
         response.discount_amount = defaultIfNull(order.discount_amount);
         response.total_amount = defaultIfNull(order.total_amount);

@@ -7,6 +7,7 @@ interface OrderMiniCardProps {
   order: BackendFrontdeskOrderBoardItem
   selected: boolean
   onClick: () => void
+  onMenu?: () => void
   compact?: boolean
 }
 
@@ -14,12 +15,12 @@ function displayLabel(order: BackendFrontdeskOrderBoardItem) {
   return orderLocationDisplay(order, `#${order.order_id}`)
 }
 
-export function OrderMiniCard({ order, selected, onClick, compact = false }: OrderMiniCardProps) {
+export function OrderMiniCard({ order, selected, onClick, onMenu, compact = false }: OrderMiniCardProps) {
   const { t } = useLocale()
   const isActive = ['submitted', 'preparing', 'ready'].includes(order.order_status)
 
   return (
-    <button type="button" className="w-full text-left" onClick={onClick}>
+    <div role="button" tabIndex={0} className="w-full text-left" onClick={onClick} onKeyDown={e=>{if(e.target===e.currentTarget&&(e.key==='Enter'||e.key===' '))onClick()}}>
       <Card
         tone="feature"
         className={`transition ${
@@ -35,6 +36,7 @@ export function OrderMiniCard({ order, selected, onClick, compact = false }: Ord
               {order.order_status}
             </div>
           </div>
+          {onMenu&&<button type="button" aria-label={`订单 ${order.order_id} 操作`} className="min-h-12 min-w-12 rounded-xl bg-white text-3xl" onClick={e=>{e.stopPropagation();onMenu()}}>⋮</button>}
           <span
             className={`rounded-full font-bold ${
               isActive
@@ -46,6 +48,6 @@ export function OrderMiniCard({ order, selected, onClick, compact = false }: Ord
           </span>
         </div>
       </Card>
-    </button>
+    </div>
   )
 }

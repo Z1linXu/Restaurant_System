@@ -151,6 +151,7 @@ public class AnalyticsAggregationServiceImpl implements AnalyticsAggregationServ
         List<Order> completedOrders = storeOrders.stream().filter(SalesReporting::eligible).filter(order -> matchesDate(order.submitted_at, summaryDate)).toList();
         List<Order> cancelledOrders = orderRepository.findCancelledByStoreIdAndUpdatedDate(store.id, sqlSummaryDate).stream().filter(order -> !order.kitchenMirror() && !"UBER_EATS".equals(order.external_source)).toList();
         List<OrderItem> completedOrderItems = fetchOrderItems(completedOrders);
+        if ("ALLO_NOUILLES_TEST".equals(store.code)) completedOrderItems = com.restaurant.system.allo.AlloMoney.effectiveItems(completedOrderItems);
         Map<Long, BigDecimal> costByMenuItemId = loadItemCosts(completedOrderItems);
 
         BigDecimal grossSales = scale(sumSubtotals(completedOrders));

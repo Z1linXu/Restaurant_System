@@ -45,6 +45,31 @@ class ReceiptArtifactTest {
   var copy=job(2);copy.payload_snapshot=source.payload_snapshot;copy.reprintSourceJobId=source.id;service.attachRenderedContent(copy,p.id,source.rendered_text_snapshot);
   p.escpos_code_page=18;assertThrows(RuntimeException.class,()->service.markPadDirectQueued(copy,p));assertEquals(source.escposPayloadBase64,copy.escposPayloadBase64);
  }
+ @org.junit.jupiter.params.ParameterizedTest
+ @org.junit.jupiter.params.provider.ValueSource(strings={"XS","SMALL"})
+ void alloLogicalXsReprintsBothHistoricAndEnlargedOriginalWithoutChangingBytes(String frozenFont){
+  when(printingPolicy.padDirectActive(1L)).thenReturn(true);
+  var source=padJob(1);var p=printer();p.font_size=frozenFont;
+  service.attachRenderedContent(source,p.id,"Frozen XS receipt\n");service.markPadDirectQueued(source,p);source.status="PRINTED";
+  assertEquals(frozenFont,ReceiptArtifact.validate(source).path("font").asText());
+  when(printingPolicy.allowsPadDirect(1L)).thenReturn(true);p.font_size="XS";
+  var copy=job(2);copy.payload_snapshot=source.payload_snapshot;copy.reprintSourceJobId=source.id;
+  service.attachRenderedContent(copy,p.id,source.rendered_text_snapshot);service.markPadDirectQueued(copy,p);
+  assertEquals(source.escposPayloadBase64,copy.escposPayloadBase64);assertEquals(source.payload_snapshot,copy.payload_snapshot);
+  assertEquals("PRINTED",source.status);assertEquals("PENDING",copy.status);
+ }
+ @org.junit.jupiter.params.ParameterizedTest
+ @org.junit.jupiter.params.provider.ValueSource(strings={"font","encoding","paper","code_page"})
+ void alloXsOriginalCopyStillRejectsIncompatiblePhysicalSettings(String setting){
+  when(printingPolicy.padDirectActive(1L)).thenReturn(true);when(printingPolicy.allowsPadDirect(1L)).thenReturn(true);
+  var source=padJob(1);var p=printer();p.font_size="XS";
+  service.attachRenderedContent(source,p.id,"Frozen XS receipt\n");service.markPadDirectQueued(source,p);
+  var copy=job(2);copy.payload_snapshot=source.payload_snapshot;copy.reprintSourceJobId=source.id;
+  service.attachRenderedContent(copy,p.id,source.rendered_text_snapshot);
+  switch(setting){case "font"->p.font_size="LARGE";case "encoding"->p.text_encoding="GBK";case "paper"->p.paper_width_mm=58;case "code_page"->p.escpos_code_page=18;}
+  assertThrows(RuntimeException.class,()->service.markPadDirectQueued(copy,p));
+  assertEquals(source.escposPayloadBase64,copy.escposPayloadBase64);assertEquals(source.payload_snapshot,copy.payload_snapshot);
+ }
  @Test void strictPhysicalEncodingFailsInsteadOfReplacingCharacters(){when(printingPolicy.padDirectActive(1L)).thenReturn(true);var j=padJob(1);var p=printer();p.text_encoding="US-ASCII";service.attachRenderedContent(j,p.id,"合成菜");
   assertThrows(RuntimeException.class,()->service.markPadDirectQueued(j,p));assertNull(j.escposPayloadBase64);assertFalse(ReceiptArtifact.present(j));
  }
