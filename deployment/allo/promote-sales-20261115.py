@@ -54,11 +54,15 @@ if ACTION=='stage':
  identity(43);assert all(c['State'].get('Health',{}).get('Status')=='healthy' for c in cs)
  assert cs[0]['Image']=='sha256:7141585f9b545a69afe865a38a7577fca166bda5ab3cf7a9f3a7a9925c884804'
  assert cs[1]['Image']=='sha256:1e8c3dbe54e03b3567c76c5fcccc055cb52328fed6800d77d360dfad4a5b78a2'
- B=R/'rollback-baseline';B.mkdir(mode=0o700)
+ B=R/'rollback-baseline';B.mkdir(mode=0o700,exist_ok=True)
  for p,name in [('compose.yml','compose.yml'),('private/runtime.env','runtime.env'),('config/nginx.conf','nginx.conf')]:
-  dst=B/name;assert not dst.exists();dst.write_bytes((ROOT/p).read_bytes());dst.chmod(0o600)
+  dst=B/name
+  if dst.exists():assert digest(dst)==digest(ROOT/p),name
+  else:dst.write_bytes((ROOT/p).read_bytes());dst.chmod(0o600)
  base={'containers':cs,'sha256':{p:digest(ROOT/p) for p in ('compose.yml','private/runtime.env','config/nginx.conf')},'disk_before':disk()}
- save(B/'baseline.json',base)
+ if (B/'baseline.json').exists():
+  previous=json.loads((B/'baseline.json').read_text());assert previous['sha256']==base['sha256'] and [c['Id'] for c in previous['containers']]==[c['Id'] for c in cs]
+ else:save(B/'baseline.json',base)
  old=compose(ROOT/'private/runtime.env',ROOT/'compose.yml');new_values={'BACKEND_IMAGE':'allo-nouilles-backend:'+SHA,'FRONTEND_IMAGE':'allo-nouilles-frontend:'+SHA,'APP_BUILD_SHA':SHA}
  lines=(ROOT/'private/runtime.env').read_text().splitlines();seen={k:0 for k in new_values};out=[]
  for line in lines:
@@ -77,9 +81,11 @@ if ACTION=='stage':
  images={}
  for service in ('backend','frontend'):
   image=new_values[service.upper()+'_IMAGE'];base_image=M['base_'+service+'_image']
-  run(['docker','image','inspect',base_image])
-  p=run(['docker','build','--network=none','--pull=false','--build-arg','BASE_IMAGE='+base_image,'--build-arg','RELEASE_VERSION='+SHA,'--build-arg','SOURCE_SHA='+SHA,'--build-arg','PATCH_SHA256='+M['files']['compatibility.patch'],'-f','Dockerfile.'+service,'-t',image,'.'],cwd=R)
+  base_ref='allo-nouilles-source-backend:source' if service=='backend' else 'allo-nouilles-frontend:b78ab21d9d4b97bf2b6526ccc489503f486b866e'
+  assert json.loads(run(['docker','image','inspect',base_ref]).stdout)[0]['Id']==base_image
+  p=subprocess.run(['docker','build','--network=none','--pull=false','--build-arg','BASE_IMAGE='+base_ref,'--build-arg','RELEASE_VERSION='+SHA,'--build-arg','SOURCE_SHA='+SHA,'--build-arg','PATCH_SHA256='+M['files']['compatibility.patch'],'-f','Dockerfile.'+service,'-t',image,'.'],cwd=R,capture_output=True)
   (R/('build-'+service+'.log')).write_bytes(p.stdout+p.stderr)
+  if p.returncode:raise RuntimeError('Image build failed; see build-'+service+'.log')
   v=json.loads(run(['docker','image','inspect',image]).stdout)[0];assert v['Config']['Labels']['org.opencontainers.image.revision']==SHA
   images[service]={'reference':image,'id':v['Id']}
  save(R/'staged-images.json',{'images':images,'old_ids':[c['Id'] for c in cs],'candidate_env':digest(R/'candidate-runtime.env'),'candidate_compose':digest(R/'candidate-compose.yml'),'disk':disk()})
