@@ -9947,5 +9947,9 @@ Finish's task cancellation. Existing old Pad order/print protocols remain usable
 new interface assets require Allô APK1.1.0/code5. Old financial displays receive
 net-allocated view copies; new adjusted-order additions require the v2 client.
 No IndexedDB migration or native Worker/Bridge source change is introduced.
+Allô's logical XS uses the supported SMALL ESC/POS size for new physical tickets.
+Original-copy reprints compare that effective size only for frozen SMALL artifacts;
+historical XS artifacts retain their exact original size, text and bytes. Encoding,
+paper width and code-page compatibility checks still apply to both generations.
 See [current API contract](doc/API.md#allô-financial-adjustments-and-sales-overview-v44)
 and [bounded delivery evidence](docs/commercialization/merchants/allo-nouille/SALES_PRINTING_20261115.md).
