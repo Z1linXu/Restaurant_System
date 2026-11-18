@@ -79,7 +79,7 @@ def configure(api, store):
     sid = store['id']
     params = f'?store_id={sid}'
     ctx = api.call('/admin/menu/management-context' + params)
-    items = ctx['menu_items']
+    items = api.call('/admin/platform/menu/items' + params)
     station = one(ctx['stations'], lambda x: x['code'] == 'NOODLE' and x['is_active'], 'noodle_station')
     assert station['store_id'] == sid
     noodles = {row['sku']: row for row in items if row['sku'] in NOODLES}
@@ -297,6 +297,7 @@ def verify(api, store, catalog, report, root):
         row = one(rows, lambda x: x['receipt_type'] == receipt, 'missing_' + receipt)
         assert row['status'] == 'PRINTED' and row['store_id'] == sid
         assert not row.get('printer_id') and not row.get('printed_by_device_id') and not row.get('claimed_by_device_id')
+        assert row.get('execution_mode') in (None, 'MOCK') and not row.get('printer_endpoint')
         text = row['rendered_text_snapshot']
         assert text.startswith('[[TOP_FEED_16MM]]\n[[LARGE]]' + tables[0] + '[[/LARGE]]')
         assert text.count('[[TOP_FEED_16MM]]') == 1
@@ -310,7 +311,13 @@ def verify(api, store, catalog, report, root):
 
 
 def main(sha, mode):
-    deployment.require_clean_release(sha)
+    assert re.fullmatch(r'[0-9a-f]{40}', sha)
+    script_sha = i.run(['git', '-C', str(HERE), 'rev-parse', 'HEAD']).decode().strip()
+    checkout = deployment.require_clean_release(script_sha)
+    i.run(['git', '-C', str(checkout), 'merge-base', '--is-ancestor', sha, script_sha])
+    changes = i.run(['git', '-C', str(checkout), 'diff', '--name-only', sha, script_sha]).decode().splitlines()
+    assert set(changes) <= {'deployment/cloud/chinatown-menu/accept-staging.py',
+                           'frontend/src/features/ordering/components/ItemCustomizationModal.test.tsx'}
     assert mode in ('apply', 'verify')
     root = ROOT / ('chinatown-menu-' + sha)
     deployed = json.loads((root / 'result.json').read_text())
@@ -334,7 +341,8 @@ def main(sha, mode):
     api = h.Api()
     existing.login(api)
     try:
-        report = {'sha': sha, 'store_id': store['id'], 'before_revision': baseline['revision'], 'orders': {}}
+        report = {'sha': sha, 'acceptance_sha': script_sha, 'store_id': store['id'],
+                  'before_revision': baseline['revision'], 'orders': {}}
         if mode == 'apply':
             assert not (root / 'acceptance-progress.json').exists()
             report['menu'] = configure(api, store)
@@ -352,6 +360,9 @@ def main(sha, mode):
         report['result'] = 'PASS'
         ops.write_private(root / 'acceptance.json', report)
         print(json.dumps(report, ensure_ascii=False), flush=True)
+    except Exception:
+        print('Last sanitized API request:', api.last_request, flush=True)
+        raise
     finally:
         api.logout()
 
