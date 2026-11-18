@@ -191,7 +191,7 @@ def configure(api, store):
         'broth_portion_prices': portions, 'broth_default_spice': spice[0]['option_code']}
 
 
-def verify(api, store, catalog, report, root):
+def verify(api, store, catalog, report, progress, prior_standalone=None):
     sid = store['id']
     by_sku = {item['sku']: {**item, 'category_code': cat['code']}
               for cat in catalog['categories'] for item in cat['items']}
@@ -229,8 +229,10 @@ def verify(api, store, catalog, report, root):
                 'item_sku_snapshot': sku, 'item_type_snapshot': item['item_type'], 'quantity': qty,
                 'combo_role': 'standalone', 'options': selected}
 
+    identity_prefix = 'CHINATOWN_MENU_' + report['sha'][:10] + ('_ordered_' if prior_standalone else '_')
+
     def submit(key, lines, table=None):
-        identity = 'CHINATOWN_MENU_' + report['sha'][:10] + '_' + key
+        identity = identity_prefix + key
         payload = {'client_order_id': identity, 'idempotency_key': identity, 'local_draft_id': identity,
                    'store_id': sid, 'organization_id': store['organization_id'], 'server_order_id': None,
                    'order_type': 'dine_in' if table else 'pickup', 'table_no': table, 'pickup_no': None if table else identity,
@@ -240,7 +242,7 @@ def verify(api, store, catalog, report, root):
         order = api.call(f"/orders/{result['order_id']}")
         assert order['store_id'] == sid
         report['orders'][key] = order['id']
-        ops.write_private(root / 'acceptance-progress.json', report)
+        ops.write_private(progress, report)
         return order
 
     def amounts(order, subtotal):
@@ -248,17 +250,35 @@ def verify(api, store, catalog, report, root):
         assert money(order['subtotal_amount']) == expected
         assert money(order['total_amount']) == expected + tax(expected)
 
+    def wait_for_jobs(order_id, receipt_types):
+        for _ in range(40):
+            rows = api.call(f"/orders/{order_id}/print-jobs")
+            jobs = {row['receipt_type']: row for row in rows}
+            assert not any(jobs[receipt]['status'] in ('FAILED', 'CANCELLED', 'PRINTING')
+                           for receipt in receipt_types if receipt in jobs)
+            if all(receipt in jobs and jobs[receipt]['status'] == 'PRINTED' for receipt in receipt_types):
+                return jobs
+            time.sleep(.5)
+        raise RuntimeError('Expected MOCK receipts did not finish')
+
     large = line('add_on_beef_broth', choices=['chili_on_side'], spice='spicy_regular')
     small = line('add_on_beef_broth', size='size_small', spice='spicy_mild', qty=2)
     paid = [line('add_on_' + x[0], qty=3 if x[0] == 'corn' else 1)
             for x in PRODUCTS if x[3] is not None and x[0] != 'beef_broth']
-    only_addons = submit('standalone', [large, small, *paid])
+    if prior_standalone is not None:
+        only_addons = api.call(f'/orders/{prior_standalone}')
+        assert only_addons['store_id'] == sid and only_addons['order_type'] == 'pickup'
+        report['orders']['standalone'] = only_addons['id']
+    else:
+        only_addons = submit('standalone', [large, small, *paid])
     expected_addon_total = Decimal('3.00') + 2 * Decimal('2.00') + sum(
         Decimal(price) * (3 if key == 'corn' else 1) for key, _, _, price in PRODUCTS
         if price is not None and key != 'beef_broth'
     )
     amounts(only_addons, expected_addon_total)
     assert [money(x['line_amount']) for x in only_addons['items'][:2]] == [Decimal('3.00'), Decimal('4.00')]
+    assert [x['quantity'] for x in only_addons['items'] if x['item_sku_snapshot'] == 'add_on_corn'] == [3]
+    report['standalone_totals'] = {k: str(money(only_addons[k])) for k in ('subtotal_amount','total_amount')}
 
     tendon = line('braised_beef_tendon_noodle', choices=['egg_on_side','meat_on_side','tendon_on_side','bok_choy_on_side',
                                                        'fried_egg'])
@@ -275,26 +295,31 @@ def verify(api, store, catalog, report, root):
     order = submit('dine_in', original_lines, tables[0])
     original_total = sum(map(existing.line_amount, original_lines))
     amounts(order, original_total)
+    frozen_initial = wait_for_jobs(order['id'], ('GRAB', 'FRONTDESK_RECEIPT', 'HOT_KITCHEN'))
+    assert len(order['items']) == len(original_lines)
+    assert all('牛肉汤 小份' not in j['rendered_text_snapshot'] for j in frozen_initial.values())
     update_tendon = line('braised_beef_tendon_noodle', choices=['egg_on_side', 'tendon_on_side', 'fried_egg'])
     updated = api.call(f"/orders/{order['id']}/updates", 'POST', {
-        'idempotency_key': 'CHINATOWN_MENU_' + report['sha'][:10] + '_update',
+        'idempotency_key': identity_prefix + 'update',
         'items': [small, update_tendon]})
     amounts(updated['order'], original_total + existing.line_amount(small) + existing.line_amount(update_tendon))
     assert len(updated['order']['items']) == 6
+    before_ids = {item['id'] for item in order['items']}
+    originals = [item for item in updated['order']['items'] if item['id'] in before_ids]
+    assert h.frozen_order({**updated['order'], 'items': originals})['items'] == h.frozen_order(order)['items']
     required = {'GRAB': ('蛋单放','肉单放','牛筋单放','上海青单放','牛肉汤 大份','正常辣','辣单放'),
                 'FRONTDESK_RECEIPT': ('蛋单放','肉单放','牛筋单放','上海青单放','牛肉汤 大份','正常辣','辣单放'),
                 'HOT_KITCHEN': ('蛋单放','牛筋单放'),
                 'GRAB_UPDATE': ('蛋单放','牛筋单放','牛肉汤 小份','少辣'),
                 'FRONTDESK_RECEIPT_UPDATE': ('蛋单放','牛筋单放','牛肉汤 小份','少辣'),
                 'HOT_KITCHEN_UPDATE': ('蛋单放','牛筋单放')}
-    for _ in range(30):
-        rows = api.call(f"/orders/{order['id']}/print-jobs")
-        if set(required) <= {row['receipt_type'] for row in rows}:
-            break
-        time.sleep(.5)
+    jobs = wait_for_jobs(order['id'], required)
+    for receipt, original in frozen_initial.items():
+        assert jobs[receipt]['id'] == original['id']
+        assert jobs[receipt]['rendered_text_snapshot'] == original['rendered_text_snapshot']
     headers = report.setdefault('print_previews', {})
     for receipt, tokens in required.items():
-        row = one(rows, lambda x: x['receipt_type'] == receipt, 'missing_' + receipt)
+        row = jobs[receipt]
         assert row['status'] == 'PRINTED' and row['store_id'] == sid
         assert not row.get('printer_id') and not row.get('printed_by_device_id') and not row.get('claimed_by_device_id')
         assert row.get('execution_mode') in (None, 'MOCK') and not row.get('printer_endpoint')
@@ -305,9 +330,12 @@ def verify(api, store, catalog, report, root):
         assert not any('走' + token in text for token in tokens if token.endswith('单放'))
         if receipt.endswith('_UPDATE'):
             assert ' (UPDATE)' in text.splitlines()[1] and '辣单放' not in text and '肉单放' not in text
+            assert '大份' not in text and '上海青单放' not in text
+            assert row['order_update_batch_id'] == updated['update_batch_id']
         headers[receipt] = {'job_id': row['id'], 'text': text}
     report['checks'] = ['standalone_add_on_quantity_and_tax', 'scope_all_visible_noodles', 'snapshot_and_update',
-                        'six_mock_previews', 'no_physical_print', 'archived_orders_and_other_stores_unchanged']
+                        'six_mock_previews', 'first_ticket_frozen_before_update', 'no_physical_print',
+                        'archived_orders_and_other_stores_unchanged']
 
 
 def main(sha, mode):
@@ -318,7 +346,7 @@ def main(sha, mode):
     changes = i.run(['git', '-C', str(checkout), 'diff', '--name-only', sha, script_sha]).decode().splitlines()
     assert set(changes) <= {'deployment/cloud/chinatown-menu/accept-staging.py',
                            'frontend/src/features/ordering/components/ItemCustomizationModal.test.tsx'}
-    assert mode in ('apply', 'verify')
+    assert mode in ('apply', 'verify', 'verify-ordered')
     root = ROOT / ('chinatown-menu-' + sha)
     deployed = json.loads((root / 'result.json').read_text())
     assert deployed['result'] == 'PASS' and deployed['sha'] == sha
@@ -341,24 +369,32 @@ def main(sha, mode):
     api = h.Api()
     existing.login(api)
     try:
+        ordered = mode == 'verify-ordered'
+        prior_standalone = None
+        progress = root / ('ordered-progress.json' if ordered else 'acceptance-progress.json')
+        assert not progress.exists(), 'Inspect existing test orders before replay'
         report = {'sha': sha, 'acceptance_sha': script_sha, 'store_id': store['id'],
                   'before_revision': baseline['revision'], 'orders': {}}
         if mode == 'apply':
-            assert not (root / 'acceptance-progress.json').exists()
             report['menu'] = configure(api, store)
             ops.write_private(root / 'menu-configured.json', report)
         else:
-            report = json.loads((root / 'menu-configured.json').read_text())
-            assert not (root / 'acceptance-progress.json').exists(), 'Inspect existing test orders before replay'
+            configured = json.loads((root / 'menu-configured.json').read_text())
+            assert configured['sha'] == sha and configured['store_id'] == store['id']
+            report['menu'] = configured['menu']
+            if ordered:
+                prior = json.loads((root / 'acceptance.json').read_text())
+                assert prior['sha'] == sha and prior['result'] == 'PASS' and prior['store_id'] == store['id']
+                prior_standalone = prior['orders']['standalone']
         catalog = api.call(f"/menu/catalog?store_id={store['id']}")
         report['menu_revision'] = catalog['menu_revision']
         assert catalog['menu_revision'] > baseline['revision']
-        verify(api, store, catalog, report, root)
+        verify(api, store, catalog, report, progress, prior_standalone=prior_standalone)
         assert p.history_fingerprints(baseline['history']['cutoffs']) == baseline['history']
         assert fingerprint_other_menus(store['id']) == baseline['controls']
         assert {name: i.fingerprint(name) for name in i.PROD} == prod
         report['result'] = 'PASS'
-        ops.write_private(root / 'acceptance.json', report)
+        ops.write_private(root / ('acceptance-ordered.json' if ordered else 'acceptance.json'), report)
         print(json.dumps(report, ensure_ascii=False), flush=True)
     except Exception:
         print('Last sanitized API request:', api.last_request, flush=True)
