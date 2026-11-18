@@ -5,6 +5,7 @@ import { buildDefaultDraft } from '../../../hooks/useOrderSessions'
 import { buildLocalLineItem } from '../../../hooks/useDraftOrder'
 import { calculateDraftLineSubtotal } from '../../../utils/orderPricing'
 import { ItemCustomizationModal } from './ItemCustomizationModal'
+import { MenuItemCard } from './MenuItemCard'
 import { formatNoodleTypeDisplayLabel } from './noodleTypePresentation'
 
 vi.mock('../../../hooks/useIpadLandscape', () => ({ useIpadLandscape: () => false }))
@@ -57,6 +58,33 @@ it('defaults broth to the large portion and retains spice and chili-on-side when
   const line = buildLocalLineItem(broth, draft)
   expect(line.lineSubtotal).toBe(6)
   expect(line.optionSnapshots?.map((option) => option.optionCode)).toEqual(['size_small', 'spicy_regular', 'chili_on_side'])
+  await act(async () => view!.unmount())
+})
+
+it('uses the standalone menu quantity controls for takeout chili when available', async () => {
+  const chili: MenuItem = {
+    id: '36', sku: 'add_on_takeout_chili', categoryId: '2', categoryCode: 'CATEGORY_ADD_ON',
+    nameEn: 'Takeout Chili', nameZh: '外卖辣椒', descriptionEn: '', descriptionZh: '', price: 0,
+  }
+  let quantity = 0
+  let view: ReturnType<typeof create>
+  const render = () => <MenuItemCard item={chili} onSelect={vi.fn()} orderedQuantity={quantity}
+    canDecrement={quantity > 0} onQuickAdd={() => { quantity += 1 }}
+    onDecrement={() => { quantity -= 1 }} />
+  await act(async () => { view = create(render()) })
+  const click = async (label: string) => {
+    const button = view!.root.findAllByType('button').find((entry) => entry.props['aria-label'] === label)
+    expect(button).toBeDefined()
+    await act(async () => button!.props.onClick({ stopPropagation() {} }))
+    await act(async () => view!.update(render()))
+  }
+  await click('Add Takeout Chili')
+  await click('Add one Takeout Chili')
+  await click('Add one Takeout Chili')
+  expect(view!.root.findAllByProps({ 'aria-label': 'Takeout Chili ordered quantity 3' })).toHaveLength(1)
+  expect(buildLocalLineItem(chili, { ...buildDefaultDraft(chili), quantity }).quantity).toBe(3)
+  await click('Remove one Takeout Chili')
+  expect(quantity).toBe(2)
   await act(async () => view!.unmount())
 })
 
