@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -83,10 +84,12 @@ public class OwnerMenuOptionController {
     public ApiResponse<MenuItemOptionAdminResponse> deleteOption(
         @PathVariable Long itemId,
         @PathVariable Long optionId,
+        @RequestParam(name = "legacy_addon", defaultValue = "false") boolean legacyAddon,
         HttpServletRequest servletRequest
     ) {
         var user = requireItemStore(itemId);
-        MenuItemOptionAdminResponse response = ownerMenuOptionService.deactivateOption(itemId, optionId);
+        MenuItemOptionAdminResponse response = legacyAddon ? ownerMenuOptionService.deactivateLegacyAddon(itemId, optionId)
+            : ownerMenuOptionService.deactivateOption(itemId, optionId);
         auditLogService.record(user.storeId(), user, "MENU_OPTION_DEACTIVATED", "MENU_ITEM_OPTION", optionId, "Deactivated menu option", Map.of("menu_item_id", itemId), servletRequest);
         return ApiResponse.success("Menu item option deactivated", response);
     }

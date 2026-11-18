@@ -24,6 +24,14 @@ public enum StandardSize {
         this.defaultDelta = defaultDelta;
     }
 
+    public String portionLabelZh() {
+        return labelZh.replace("碗", "份");
+    }
+
+    public static boolean isPortionLabel(String code, String labelZh) {
+        return fromCode(code).map(size -> size.portionLabelZh().equals(labelZh)).orElse(false);
+    }
+
     public static Optional<StandardSize> fromCode(String code) {
         if (code == null || code.isBlank()) {
             return Optional.empty();

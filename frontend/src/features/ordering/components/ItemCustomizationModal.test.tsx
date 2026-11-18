@@ -1,6 +1,9 @@
 import { act, create } from 'react-test-renderer'
 import { describe, expect, it, vi } from 'vitest'
 import type { ItemCustomizationDraft, MenuItem } from '../../../types/ordering'
+import { buildDefaultDraft } from '../../../hooks/useOrderSessions'
+import { buildLocalLineItem } from '../../../hooks/useDraftOrder'
+import { calculateDraftLineSubtotal } from '../../../utils/orderPricing'
 import { ItemCustomizationModal } from './ItemCustomizationModal'
 import { formatNoodleTypeDisplayLabel } from './noodleTypePresentation'
 
@@ -17,6 +20,45 @@ const noodleTypes = [
   ['wide', 'Wide', '宽', 'noodle_wide', '宽（6）'],
   ['extra-wide', 'Extra Wide', '大宽', 'noodle_extra_wide', '大宽（7）'],
 ] as const
+
+it('defaults broth to the large portion and retains spice and chili-on-side when changing size and quantity', async () => {
+  const broth: MenuItem = {
+    id: '30', categoryId: '2', categoryCode: 'CATEGORY_ADD_ON',
+    nameEn: 'Beef Broth', nameZh: '牛肉汤', descriptionEn: '', descriptionZh: '', price: 3,
+    customization: {
+      sizes: { required: true, options: [
+        { id: '31', labelEn: 'Large', labelZh: '大份', optionGroup: 'SIZE', optionCode: 'size_large', priceDelta: 0, portionPrice: 3 },
+        { id: '32', labelEn: 'Small', labelZh: '小份', optionGroup: 'SIZE', optionCode: 'size_small', priceDelta: -1, portionPrice: 2 },
+      ] },
+      spicyLevels: [
+        { id: '33', labelEn: 'No Spice', labelZh: '不辣', optionGroup: 'SPICY_LEVEL', optionCode: 'spicy_none' },
+        { id: '34', labelEn: 'Regular Spice', labelZh: '正常辣', optionGroup: 'SPICY_LEVEL', optionCode: 'spicy_regular' },
+      ],
+      removeOptions: [{ id: '35', labelEn: 'Chili on the Side', labelZh: '辣单放', optionGroup: 'REMOVE', optionCode: 'chili_on_side' }],
+    },
+  }
+  let draft = buildDefaultDraft(broth)
+  expect(draft).toMatchObject({ sizeId: '31', spicyLevelId: '33', quantity: 1 })
+  expect(calculateDraftLineSubtotal(broth, draft)).toBe(3)
+  let view: ReturnType<typeof create>
+  const render = () => <ItemCustomizationModal item={broth} draft={draft} mode="add"
+    subtotal={calculateDraftLineSubtotal(broth, draft)} onClose={vi.fn()} onSubmit={vi.fn()}
+    onChange={(next) => { draft = next }} />
+  await act(async () => { view = create(render()) })
+  for (const label of ['小份 · $2.00', '正常辣', '辣单放', '+', '+']) {
+    const button = view!.root.findAllByType('button')
+      .find((entry) => entry.children.includes(label) || (['div', 'span'] as const).some((tag) =>
+        entry.findAllByType(tag).some((node) => node.children.join('').includes(label))))
+    expect(button, label).toBeDefined()
+    await act(async () => button!.props.onClick())
+    await act(async () => view!.update(render()))
+  }
+  expect(draft).toMatchObject({ sizeId: '32', spicyLevelId: '34', removeIds: ['35'], quantity: 3 })
+  const line = buildLocalLineItem(broth, draft)
+  expect(line.lineSubtotal).toBe(6)
+  expect(line.optionSnapshots?.map((option) => option.optionCode)).toEqual(['size_small', 'spicy_regular', 'chili_on_side'])
+  await act(async () => view!.unmount())
+})
 
 describe('noodle type presentation labels', () => {
   it('preserves a restored manual egg when Combo is turned off and on after the default changes', async () => {

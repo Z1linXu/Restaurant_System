@@ -1,6 +1,7 @@
 package com.restaurant.system.order.service.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
 
@@ -261,6 +262,74 @@ class OrderPricingSnapshotIntegrationTest {
                 assertThat(o.parent_option_id_snapshot).isEqualTo(parent.option_id);
                 assertThat(o.price_delta).isEqualByComparingTo(BigDecimal.ZERO);
             });
+    }
+
+    @Test
+    void itemPricedPortionsUseServerPriceAndKeepFrozenChoicesAfterCatalogEdit() {
+        CreateOrderItemOptionRequest large = portion("size_large", "大份", "3.00");
+        CreateOrderItemOptionRequest small = portion("size_small", "小份", "2.00");
+        CreateOrderItemOptionRequest spicy = option("spicy_level", "SPICY_LEVEL", "spicy_none", "0.00", 1);
+        spicy.option_name_snapshot_zh = "不辣";
+        CreateOrderItemOptionRequest separated = option("remove", "REMOVE", "chili_on_side", "0.00", 1);
+        separated.option_name_snapshot_zh = "辣单放";
+        OrderResponse submitted = service.submitOrder(service.createOrder(request(List.of(
+            portionLine(1, large, spicy, separated), portionLine(2, small)
+        ))).id);
+        assertStoredAndRendered(submitted.id, "7.00", "1.05", "8.05");
+        assertThat(assertReceiptConservation(submitted.id)).contains("牛肉汤 大份", "牛肉汤 小份", "辣单放");
+        assertThat(orderOptions.findAllByOrderItemIds(List.of(submitted.items.get(0).id)))
+            .extracting(row -> row.option_code_snapshot)
+            .containsExactlyInAnyOrder("size_large", "spicy_none", "chili_on_side");
+
+        MenuItemOption changed = menuOptions.findById(large.option_id).orElseThrow();
+        changed.portion_price = new BigDecimal("4.00");
+        menuOptions.saveAndFlush(changed);
+        assertStoredAndRendered(submitted.id, "7.00", "1.05", "8.05");
+    }
+
+    @ParameterizedTest
+    @CsvSource({"missing,PORTION_SIZE_REQUIRED", "double,PORTION_SIZE_REQUIRED",
+        "size_quantity,PORTION_SIZE_REQUIRED", "base,PORTION_PRICE_CHANGED", "delta,PORTION_PRICE_CHANGED"})
+    void invalidPortionSelectionCannotChangeServerPrice(String scenario, String error) {
+        CreateOrderItemOptionRequest large = portion("size_large", "大份", "3.00");
+        CreateOrderItemOptionRequest small = portion("size_small", "小份", "2.00");
+        CreateOrderItemRequest line = portionLine(1, large);
+        switch (scenario) {
+            case "missing" -> line.options.clear();
+            case "double" -> line.options.add(small);
+            case "size_quantity" -> large.quantity = 2;
+            case "base" -> line.unit_price_snapshot = BigDecimal.ZERO;
+            case "delta" -> large.option_price_snapshot = new BigDecimal("-2.00");
+            default -> throw new AssertionError(scenario);
+        }
+        assertThatThrownBy(() -> service.createOrder(request(List.of(line)))).hasMessageContaining(error);
+    }
+
+    private CreateOrderItemOptionRequest portion(String code, String label, String price) {
+        var request = option("size", "SIZE", code, "0.00", 1);
+        MenuItemOption row = menuOptions.findById(request.option_id).orElseThrow();
+        row.name_zh = label;
+        row.portion_price = new BigDecimal(price);
+        menuOptions.saveAndFlush(row);
+        request.option_price_snapshot = row.portionDelta(new BigDecimal("3.00"));
+        return request;
+    }
+
+    private CreateOrderItemRequest portionLine(int quantity, CreateOrderItemOptionRequest... selected) {
+        item.base_price = new BigDecimal("3.00");
+        item.name_zh = "牛肉汤";
+        item.sku = "portion_test";
+        menuItems.saveAndFlush(item);
+        CreateOrderItemRequest line = new CreateOrderItemRequest();
+        line.menu_item_id = item.id;
+        line.category_code_snapshot = "ADD_ON";
+        line.station_id_snapshot = item.station_id;
+        line.unit_price_snapshot = item.base_price;
+        line.item_sku_snapshot = item.sku;
+        line.item_name_snapshot_zh = item.name_zh;
+        line.quantity = quantity;
+        line.options = new ArrayList<>(List.of(selected));
+        return line;
     }
 
     private CreateOrderRequest request(List<CreateOrderItemRequest> lines) {

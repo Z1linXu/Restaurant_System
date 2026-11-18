@@ -21,6 +21,7 @@ import com.restaurant.system.menu.entity.MenuCategory;
 import com.restaurant.system.menu.entity.MenuItem;
 import com.restaurant.system.menu.entity.MenuItemBom;
 import com.restaurant.system.menu.entity.MenuItemOption;
+import com.restaurant.system.menu.pricing.StandardSize;
 import com.restaurant.system.menu.entity.MenuItemOptionBom;
 import com.restaurant.system.menu.repository.MenuCategoryRepository;
 import com.restaurant.system.menu.repository.MenuItemBomRepository;
@@ -1008,6 +1009,9 @@ public class OrderServiceImpl implements OrderService {
         MenuItem menuItem = itemRequest.menu_item_id == null ? null : menuItemRepository.findById(itemRequest.menu_item_id).orElse(null);
         if (menuItem != null) {
             validateMenuItemBelongsToStore(menuItem, order.store_id);
+            if (Boolean.FALSE.equals(menuItem.is_active) && menuItem.base_price == null) {
+                throw new BusinessException("MENU_ITEM_PRICE_NOT_CONFIGURED");
+            }
         } else if (!raw && (itemRequest.station_id_snapshot == null || itemRequest.category_code_snapshot == null
             || itemRequest.unit_price_snapshot == null)) {
             throw new BusinessException("Cached menu item snapshot is incomplete: " + itemRequest.menu_item_id);
@@ -1077,6 +1081,11 @@ public class OrderServiceImpl implements OrderService {
         }
         MenuItem mainMenuItem = menuItemRepository.findById(menuItemId).orElse(null);
         Map<Long, MenuItemOption> requestedOptionsById = loadRequestedMenuItemOptions(optionRequests);
+        List<MenuItemOption> portionSizes = mainMenuItem == null ? List.of()
+            : menuItemOptionRepository.findPortionSizes(mainMenuItem.id);
+        if (!portionSizes.isEmpty()) {
+            validatePortionSelection(orderItem, mainMenuItem, optionRequests, requestedOptionsById, portionSizes);
+        }
         Map<Long, Long> comboSideRemoveParentByOptionId = mainMenuItem == null
             ? Map.of()
             : buildComboSideRemoveParentMap(mainMenuItem, requestedOptionsById, optionRequests);
@@ -1167,9 +1176,52 @@ public class OrderServiceImpl implements OrderService {
                 orderItemOption.option_group_snapshot = comboSideParentOptionId == null ? "REMOVE" : "COMBO_SIDE_REMOVE";
                 orderItemOption.price_delta = BigDecimal.ZERO;
             }
+            if (!portionSizes.isEmpty() && menuItemOption.portion_price != null) {
+                orderItemOption.option_type_snapshot = "size";
+                orderItemOption.option_group_snapshot = "SIZE";
+                orderItemOption.option_code_snapshot = menuItemOption.option_code;
+                orderItemOption.option_name_snapshot_zh = menuItemOption.name_zh;
+                orderItemOption.option_name_snapshot_en = menuItemOption.name_en;
+                orderItemOption.parent_option_id_snapshot = null;
+                orderItemOption.price_delta = menuItemOption.portionDelta(mainMenuItem.base_price);
+            }
             savedOptions.add(orderItemOptionRepository.save(orderItemOption));
         }
         return savedOptions;
+    }
+
+    private void validatePortionSelection(
+        OrderItem line, MenuItem item, List<CreateOrderItemOptionRequest> requests,
+        Map<Long, MenuItemOption> optionsById, List<MenuItemOption> portionSizes
+    ) {
+        if (line.unit_price.compareTo(item.base_price) != 0) {
+            throw new BusinessException("PORTION_PRICE_CHANGED: refresh the menu and confirm the portion price");
+        }
+        int selectedSizes = 0;
+        for (CreateOrderItemOptionRequest request : requests) {
+            MenuItemOption option = optionsById.get(request.option_id);
+            if (option == null || !item.id.equals(option.menu_item_id) || !Boolean.TRUE.equals(option.is_active)) {
+                throw new BusinessException("PORTION_OPTION_UNAVAILABLE: refresh the menu and select again");
+            }
+            boolean isSize = "SIZE".equalsIgnoreCase(option.option_group) || "size".equalsIgnoreCase(option.option_type)
+                || "SIZE".equalsIgnoreCase(request.option_group_snapshot)
+                || "size".equalsIgnoreCase(request.option_type_snapshot);
+            if (isSize) {
+                if (!Integer.valueOf(1).equals(request.quantity)
+                    || portionSizes.stream().noneMatch(size -> size.id.equals(option.id) && Boolean.TRUE.equals(size.is_active))) {
+                    throw new BusinessException("PORTION_SIZE_REQUIRED: select exactly one available size");
+                }
+                selectedSizes++;
+            }
+            BigDecimal expectedDelta = option.portion_price == null ? defaultIfNull(option.price_delta)
+                : option.portionDelta(item.base_price);
+            if (request.option_price_snapshot != null && request.option_price_snapshot.compareTo(expectedDelta) != 0) {
+                throw new BusinessException("PORTION_PRICE_CHANGED: refresh the menu and confirm the portion price");
+            }
+        }
+        if (selectedSizes != 1) {
+            throw new BusinessException("PORTION_SIZE_REQUIRED: select exactly one available size");
+        }
     }
 
     private void validateDraftAddons(Order order, List<OrderItem> lines, List<OrderItemOption> snapshots) {
@@ -1972,8 +2024,18 @@ public class OrderServiceImpl implements OrderService {
         List<OrderItemOption> orderItemOptions,
         PrintingDisplayRuleContext printingRules
     ) {
-        String primaryLine = buildKitchenPrimaryLine(menuItem, orderItemOptions, printingRules);
+        OrderItemOption size = findOption(orderItemOptions, OPTION_TYPE_SIZE);
         List<String> secondaryParts = buildKitchenSecondaryParts(orderItem, orderItemOptions, printingRules);
+        if (size != null && StandardSize.isPortionLabel(size.option_code_snapshot, size.option_name_snapshot_zh)) {
+            List<String> lines = new ArrayList<>();
+            lines.add(buildKitchenDisplayNameZh(menuItem, orderItem, printingRules) + " " + size.option_name_snapshot_zh);
+            OrderItemOption spicy = findOption(orderItemOptions, OPTION_TYPE_SPICY_LEVEL);
+            String spicyLabel = spicy == null ? null : firstNonBlank(spicy.option_name_snapshot_zh, spicy.option_name_snapshot_en);
+            if (spicyLabel != null) lines.add(spicyLabel);
+            if (!secondaryParts.isEmpty()) lines.add(String.join(" ", secondaryParts));
+            return String.join(" | ", lines);
+        }
+        String primaryLine = buildKitchenPrimaryLine(menuItem, orderItemOptions, printingRules);
 
         List<String> lines = new ArrayList<>();
         if (primaryLine != null && !primaryLine.isBlank()) {

@@ -97,10 +97,31 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
     @Override
     @Transactional
     public MenuItemOptionAdminResponse deactivateOption(Long itemId, Long optionId) {
+        return deactivateOption(itemId, optionId, false);
+    }
+
+    @Override
+    @Transactional
+    public MenuItemOptionAdminResponse deactivateLegacyAddon(Long itemId, Long optionId) {
+        return deactivateOption(itemId, optionId, true);
+    }
+
+    private MenuItemOptionAdminResponse deactivateOption(Long itemId, Long optionId, boolean legacyAddon) {
         MenuItem menuItem = loadMenuItem(itemId);
+        if (legacyAddon) menuRevisionService.lockStoresInOrder(List.of(menuItem.store_id));
         List<MenuItemOption> existingOptions = menuItemOptionRepository.findAllByMenuItemIdOrdered(itemId);
         MenuItemOption option = loadOptionFromList(itemId, optionId, existingOptions);
-        rejectSystemControlledPricingWrite(option);
+        if (legacyAddon) {
+            // Disable one unresolved legacy assignment without selecting a shared price.
+            if (option.store_addon_id != null || option.store_remove_id != null || option.parent_option_id != null
+                || !StoreAddonService.isAddon(option.option_group, option.option_type, option.option_code,
+                    option.name_zh, option.name_en)
+                || addonResolver.hasCanonicalCode(menuItem.store_id, option.option_code)) {
+                throw new BusinessException("UNRESOLVED_LEGACY_ADDON_REQUIRED");
+            }
+        } else {
+            rejectSystemControlledPricingWrite(option);
+        }
         option.is_active = false;
         option.updated_at = LocalDateTime.now();
         validateSizeConfiguration(existingOptions);
@@ -386,6 +407,7 @@ public class OwnerMenuOptionServiceImpl implements OwnerMenuOptionService {
         response.name_zh = option.name_zh;
         response.name_en = option.name_en;
         response.price_delta = option.price_delta;
+        response.portion_price = option.portion_price;
         response.is_active = option.is_active;
         response.created_at = option.created_at;
         response.updated_at = option.updated_at;

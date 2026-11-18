@@ -101,7 +101,7 @@ public class StorePricingPolicyServiceImpl implements StorePricingPolicyService 
             StorePricingPolicyPreviewResponse.ImpactGroup group = impactGroup(size.semantic + "_DELTA", oldDelta, newDelta);
             for (MenuItem item : items) {
                 boolean affected = optionsByItemId.getOrDefault(item.id, List.of()).stream()
-                    .filter(option -> Boolean.TRUE.equals(option.is_active))
+                    .filter(option -> Boolean.TRUE.equals(option.is_active) && option.portion_price == null)
                     .anyMatch(option -> size.equals(resolveSize(option).orElse(null)));
                 if (affected) {
                     group.sample_items.add(impactItem(item, oldDelta, newDelta));
@@ -163,6 +163,11 @@ public class StorePricingPolicyServiceImpl implements StorePricingPolicyService 
             resolveSize(option).ifPresent(size -> canonical.merge(size, option, this::preferCanonicalSizeOption));
         }
 
+        Map<StandardSize, BigDecimal> portionPrices = resolvePortionPrices(request, enabled, canonical);
+        if (!portionPrices.isEmpty() && item.base_price == null) {
+            throw new BusinessException("Enter the item base price before configuring portion prices");
+        }
+
         int sort = 10;
         Set<Long> canonicalOptionIds = new HashSet<>();
         for (StandardSize size : defaultOrderedSizes(enabled, defaultCode)) {
@@ -172,11 +177,13 @@ public class StorePricingPolicyServiceImpl implements StorePricingPolicyService 
             option.option_type = TYPE_SIZE;
             option.option_group = GROUP_SIZE;
             option.option_code = size.code;
-            option.name_zh = size.labelZh;
+            option.portion_price = portionPrices.get(size);
+            option.name_zh = option.portion_price == null ? size.labelZh : size.portionLabelZh();
             option.name_en = size.labelEn;
             option.parent_option_id = null;
             option.sort_order = sort;
-            option.price_delta = deltaForSize(policy, size);
+            option.price_delta = option.portion_price == null
+                ? deltaForSize(policy, size) : option.portionDelta(defaultMoney(item.base_price));
             option.is_active = enabled.contains(size);
             option.updated_at = now();
             if (creating) {
@@ -201,7 +208,9 @@ public class StorePricingPolicyServiceImpl implements StorePricingPolicyService 
             }
         }
 
-        storePricingPolicyRepository.mirrorPolicyToSizeAndComboOptions(item.store_id);
+        if (portionPrices.isEmpty()) {
+            storePricingPolicyRepository.mirrorPolicyToSizeAndComboOptions(item.store_id);
+        }
         menuRevisionService.incrementRevision(item.store_id);
         return menuItemOptionRepository.findAllByMenuItemIdOrdered(itemId).stream()
             .map(this::toResponse)
@@ -256,7 +265,7 @@ public class StorePricingPolicyServiceImpl implements StorePricingPolicyService 
 
     @Override
     public MenuItemOption applyEffectiveCatalogPricing(MenuItemOption option, StorePricingPolicy policy) {
-        if (option == null || policy == null) {
+        if (option == null || policy == null || option.portion_price != null) {
             return option;
         }
         Optional<StandardSize> size = resolveSize(option);
@@ -281,6 +290,30 @@ public class StorePricingPolicyServiceImpl implements StorePricingPolicyService 
             return copy;
         }
         return option;
+    }
+
+    private Map<StandardSize, BigDecimal> resolvePortionPrices(
+        MenuItemSizeConfigurationRequest request, Set<StandardSize> enabled, Map<StandardSize, MenuItemOption> current
+    ) {
+        Map<StandardSize, BigDecimal> prices = new LinkedHashMap<>();
+        current.forEach((size, option) -> {
+            if (option.portion_price != null) prices.put(size, option.portion_price);
+        });
+        if (request.portion_prices != null) {
+            request.portion_prices.forEach((code, price) -> {
+                StandardSize size = StandardSize.fromCode(code)
+                    .orElseThrow(() -> new BusinessException("Unsupported portion Size code: " + code));
+                if (!size.code.equals(code) || !enabled.contains(size) || price == null || price.signum() < 0
+                    || price.stripTrailingZeros().scale() > 2 || price.compareTo(new BigDecimal("10000000000")) >= 0) {
+                    throw new BusinessException("An enabled portion requires a non-negative price with at most two decimals");
+                }
+                prices.put(size, money(price));
+            });
+        }
+        if (!prices.isEmpty() && !prices.keySet().containsAll(enabled)) {
+            throw new BusinessException("Enter a price for every enabled portion");
+        }
+        return prices;
     }
 
     private MenuItem loadItem(Long itemId) {
@@ -501,6 +534,7 @@ public class StorePricingPolicyServiceImpl implements StorePricingPolicyService 
         response.name_zh = option.name_zh;
         response.name_en = option.name_en;
         response.price_delta = option.price_delta;
+        response.portion_price = option.portion_price;
         response.is_active = option.is_active;
         response.created_at = option.created_at;
         response.updated_at = option.updated_at;

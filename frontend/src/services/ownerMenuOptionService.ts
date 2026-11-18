@@ -26,6 +26,7 @@ export interface MenuItemOptionAdminRecord {
   name_zh: string
   name_en: string
   price_delta: number
+  portion_price?: number | string | null
   is_active: boolean
   created_at?: string
   updated_at?: string
@@ -165,6 +166,7 @@ export interface StoreComboConfigurationPayload {
 export interface MenuItemSizeConfigurationPayload {
   enabled_size_codes: StandardSizeCode[]
   default_size_code?: StandardSizeCode | null
+  portion_prices?: Partial<Record<StandardSizeCode, string>>
 }
 
 export interface MenuItemComboPolicyPayload {

@@ -40,7 +40,7 @@ interface MenuItemEditorState {
   name_en: string
   sku: string
   item_type: string
-  base_price: number
+  base_price: number | null
   cost_per_item: number
   is_active: boolean
   is_sold_out: boolean
@@ -72,6 +72,10 @@ function asString(value: unknown, fallback = '') {
 
 function asBoolean(value: unknown, fallback = false) {
   return typeof value === 'boolean' ? value : fallback
+}
+
+function normalizePrice(value: number | null) {
+  return value == null ? null : normalizeMoney(value)
 }
 
 function normalizeMoney(value: number) {
@@ -108,7 +112,7 @@ function toEditorState(record: Record<string, unknown> | MenuItemAdminRecord, fa
     name_en: asString(record.name_en),
     sku: asString(record.sku),
     item_type: asString(record.item_type, 'menu_item'),
-    base_price: asNumber(record.base_price, 0),
+    base_price: record.base_price == null ? null : asNumber(record.base_price, 0),
     cost_per_item: asNumber(record.cost_per_item, 0),
     is_active: asBoolean(record.is_active, true),
     is_sold_out: asBoolean(record.is_sold_out, false),
@@ -118,7 +122,7 @@ function toEditorState(record: Record<string, unknown> | MenuItemAdminRecord, fa
 
 function sameSavedValues(expected: MenuItemEditorState, actual: MenuItemEditorState) {
   return (
-    normalizeMoney(expected.base_price) === normalizeMoney(actual.base_price) &&
+    normalizePrice(expected.base_price) === normalizePrice(actual.base_price) &&
     normalizeMoney(expected.cost_per_item) === normalizeMoney(actual.cost_per_item) &&
     expected.is_active === actual.is_active &&
     expected.is_sold_out === actual.is_sold_out &&
@@ -388,7 +392,7 @@ export function MenuManagementPage() {
     }
 
     const previous = menuItems.find((item) => item.id === editor.id)
-    const priceChanged = previous == null ? editor.base_price > 0 : normalizeMoney(previous.base_price) !== normalizeMoney(editor.base_price)
+    const priceChanged = previous == null ? (editor.base_price ?? 0) > 0 : normalizePrice(previous.base_price) !== normalizePrice(editor.base_price)
     const costChanged = previous == null ? editor.cost_per_item > 0 : normalizeMoney(previous.cost_per_item) !== normalizeMoney(editor.cost_per_item)
 
     try {
@@ -399,7 +403,7 @@ export function MenuManagementPage() {
         'menu/items',
         {
           ...editor,
-          base_price: normalizeMoney(Number(editor.base_price)),
+          base_price: normalizePrice(editor.base_price),
           cost_per_item: normalizeMoney(Number(editor.cost_per_item)),
         },
         editor.id,
@@ -445,7 +449,7 @@ export function MenuManagementPage() {
         {
           ...item,
           ...patch,
-          base_price: normalizeMoney(item.base_price),
+          base_price: normalizePrice(item.base_price),
           cost_per_item: normalizeMoney(item.cost_per_item),
         },
         item.id,
@@ -505,7 +509,7 @@ export function MenuManagementPage() {
       const savedPayload = {
         ...editor,
         is_active: nextActive,
-        base_price: normalizeMoney(editor.base_price),
+        base_price: normalizePrice(editor.base_price),
         cost_per_item: normalizeMoney(editor.cost_per_item),
       }
       await savePlatformEntity('menu/items', savedPayload, editor.id)
@@ -840,7 +844,7 @@ export function MenuManagementPage() {
                             </td>
                             <td className="px-4 py-3 text-[var(--muted)]">{categoryNameById.get(item.category_id) ?? 'Unassigned'}</td>
                             <td className="px-4 py-3 text-[var(--muted)]">{stationNameById.get(item.station_id) ?? 'Unassigned'}</td>
-                            <td className="px-4 py-3 text-[var(--on-surface)]">{formatCurrency(item.base_price)}</td>
+                            <td className="px-4 py-3 text-[var(--on-surface)]">{item.base_price == null ? '待配置 / Price required' : formatCurrency(item.base_price)}</td>
                             <td className="px-4 py-3 text-[var(--on-surface)]">{formatCurrency(item.cost_per_item)}</td>
                             <td className="px-4 py-3">
                               <div className="flex flex-wrap gap-2">
@@ -1027,8 +1031,8 @@ export function MenuManagementPage() {
                         <input
                           type="number"
                           step="0.01"
-                          value={editor.base_price}
-                          onChange={(event) => setEditor({ ...editor, base_price: Number(event.target.value) })}
+                          value={editor.base_price ?? ''}
+                          onChange={(event) => setEditor({ ...editor, base_price: event.target.value === '' ? null : Number(event.target.value) })}
                           className="mt-1 w-full rounded-[16px] border border-[rgba(26,28,25,0.08)] bg-white px-4 py-3 text-[0.92rem] outline-none"
                         />
                       </label>

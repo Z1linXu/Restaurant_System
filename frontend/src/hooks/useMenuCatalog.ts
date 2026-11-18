@@ -283,6 +283,10 @@ export function mapCatalog(data: BackendMenuCatalog): OrderingCatalog {
         const activeOptions = item.options.filter((option) => option.is_active)
         const optionsByType = activeOptions.reduce<Record<string, ChoiceOption[]>>((groups, option) => {
           const mapped = mapOption(option)
+          if (option.portion_price != null) {
+            // The base price and delta already belong to the catalog hash used by older Pads.
+            mapped.portionPrice = Number(item.base_price) + (mapped.priceDelta ?? 0)
+          }
           groups[option.option_type] = [...(groups[option.option_type] ?? []), mapped]
           return groups
         }, {})

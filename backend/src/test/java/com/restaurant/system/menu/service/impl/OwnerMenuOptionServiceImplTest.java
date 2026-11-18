@@ -5,6 +5,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import com.restaurant.system.menu.addon.StoreAddonOptionResolver;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -67,6 +68,35 @@ class OwnerMenuOptionServiceImplTest {
         linked.option_type="other"; linked.option_group="CUSTOM";
         when(menuItemOptionRepository.findAllByMenuItemIdOrdered(14L)).thenReturn(List.of(linked));
         assertTrue(assertThrows(BusinessException.class, () -> service.updateOption(14L,99L,request)).getMessage().contains("Store Add-on catalog"));
+    }
+
+    @Test
+    void explicitLegacyDeactivationOnlyDisablesAnUnlinkedOrdinaryAddon() {
+        var item = new MenuItem();
+        item.id = 14L;
+        item.store_id = 3L;
+        var egg = new MenuItemOption();
+        egg.id = 99L;
+        egg.menu_item_id = item.id;
+        egg.option_type = "addon";
+        egg.option_group = "ADD_ON";
+        egg.option_code = "fried_egg";
+        egg.name_zh = "煎蛋";
+        egg.price_delta = new BigDecimal("1.80");
+        egg.is_active = true;
+        when(menuItemRepository.findById(item.id)).thenReturn(Optional.of(item));
+        when(menuItemOptionRepository.findAllByMenuItemIdOrdered(item.id)).thenReturn(List.of(egg));
+        when(menuItemOptionRepository.save(egg)).thenReturn(egg);
+
+        assertThrows(BusinessException.class, () -> service.deactivateOption(item.id, egg.id));
+        assertFalse(service.deactivateLegacyAddon(item.id, egg.id).is_active);
+        assertEquals(new BigDecimal("1.80"), egg.price_delta);
+        verify(menuRevisionService).incrementRevision(item.store_id);
+
+        egg.is_active = true;
+        egg.store_addon_id = 7L;
+        assertThrows(BusinessException.class, () -> service.deactivateLegacyAddon(item.id, egg.id));
+        assertTrue(egg.is_active);
     }
 
     @Test

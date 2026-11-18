@@ -7458,6 +7458,13 @@ Generic option create/update/deactivate/reorder endpoints also reject Combo
 upcharge writes; per-item Combo allowed/disabled state must use the dedicated
 Combo Policy endpoint, and Store-level Combo delta must use Pricing Rules.
 
+An item can use absolute portion prices on the same Size options. The menu
+returns the configured portion price and its delta from the base price.
+Store-wide Size pricing leaves these options intact, and new order lines
+validate the selected Size and quote before freezing the price in the order.
+Inactive items can retain an unconfigured price in Menu Management until a
+price is entered. An explicit zero remains a valid selling price.
+
 Phase A5.5 generalizes the A0.2 Store-level Combo content configuration.
 `store_combo_groups` owns Store-scoped group definitions and
 `store_combo_components` owns Store-scoped component definitions. Menu
