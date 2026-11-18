@@ -88,7 +88,7 @@ class OwnerMenuAddonControllerTest {
         var request = new StoreAddonService.ReconcileRequest();
         request.store_id = 12L;
         request.dry_run = true;
-        request.option_codes = List.of("corn");
+        request.option_codes = java.util.Set.of("corn");
         var report = new StoreAddonService.ReconciliationReport(12L, true, 1, 1, List.of());
         when(service.reconcile(12L, true, request.option_codes)).thenReturn(report);
 
