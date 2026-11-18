@@ -65,4 +65,19 @@ describe('per-unit frozen order pricing', () => {
     expect(new Set(lines.map((line) => line.id)).size).toBe(3)
     expect(lines.map((line) => line.lineSubtotal)).toEqual([16.99, 18.99, 20.98])
   })
+
+  it('keeps multiple on-side instructions free alongside Remove, Add-on and Combo', () => {
+    const tendon = { ...item, customization: { ...item.customization, removeOptions: [
+      ...item.customization!.removeOptions!,
+      { id: '10', labelZh: '蛋单放', labelEn: 'Egg on the Side', optionCode: 'egg_on_side', optionGroup: 'REMOVE', priceDelta: 0 },
+      { id: '11', labelZh: '牛筋单放', labelEn: 'Tendon on the Side', optionCode: 'tendon_on_side', optionGroup: 'REMOVE', priceDelta: 0 },
+    ] } }
+    const base = selection('1', 2, true, 1)
+    const customized = buildLocalLineItem(tendon, { ...base, removeIds: [...base.removeIds, '10', '11'] })
+    expect(customized.lineSubtotal).toBe(calculateDraftLineSubtotal(item, base))
+    expect(customized.quantity).toBe(2)
+    expect(customized.optionSnapshots?.map((option) => option.optionCode)).toEqual(expect.arrayContaining([
+      'egg_on_side', 'tendon_on_side', 'tea_egg', 'combo',
+    ]))
+  })
 })

@@ -94,12 +94,15 @@ public class OwnerMenuAddonController {
         if (request == null || request.dry_run == null) throw new BusinessException("ADDON_RECONCILE_DRY_RUN_REQUIRED");
         var user = requireStore(request.store_id);
         boolean hasDecisions = request.confirmed_prices != null && !request.confirmed_prices.isEmpty();
+        if (hasDecisions && request.option_codes != null) {
+            throw new BusinessException("ADDON_PRICE_DECISIONS_AND_OPTION_FILTER_MUTUALLY_EXCLUSIVE");
+        }
         if (hasDecisions && (!"staging".equals(environment)
             || datasourceUrl == null || !datasourceUrl.matches("jdbc:postgresql://[^/]+/restaurant_pos_staging(?:\\?.*)?"))) {
             throw new BusinessException("ADDON_PRICE_RECONCILIATION_STAGING_ONLY");
         }
         var result = hasDecisions ? addons.reconcilePrices(request.store_id, request.dry_run, request.confirmed_prices)
-            : addons.reconcile(request.store_id, request.dry_run);
+            : addons.reconcile(request.store_id, request.dry_run, request.option_codes);
         if (!request.dry_run) audit.record(request.store_id, user, "MENU_ADDONS_RECONCILED", "STORE", request.store_id,
             "Reconciled Store Add-ons", Map.of("linked_groups", result.linked_groups(),
                 "linked_options", result.linked_options(), "conflict_count", result.conflicts().size(),

@@ -455,6 +455,10 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
             && !java.util.Objects.equals(target.store_id, menuItem.store_id)) {
             throw new BusinessException("Clear the item Combo egg default before moving the item to another Store.");
         }
+        if ((creating || Boolean.FALSE.equals(target.is_active) || target.base_price != null)
+            && !Boolean.FALSE.equals(menuItem.is_active) && menuItem.base_price == null) {
+            throw new BusinessException("Set a price before activating the item.");
+        }
         Long previousStoreId = target.store_id;
         Long previousCategoryId = target.category_id;
         target.store_id = menuItem.store_id;

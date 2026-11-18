@@ -1362,6 +1362,14 @@ enabled it is the deterministic default. If only one Size is enabled it is
 auto-selected. If multiple Sizes are enabled and Regular is disabled,
 `default_size_code` must name one enabled Size.
 
+For items with independent portion prices, include `portion_prices`, for
+example `{"size_large":3.00,"size_small":2.00}`. Each enabled size needs an
+absolute price, and the catalog returns it as `portion_price` on the Size
+option. The ordering compatibility delta is the portion price minus the
+item's base price. New or updated order lines require exactly one available
+portion. Store-wide Size pricing skips these overrides. Existing order
+snapshots retain the prices at submission.
+
 #### Update Item Combo Policy
 
 `PUT /api/v1/admin/menu/items/{itemId}/combo-policy`
@@ -1462,7 +1470,7 @@ IDs are revalidated on the backend; frontend Store context is not authorization.
 | PUT | `/api/v1/admin/menu/addons/{addonId}` | `{name_zh, name_en, price, active}`; changed code rejected |
 | GET | `/api/v1/admin/menu/items/{itemId}/addons` | Catalog entries with item `enabled` |
 | PUT | `/api/v1/admin/menu/items/{itemId}/addons/{addonId}` | `{enabled: boolean}` |
-| POST | `/api/v1/admin/menu/addons/reconcile` | `{store_id, dry_run: boolean}`; sanitized linking/conflict report |
+| POST | `/api/v1/admin/menu/addons/reconcile` | `{store_id, dry_run: boolean, option_codes?: string[]}`; sanitized linking/conflict report |
 
 An optional `confirmed_prices: {stable_code: nonnegative_price}` on reconciliation
 is restricted to the verified Staging marker/database and authorized Store.
@@ -1471,6 +1479,13 @@ Apply is atomic across current catalog/options and menu revision. It never picks
 an unresolved name or edits history. Dry-run reports existing conflicts without
 writes. Combo-only `combo_tea_egg`/`combo_fried_egg` cannot be normal catalog
 entries (`ADDON_COMBO_COMPONENT_IDENTITY`) and are omitted from catalog/eligibility.
+
+`option_codes` limits reconciliation to explicit stable codes and uses the
+existing, unambiguous price. The filter cannot be combined with a confirmed
+price override. An unresolved, ordinary legacy Add-on may be disabled with
+`DELETE /api/v1/admin/menu/items/{itemId}/options/{optionId}?legacy_addon=true`.
+The call keeps the row and historical snapshots and rejects linked or Combo
+identities. Linked Add-ons use item eligibility to disable a choice.
 
 Catalog entries expose `id`, `store_id`, immutable `code`, bilingual names,
 `price`, `active` and `printing_configured`. Missing Printing MODIFIER_ADD
@@ -2224,6 +2239,10 @@ create-or-replace/submit reject any non-null value, including an empty string.
 GRAB/HOT reprint retains the original rendered snapshot and does not fetch Uber.
 
 ### Shared Remove printing vocabulary
+
+The stable `egg_on_side`, `meat_on_side`, `tendon_on_side`, `bok_choy_on_side`,
+and `chili_on_side` codes represent zero-price packaging instructions. The
+ticket vocabulary retains the `单放` instruction under the selected item.
 
 `GET /api/v1/admin/printing/display-rules?store_id=...` additionally returns
 `remove_aliases` (`code`, `name_zh`, `default_print_text`, `source`, `alias_codes`),

@@ -47,6 +47,14 @@ public class MenuItemOption {
     @Column(name = "price_delta")
     public BigDecimal price_delta;
 
+    /** Absolute price for an item-priced SIZE. Null inherits the Store bowl price rules. */
+    @Column(name = "portion_price", precision = 12, scale = 2)
+    public BigDecimal portion_price;
+
+    public BigDecimal portionDelta(BigDecimal basePrice) {
+        return portion_price.subtract(basePrice);
+    }
+
     @Column(name = "is_active")
     public Boolean is_active;
 

@@ -86,6 +86,9 @@ public interface MenuItemOptionRepository extends JpaRepository<MenuItemOption, 
         """)
     List<MenuItemOption> findAllByMenuItemIdOrdered(@Param("menuItemId") Long menuItemId);
 
+    @Query("select o from MenuItemOption o where o.menu_item_id = :menuItemId and o.portion_price is not null")
+    List<MenuItemOption> findPortionSizes(@Param("menuItemId") Long menuItemId);
+
     @Query("""
         select o from MenuItemOption o
         where o.menu_item_id in :menuItemIds

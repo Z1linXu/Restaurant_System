@@ -136,6 +136,8 @@ public class MenuCatalogResponse {
         public String name_zh;
         public String name_en;
         public BigDecimal price_delta;
+        @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+        public BigDecimal portion_price;
         public Boolean is_active;
         public List<OptionResponse> side_item_remove_options;
 
