@@ -31,7 +31,20 @@ public final class RemoveSemantics {
         BASELINE = Collections.unmodifiableMap(values);
     }
 
+    private static final Map<String, String> SEPARATE_PLATING = Map.of(
+        "egg_on_side", "蛋单放",
+        "meat_on_side", "肉单放",
+        "tendon_on_side", "牛筋单放",
+        "bok_choy_on_side", "上海青单放",
+        "chili_on_side", "辣单放"
+    );
+
     private RemoveSemantics() {}
+
+    public static String separatePlatingLabel(String code) {
+        String semantic = canonicalSemantic(code);
+        return semantic == null ? null : SEPARATE_PLATING.get(semantic);
+    }
 
     public static String canonicalSemantic(String code) {
         if (code == null || code.isBlank()) return null;

@@ -61,7 +61,7 @@ export function MenuItemCard({
               <p className={`${compact ? 'text-[1rem]' : 'text-[1.35rem]'} font-semibold text-[rgba(83,58,50,0.86)]`}>{item.nameZh}</p>
             </div>
             <div className={`text-right ${compact ? 'text-[1.55rem]' : 'text-[2rem]'} font-extrabold tracking-[-0.04em] text-[var(--primary)]`}>
-              ${item.price.toFixed(2)}
+              ${(item.customization?.sizes?.options[0]?.portionPrice ?? item.price).toFixed(2)}
             </div>
           </div>
 

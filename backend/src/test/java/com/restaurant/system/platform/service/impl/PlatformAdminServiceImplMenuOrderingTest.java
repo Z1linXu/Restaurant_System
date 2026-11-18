@@ -44,6 +44,7 @@ import com.restaurant.system.user.entity.User;
 import com.restaurant.system.user.repository.RoleRepository;
 import com.restaurant.system.user.repository.StoreRepository;
 import com.restaurant.system.user.repository.UserRepository;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -116,6 +117,7 @@ class PlatformAdminServiceImplMenuOrderingTest {
         request.store_id = 1L;
         request.category_id = 7L;
         request.name_zh = "新菜";
+        request.base_price = BigDecimal.ZERO;
 
         MenuItem saved = service.saveMenuItem(request);
 
@@ -157,6 +159,7 @@ class PlatformAdminServiceImplMenuOrderingTest {
         request.store_id = 44L;
         request.category_id = 7L;
         request.name_zh = "本店测试菜";
+        request.base_price = BigDecimal.ZERO;
 
         service.saveMenuItem(request);
 
@@ -457,6 +460,29 @@ class PlatformAdminServiceImplMenuOrderingTest {
 
         assertThrows(BusinessException.class, () -> service.saveMenuItem(item));
 
+        verify(menuItemRepository, never()).save(any());
+    }
+
+    @Test
+    void cannotClearThePriceOfAnActiveItemOrActivateAnUnpricedItem() {
+        MenuItem existing = new MenuItem();
+        existing.id = 14L;
+        existing.store_id = 3L;
+        existing.is_active = true;
+        existing.base_price = new BigDecimal("3.00");
+        when(menuItemRepository.findStoreIdById(14L)).thenReturn(Optional.of(3L));
+        when(menuItemRepository.findById(14L)).thenReturn(Optional.of(existing));
+        MenuItem request = new MenuItem();
+        request.id = 14L;
+        request.store_id = 3L;
+        request.is_active = true;
+
+        assertThrows(BusinessException.class, () -> service.saveMenuItem(request));
+        assertEquals(new BigDecimal("3.00"), existing.base_price);
+        existing.is_active = false;
+        existing.base_price = null;
+        assertThrows(BusinessException.class, () -> service.saveMenuItem(request));
+        assertEquals(false, existing.is_active);
         verify(menuItemRepository, never()).save(any());
     }
 

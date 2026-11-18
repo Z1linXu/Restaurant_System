@@ -15,5 +15,7 @@ public interface OwnerMenuOptionService {
 
     MenuItemOptionAdminResponse deactivateOption(Long itemId, Long optionId);
 
+    MenuItemOptionAdminResponse deactivateLegacyAddon(Long itemId, Long optionId);
+
     List<MenuItemOptionAdminResponse> reorderOptions(Long itemId, MenuItemOptionReorderRequest request);
 }

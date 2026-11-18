@@ -20,6 +20,10 @@ function normalizeStableCode(value?: string | null) {
   return (value ?? '').trim().toUpperCase()
 }
 
+function formatSizePrice(option: { priceDelta?: number; portionPrice?: number }) {
+  return option.portionPrice == null ? formatPriceDelta(option.priceDelta) : ` · $${option.portionPrice.toFixed(2)}`
+}
+
 function formatPriceDelta(priceDelta?: number) {
   if (!priceDelta) {
     return ''
@@ -363,10 +367,10 @@ export function ItemCustomizationModal({
                 {customization.sizes.options.length === 1 ? (
                   <div className={`rounded-[18px] bg-[rgba(26,28,25,0.04)] text-[var(--on-surface)] ${compact ? 'px-4 py-3' : 'px-5 py-4'}`}>
                     <div className={`${compact ? 'text-[0.95rem]' : 'text-[1.05rem]'} font-bold`}>
-                      Auto-selected: {customization.sizes.options[0].labelEn}{formatPriceDelta(customization.sizes.options[0].priceDelta)}
+                      Auto-selected: {customization.sizes.options[0].labelEn}{formatSizePrice(customization.sizes.options[0])}
                     </div>
                     <div className={`${compact ? 'mt-0.5 text-[0.78rem]' : 'mt-1 text-sm'} text-[var(--muted)]`}>
-                      自动选择：{customization.sizes.options[0].labelZh}{formatPriceDelta(customization.sizes.options[0].priceDelta)}
+                      自动选择：{customization.sizes.options[0].labelZh}{formatSizePrice(customization.sizes.options[0])}
                     </div>
                   </div>
                 ) : (
@@ -375,8 +379,8 @@ export function ItemCustomizationModal({
                       <ChoiceButton
                         key={option.id}
                         active={draft.sizeId === option.id}
-                        label={`${option.labelEn}${formatPriceDelta(option.priceDelta)}`}
-                        sublabel={`${option.labelZh}${formatPriceDelta(option.priceDelta)}`}
+                        label={`${option.labelEn}${formatSizePrice(option)}`}
+                        sublabel={`${option.labelZh}${formatSizePrice(option)}`}
                         compact={compact}
                         onClick={() => onChange({ ...draft, sizeId: option.id })}
                       />

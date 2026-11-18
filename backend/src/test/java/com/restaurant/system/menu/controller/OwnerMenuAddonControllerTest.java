@@ -78,9 +78,21 @@ class OwnerMenuAddonControllerTest {
     @Test void reconciliationAuthorizesExactStoreAndReturnsSanitizedReport() {
         var request = new StoreAddonService.ReconcileRequest(); request.store_id = 12L; request.dry_run = true;
         var report = new StoreAddonService.ReconciliationReport(12L, true, 0, 0, List.of());
-        when(service.reconcile(12L, true)).thenReturn(report);
+        when(service.reconcile(12L, true, null)).thenReturn(report);
         assertThat(controller.reconcile(request, null).getData()).isSameAs(report);
         verify(authorization).requireForStore(12L, Capability.ADMIN_MENU_MANAGE);
         verify(modules).requireCapability(12L, ModuleKeys.MENU_MANAGEMENT);
+    }
+
+    @Test void reconciliationCanLimitWritesToOneStableOptionCode() {
+        var request = new StoreAddonService.ReconcileRequest();
+        request.store_id = 12L;
+        request.dry_run = true;
+        request.option_codes = List.of("corn");
+        var report = new StoreAddonService.ReconciliationReport(12L, true, 1, 1, List.of());
+        when(service.reconcile(12L, true, request.option_codes)).thenReturn(report);
+
+        assertThat(controller.reconcile(request, null).getData()).isSameAs(report);
+        verify(authorization).requireForStore(12L, Capability.ADMIN_MENU_MANAGE);
     }
 }

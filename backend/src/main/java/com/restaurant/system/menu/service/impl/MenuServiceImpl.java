@@ -81,23 +81,13 @@ public class MenuServiceImpl implements MenuService {
             .map(option -> storePricingPolicyService.applyEffectiveCatalogPricing(option, pricingPolicy))
             .toList();
 
+        Map<Long, MenuItem> itemsById = items.stream().collect(Collectors.toMap(item -> item.id, item -> item));
         Map<Long, List<MenuCatalogResponse.OptionResponse>> optionsByItemId = effectiveOptions.stream()
             .collect(Collectors.groupingBy(
                 option -> option.menu_item_id,
                 LinkedHashMap::new,
                 Collectors.mapping(
-                    option -> new MenuCatalogResponse.OptionResponse(
-                        option.id,
-                        option.option_type,
-                        option.option_code,
-                        option.option_group,
-                        option.parent_option_id,
-                        option.sort_order,
-                        option.name_zh,
-                        option.name_en,
-                        option.price_delta,
-                        option.is_active
-                    ),
+                    option -> catalogOption(option, itemsById.get(option.menu_item_id)),
                     Collectors.toList()
                 )
             ));
@@ -173,6 +163,17 @@ public class MenuServiceImpl implements MenuService {
             categoryResponses
         );
         response.content_hash = menuCatalogHashService.calculate(response);
+        return response;
+    }
+
+    private MenuCatalogResponse.OptionResponse catalogOption(MenuItemOption option, MenuItem item) {
+        var response = new MenuCatalogResponse.OptionResponse(
+            option.id, option.option_type, option.option_code, option.option_group, option.parent_option_id,
+            option.sort_order, option.name_zh, option.name_en,
+            option.portion_price == null ? option.price_delta : option.portionDelta(item.base_price),
+            option.is_active
+        );
+        response.portion_price = option.portion_price;
         return response;
     }
 
