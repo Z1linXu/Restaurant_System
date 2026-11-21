@@ -10,6 +10,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import lombok.Data;
@@ -66,6 +67,14 @@ public class OrderItemOption {
 
     @Column(name = "quantity")
     public Integer quantity;
+
+    @Column(name = "voided_quantity", nullable = false)
+    public int voided_quantity;
+
+    // Populated on an effective-view copy when a remaining add-on quantity
+    // cannot be expressed as the same quantity on every serving.
+    @Transient
+    public Integer effective_total_quantity;
 
     @Column(name = "created_at")
     public LocalDateTime created_at;

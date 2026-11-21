@@ -58,6 +58,8 @@ public class AnalyticsAggregationServiceImpl implements AnalyticsAggregationServ
     private final StoreRepository storeRepository;
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.restaurant.system.order.repository.OrderItemOptionRepository orderItemOptions;
     private final InventoryItemRepository inventoryItemRepository;
     private final MenuItemRepository menuItemRepository;
     private final SalesDailySummaryRepository salesDailySummaryRepository;
@@ -151,7 +153,10 @@ public class AnalyticsAggregationServiceImpl implements AnalyticsAggregationServ
         List<Order> completedOrders = storeOrders.stream().filter(SalesReporting::eligible).filter(order -> matchesDate(order.submitted_at, summaryDate)).toList();
         List<Order> cancelledOrders = orderRepository.findCancelledByStoreIdAndUpdatedDate(store.id, sqlSummaryDate).stream().filter(order -> !order.kitchenMirror() && !"UBER_EATS".equals(order.external_source)).toList();
         List<OrderItem> completedOrderItems = fetchOrderItems(completedOrders);
-        if ("ALLO_NOUILLES_TEST".equals(store.code)) completedOrderItems = com.restaurant.system.allo.AlloMoney.effectiveItems(completedOrderItems);
+        if ("ALLO_NOUILLES_TEST".equals(store.code) && !completedOrderItems.isEmpty()) {
+            var choices = orderItemOptions.findAllByOrderItemIds(completedOrderItems.stream().map(i -> i.id).toList());
+            completedOrderItems = com.restaurant.system.allo.AlloMoney.effectiveItems(completedOrderItems, choices);
+        }
         Map<Long, BigDecimal> costByMenuItemId = loadItemCosts(completedOrderItems);
 
         BigDecimal grossSales = scale(sumSubtotals(completedOrders));

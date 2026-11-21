@@ -46,13 +46,22 @@ public class AlloSalesReportService {
         result.put("collected_note","按门店规则记账的已收金额，未按现金/银行卡核对");
         result.put("dine_in",Map.of("count",dineCount,"total",AlloMoney.cents(dine)));
         result.put("takeout",Map.of("count",takeoutCount,"total",AlloMoney.cents(takeout)));result.put("uber_eats","未接入");
-        result.put("adjustments",db.queryForList("select a.*,o.order_no,o.table_no,o.pickup_no,o.order_type from allo_order_adjustments a join orders o on o.id=a.order_id where a.store_id=? and a.business_date=? order by a.id",store,date));
+        result.put("adjustments", db.queryForList("""
+            select a.*, to_char(a.created_at, 'YYYY-MM-DD HH24:MI:SS') as display_time,
+                   o.order_no, o.table_no, o.pickup_no, o.order_type
+            from allo_order_adjustments a join orders o on o.id=a.order_id
+            where a.store_id=? and a.business_date=? order by a.id
+            """, store, date));
         var voids=db.queryForMap("""
             select coalesce(sum((a.before_snapshot::jsonb->>'gross')::numeric-(a.after_snapshot::jsonb->>'gross')::numeric),0) as gross,
-            coalesce(sum((select sum((v->>'quantity')::int) from jsonb_array_elements(a.item_changes::jsonb) v)),0) as quantity
+            coalesce(sum((select sum((v->>'quantity')::int) from jsonb_array_elements(a.item_changes::jsonb) v
+                where not jsonb_exists(v,'option_id'))),0) as quantity,
+            coalesce(sum((select sum((v->>'quantity')::int) from jsonb_array_elements(a.item_changes::jsonb) v
+                where jsonb_exists(v,'option_id'))),0) as addon_quantity
             from allo_order_adjustments a where a.store_id=? and a.business_date=? and a.action in ('VOID_ORDER','VOID_ITEMS')
             """,store,date);
         result.put("voided_quantity",voids.get("quantity"));result.put("voided_gross",voids.get("gross"));
+        result.put("voided_addon_quantity", voids.get("addon_quantity"));
         result.put("voided_orders",db.queryForObject("select count(distinct a.order_id) from allo_order_adjustments a join orders o on o.id=a.order_id where a.store_id=? and a.business_date=? and o.status='cancelled'",Long.class,store,date));
         return result;
     }
@@ -95,22 +104,39 @@ public class AlloSalesReportService {
             for(var n:nodes)b.append(n.path("name").asText()).append(" x").append(n.path("quantity").asInt()).append("\n");return b.toString();
         }catch(Exception e){throw new BusinessException("REPORT_ADJUSTMENT_INVALID");}
     }
-    private static String action(String code) {return switch(code){case "VOID_ORDER"->"作废整单";case "VOID_ITEMS"->"作废菜品";case "DISCOUNT"->"应用折扣";case "REMOVE_DISCOUNT"->"取消折扣";case "TAKEOUT_REPAIR"->"外带完成修复";default->code;};}
+    private static String action(String code) {
+        return switch (code) {
+            case "VOID_ORDER" -> "作废整单";
+            case "VOID_ITEMS" -> "作废菜品或加料";
+            case "DISCOUNT" -> "应用折扣";
+            case "REMOVE_DISCOUNT" -> "取消折扣";
+            case "APPLY_COUPON" -> "应用 Coupon";
+            case "REMOVE_COUPON" -> "取消 Coupon";
+            case "TAKEOUT_REPAIR" -> "外带完成修复";
+            default -> code;
+        };
+    }
     @SuppressWarnings("unchecked")
     public static String render(Map<String,Object> d) {
-        var b=new StringBuilder("Sales Overview / 销售汇总\nAllo Nouilles\n");
-        b.append(d.get("business_date")).append(" / ").append(d.get("timezone")).append("\n");
-        b.append("Report: ").append(d.get("report_id")).append("\nGenerated: ").append(d.get("generated_at")).append("\n--------------------------------\n");
+        var b = new StringBuilder("Allo Nouilles\n");
+        b.append(d.get("business_date")).append("\n--------------------------------\n");
         for(String[] field:new String[][]{{"Gross Sales","gross"},{"Discounts","discount"},{"Net Sales","net"},{"Taxes","tax"},{"Total incl. Tax","total"},{"Amount Collected","collected"}})
             b.append(field[0]).append(": $").append(d.get(field[1])).append("\n");
         b.append("按门店规则记账，未按现金/银行卡核对\n");
         for(String channel:List.of("dine_in","takeout")){var c=(Map<String,Object>)d.get(channel);b.append(channel).append(": ").append(c.get("count")).append(" / $").append(c.get("total")).append("\n");}
         b.append("Uber Eats: 未接入\nVoided orders: ").append(d.get("voided_orders")).append("\n");
         b.append("Voided quantity: ").append(d.get("voided_quantity")).append("\nVoided gross: $").append(d.get("voided_gross")).append("\n");
+        b.append("Voided add-ons: ").append(d.get("voided_addon_quantity")).append("\n");
         b.append("--------------------------------\n调整/作废明细（单独披露，不重复扣减）\n");
-        for(var a:(List<Map<String,Object>>)d.get("adjustments")) b.append(a.get("created_at")).append(" / ").append(a.get("actor_name")).append("\n")
-            .append(a.get("order_no")).append(" / ").append(a.get("order_type")).append(" / ").append(a.get("table_no")==null?a.get("pickup_no"):a.get("table_no")).append("\n")
-            .append(action(a.get("action").toString())).append("\n").append(changes(a.get("item_changes").toString())).append("\n已收调整: $").append(a.get("collected_delta")).append("\n");
+        for (var adjustment : (List<Map<String,Object>>) d.get("adjustments")) {
+            b.append(adjustment.get("display_time")).append(" / ").append(adjustment.get("actor_name")).append("\n");
+            b.append(adjustment.get("order_type"));
+            Object location = adjustment.get("table_no") == null ? adjustment.get("pickup_no") : adjustment.get("table_no");
+            if (location != null) b.append(" / ").append(location);
+            b.append("\n").append(action(adjustment.get("action").toString())).append("\n")
+                .append(changes(adjustment.get("item_changes").toString()))
+                .append("已收调整: $").append(adjustment.get("collected_delta")).append("\n");
+        }
         return b.toString();
     }
 }

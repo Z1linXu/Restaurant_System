@@ -402,6 +402,7 @@ export interface BackendOrderItemOptionResponse {
   option_name_snapshot_fr?: string | null
   price_delta: number
   quantity: number
+  effective_total_quantity?: number
 }
 
 export type SplitBillCount = 1 | 2 | 3 | 4

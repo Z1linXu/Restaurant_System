@@ -35,7 +35,7 @@ public class OrderDispatchOutboxServiceImpl implements OrderDispatchOutboxServic
         Store store = storeRepository.findById(storeId)
             .orElseThrow(() -> new BusinessException("Store not found: " + storeId));
         LocalDateTime now = LocalDateTime.now();
-        var receiptContext = receiptContexts == null ? null : receiptContexts.freeze(store,moduleCode,orderId,orderUpdateBatchId);
+        var receiptContext = receiptContexts == null ? null : receiptContexts.freezeForDispatch(store, moduleCode, orderId, orderUpdateBatchId);
         int inserted = repository.insertIfAbsent(
             store.organization_id,
             storeId,

@@ -1,5 +1,6 @@
 import { AlloSalesOverview } from '../allo/AlloSalesOverview'
 import { AlloOrderActions } from '../allo/AlloOrderActions'
+import { salesApi, type FinancialDetail } from '../allo/alloSalesService'
 import { useLocale } from '../../i18n/useLocale'
 import { useEffect, useRef, useState } from 'react'
 import { followReprint, printResultMessage, reprintErrorMessage } from '../../services/manualReprintService'
@@ -31,6 +32,9 @@ export function OrdersPage() {
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null)
   useEffect(() => () => { reprintScope.current += 1; reprintFollow.current?.() }, [storeId, selectedOrderId])
   const [selectedOrder, setSelectedOrder] = useState<BackendOrderResponse | null>(null)
+  const [financialDetail, setFinancialDetail] = useState<FinancialDetail | null>(null)
+  const [detailRevision, setDetailRevision] = useState(0)
+  const isAllo = storeCode === 'ALLO_NOUILLES_TEST'
   const [printOptions, setPrintOptions] = useState<OrderPrintOption[]>([])
   const [printJobs, setPrintJobs] = useState<PrintJobRecord[]>([])
   const [printStatusMessage, setPrintStatusMessage] = useState<{ kind: 'success' | 'error'; message: string } | null>(null)
@@ -60,6 +64,7 @@ export function OrdersPage() {
   }, [storeId])
 
   useEffect(() => {
+    setFinancialDetail(null)
     if (!selectedOrderId) {
       setSelectedOrder(null)
       setPrintOptions([])
@@ -74,8 +79,9 @@ export function OrdersPage() {
       fetchOrderDetail(selectedOrderId),
       fetchOrderPrintOptions(selectedOrderId),
       fetchOrderPrintJobs(selectedOrderId),
+      isAllo ? salesApi<FinancialDetail>(storeId, `/orders/${selectedOrderId}`) : Promise.resolve(null),
     ])
-      .then(([detailResult, optionsResult, printJobsResult]) => {
+      .then(([detailResult, optionsResult, printJobsResult, financialResult]) => {
         if (!active) return
         if (detailResult.status === 'fulfilled') {
           setSelectedOrder(detailResult.value)
@@ -85,10 +91,16 @@ export function OrdersPage() {
         }
         setPrintOptions(optionsResult.status === 'fulfilled' ? optionsResult.value : [])
         setPrintJobs(printJobsResult.status === 'fulfilled' ? printJobsResult.value : [])
+        if (financialResult.status === 'fulfilled') {
+          setFinancialDetail(financialResult.value)
+        } else if (isAllo) {
+          setError('完整订单详情加载失败，请刷新后重试。')
+          setSelectedOrder(null)
+        }
       })
       .finally(() => active && setDetailLoading(false))
     return () => { active = false }
-  }, [selectedOrderId])
+  }, [selectedOrderId, storeId, isAllo, detailRevision])
 
   const handleReprint = async (option: OrderPrintOption) => {
     if (!selectedOrder || !option.available) return
@@ -118,7 +130,9 @@ export function OrdersPage() {
     <div className={`min-h-screen bg-[var(--surface)] ${isIpadLandscape ? 'px-3 py-3' : 'px-5 py-4 md:px-7'}`}>
       {storeCode==='ALLO_NOUILLES_TEST'&&<button className="m-3 min-h-12 rounded-xl bg-white px-5 py-3 font-bold" onClick={()=>setShowSales(!showSales)}>{showSales?'返回订单':'Sales Overview / 销售汇总'}</button>}
       {showSales&&storeCode==='ALLO_NOUILLES_TEST'?<AlloSalesOverview/>:null}
-      {actionOrder&&<AlloOrderActions key={`${storeId}:${actionOrder}`} store={storeId} id={actionOrder} onClose={()=>setActionOrder(null)} onChanged={()=>{void loadToday();if(selectedOrderId)void fetchOrderDetail(selectedOrderId).then(setSelectedOrder)}}/>}
+      {actionOrder && <AlloOrderActions key={`${storeId}:${actionOrder}`} store={storeId} id={actionOrder}
+        onClose={() => setActionOrder(null)}
+        onChanged={() => { void loadToday(); setDetailRevision(revision => revision + 1) }} />}
       <div className="mx-auto max-w-[1720px] space-y-4">
         <FrontdeskTopNav activeItem="orders" />
         <header className="flex items-end justify-between rounded-[24px] bg-white/75 px-5 py-4">
@@ -127,7 +141,7 @@ export function OrdersPage() {
             <h1 className="mt-1 text-3xl font-extrabold">{t('orders.history')}</h1>
             <p className="mt-1 text-sm text-[var(--muted)]">{t('orders.historyHint')}</p>
           </div>
-          <button type="button" onClick={() => void loadToday()} className="rounded-full bg-stone-100 px-4 py-2 font-bold">{t('common.refresh')}</button>
+          <button type="button" onClick={() => { void loadToday(); setDetailRevision(revision => revision + 1) }} className="rounded-full bg-stone-100 px-4 py-2 font-bold">{t('common.refresh')}</button>
         </header>
         {error ? <div className="rounded-[18px] bg-red-50 px-4 py-3 font-semibold text-red-700">{error}</div> : null}
         <div className={`grid gap-4 ${isIpadLandscape ? 'grid-cols-[18rem_minmax(0,1fr)]' : 'xl:grid-cols-[20rem_minmax(0,1fr)]'}`}>
@@ -141,6 +155,7 @@ export function OrdersPage() {
           </Card>
           <OrderHistoryDetail
             order={selectedOrder}
+            financialDetail={financialDetail}
             loading={detailLoading}
             printOptions={printOptions}
             printJobs={printJobs}

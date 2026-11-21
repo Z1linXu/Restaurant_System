@@ -5,6 +5,8 @@ import com.restaurant.system.common.exception.BusinessException;
 import com.restaurant.system.order.entity.*;
 import java.math.*;
 import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /** Determined order money, shared by adjustments, receipts and live reporting. */
 public final class AlloMoney {
@@ -20,6 +22,42 @@ public final class AlloMoney {
         // Retain deterministic cent allocation even for historical non-divisible totals.
         return cents(i.line_amount).multiply(BigDecimal.valueOf(effectiveQuantity(i)))
             .divide(BigDecimal.valueOf(i.quantity), 2, RoundingMode.HALF_UP);
+    }
+    public static int originalOptionQuantity(OrderItem item, OrderItemOption option) {
+        return Math.multiplyExact(item.quantity, perServing(option));
+    }
+
+    public static int effectiveOptionQuantity(OrderItem item, OrderItemOption option) {
+        return Math.max(0, Math.multiplyExact(effectiveQuantity(item), perServing(option)) - option.voided_quantity);
+    }
+
+    public static boolean canVoidOption(OrderItemOption option) {
+        return ("addon".equalsIgnoreCase(option.option_type_snapshot) || "ADD_ON".equals(option.option_group_snapshot))
+            && option.price_delta != null && option.price_delta.signum() >= 0;
+    }
+
+    public static int printedOptionQuantity(OrderItemOption option, int servings) {
+        return option.effective_total_quantity != null
+            ? option.effective_total_quantity : Math.multiplyExact(servings, perServing(option));
+    }
+
+    private static int perServing(OrderItemOption option) {
+        return option.quantity == null ? 1 : option.quantity;
+    }
+
+    public static Map<Long, List<OrderItemOption>> optionsByItem(List<OrderItemOption> options) {
+        return options.stream().collect(Collectors.groupingBy(option -> option.order_item_id));
+    }
+
+    public static BigDecimal effectiveLine(OrderItem item, List<OrderItemOption> options) {
+        BigDecimal result = effectiveLine(item);
+        for (var option : options) {
+            if (option.voided_quantity == 0) continue;
+            int removed = Math.min(option.voided_quantity, Math.multiplyExact(effectiveQuantity(item), perServing(option)));
+            result = result.subtract(cents(option.price_delta).multiply(BigDecimal.valueOf(removed)));
+        }
+        // Old non-divisible snapshot totals can leave a rounding cent at the boundary.
+        return result.max(cents(BigDecimal.ZERO));
     }
     public static void validateDiscount(String type, BigDecimal value) {
         if (!Set.of("PERCENT", "AMOUNT").contains(type == null ? "" : type) || value == null
@@ -47,9 +85,38 @@ public final class AlloMoney {
             "completed".equals(o.status) ? total : cents(BigDecimal.ZERO));
     }
     public static List<OrderItem> effectiveItems(List<OrderItem> items) {
+        return effectiveItems(items, List.of());
+    }
+
+    public static List<OrderItem> effectiveItems(List<OrderItem> items, List<OrderItemOption> options) {
+        var byItem = optionsByItem(options);
         return items.stream().filter(i -> effectiveQuantity(i)>0).map(i -> {
-            OrderItem copy=new OrderItem(); com.restaurant.system.allo.AlloCopies.copy(i,copy);
-            copy.quantity=effectiveQuantity(i); copy.line_amount=effectiveLine(i); copy.voided_quantity=0; return copy;
+            var copy = AlloCopies.copy(i, new OrderItem());
+            copy.quantity = effectiveQuantity(i);
+            copy.line_amount = effectiveLine(i, byItem.getOrDefault(i.id, List.of()));
+            copy.voided_quantity = 0;
+            return copy;
         }).toList();
+    }
+
+    public static List<OrderItemOption> effectiveOptions(List<OrderItem> items, List<OrderItemOption> options) {
+        var byId = items.stream().collect(Collectors.toMap(i -> i.id, Function.identity()));
+        var effective = new ArrayList<OrderItemOption>();
+        for (var option : options) {
+            var item = byId.get(option.order_item_id);
+            if (item == null || effectiveQuantity(item) == 0) continue;
+            if (option.voided_quantity == 0) {
+                effective.add(option);
+                continue;
+            }
+            int quantity = effectiveOptionQuantity(item, option);
+            if (quantity == 0) continue;
+            var copy = AlloCopies.copy(option, new OrderItemOption());
+            int servings = effectiveQuantity(item);
+            copy.quantity = Math.max(1, quantity / servings);
+            if (quantity % servings != 0) copy.effective_total_quantity = quantity;
+            effective.add(copy);
+        }
+        return effective;
     }
 }

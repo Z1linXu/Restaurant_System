@@ -546,7 +546,8 @@ public class OrderServiceImpl implements OrderService {
         if (configuredKitchen) templateRouting.enqueue(order,null,orderItems,orderItemOptions);
         else printDispatcherService.dispatchAfterCommit(PrintModuleCode.GRAB,order.store_id,order.id);
         if (!order.kitchenMirror()) printDispatcherService.dispatchAfterCommit(PrintModuleCode.FRONTDESK_RECEIPT,order.store_id,order.id);
-        if (!configuredKitchen && printDispatcherService.hasPrintableContent(PrintModuleCode.HOT_KITCHEN,order.store_id,order.id))
+        boolean alloKitchen = alloSales != null && alloSales.enabled(order.store_id);
+        if (!configuredKitchen && (alloKitchen || printDispatcherService.hasPrintableContent(PrintModuleCode.HOT_KITCHEN, order.store_id, order.id)))
             printDispatcherService.dispatchAfterCommit(PrintModuleCode.HOT_KITCHEN,order.store_id,order.id);
         return loadOrderResponse(order.id);
     }
@@ -635,7 +636,7 @@ public class OrderServiceImpl implements OrderService {
             return buildOrderUpdateResponse(order.id, existingBatch, true);
         }
         if(alloSales!=null && alloSales.enabled(order.store_id) && !Integer.valueOf(2).equals(request.financial_version)
-            && (order.discount_type!=null || orderItemRepository.findAllByOrderId(order.id).stream().anyMatch(i->i.voided_quantity!=null&&i.voided_quantity>0)))
+            && alloSales.hasFinancialAdjustment(order))
             throw new OrderSubmissionException("ALLO_FINANCIAL_CLIENT_UPDATE_REQUIRED",HttpStatus.CONFLICT,"订单金额已调整，请更新 Allô App 后继续加菜；订单页仍可查看准确金额。");
         if (!MODIFIABLE_AFTER_SUBMIT_ORDER_STATUSES.contains(order.status)) {
             throw new BusinessException("Only submitted, preparing, or ready orders can receive an update batch");
@@ -702,7 +703,9 @@ public class OrderServiceImpl implements OrderService {
         if(configuredKitchen && !notesOnly) templateRouting.enqueue(order,batch.id,addedItems,addedOptions);
         else printDispatcherService.dispatchOrderUpdateAfterCommit(PrintModuleCode.GRAB,order.store_id,order.id,batch.id);
         if (!notesOnly) printDispatcherService.dispatchOrderUpdateAfterCommit(PrintModuleCode.FRONTDESK_RECEIPT,order.store_id,order.id,batch.id);
-        if(!notesOnly && !configuredKitchen && printDispatcherService.hasPrintableUpdateContent(PrintModuleCode.HOT_KITCHEN,order.store_id,order.id,batch.id))
+        boolean alloKitchen = alloSales != null && alloSales.enabled(order.store_id);
+        if (!configuredKitchen && (alloKitchen || !notesOnly
+                && printDispatcherService.hasPrintableUpdateContent(PrintModuleCode.HOT_KITCHEN, order.store_id, order.id, batch.id)))
             printDispatcherService.dispatchOrderUpdateAfterCommit(PrintModuleCode.HOT_KITCHEN,order.store_id,order.id,batch.id);
         return buildOrderUpdateResponse(order.id, batch, false);
     }
@@ -906,7 +909,11 @@ public class OrderServiceImpl implements OrderService {
         List<OrderItemOption> orderItemOptions = loadOptionsForOrderItems(orderItems);
         List<KitchenTask> kitchenTasks = kitchenTaskRepository.findAllByOrderId(order.id);
         List<FrontdeskBeverageItem> beverageItems = frontdeskBeverageItemRepository.findAllByOrderId(order.id);
-        if (alloSales != null && alloSales.enabled(order.store_id)) orderItems = com.restaurant.system.allo.AlloMoney.effectiveItems(orderItems);
+        if (alloSales != null && alloSales.enabled(order.store_id)) {
+            var effectiveItems = com.restaurant.system.allo.AlloMoney.effectiveItems(orderItems, orderItemOptions);
+            orderItemOptions = com.restaurant.system.allo.AlloMoney.effectiveOptions(orderItems, orderItemOptions);
+            orderItems = effectiveItems;
+        }
         return toOrderResponse(order, orderItems, orderItemOptions, kitchenTasks, beverageItems);
     }
 
@@ -1875,6 +1882,7 @@ public class OrderServiceImpl implements OrderService {
             response.option_name_snapshot_fr = orderItemOption.option_name_snapshot_fr;
             response.price_delta = defaultIfNull(orderItemOption.price_delta);
             response.quantity = orderItemOption.quantity;
+            response.effective_total_quantity = orderItemOption.effective_total_quantity;
             optionsByOrderItemId.computeIfAbsent(orderItemOption.order_item_id, key -> new ArrayList<>()).add(response);
         }
 
@@ -1947,7 +1955,7 @@ public class OrderServiceImpl implements OrderService {
         response.order_notes = order.order_notes;
         if(alloSales!=null && alloSales.enabled(order.store_id)) {
             response.financial_version=2;
-            response.financial_adjusted=order.discount_type!=null||orderItemRepository.findAllByOrderId(order.id).stream().anyMatch(i->i.voided_quantity!=null && i.voided_quantity>0);
+            response.financial_adjusted = alloSales.hasFinancialAdjustment(order);
             response.discount_type=order.discount_type;response.discount_value=order.discount_value;response.discount_name=order.discount_name;
             var money=com.restaurant.system.allo.AlloMoney.determined(order);response.net_amount=money.net();response.tax_amount=money.tax();
         }

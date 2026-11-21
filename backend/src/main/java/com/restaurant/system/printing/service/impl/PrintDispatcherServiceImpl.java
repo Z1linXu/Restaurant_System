@@ -221,7 +221,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             return true;
         }
         PrintRenderRequest renderRequest = buildRenderRequest(moduleCode, storeId, orderId);
-        return hotKitchenPrintEligibilityService.hasHotKitchenContent(renderRequest);
+        return hasHotKitchenContent(renderRequest);
     }
 
     @Override
@@ -230,7 +230,25 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
             return true;
         }
         PrintRenderRequest renderRequest = buildRenderRequest(moduleCode, storeId, orderId, orderUpdateBatchId);
-        return hotKitchenPrintEligibilityService.hasHotKitchenContent(renderRequest);
+        return hasHotKitchenContent(renderRequest);
+    }
+
+    private boolean usesGrabReceipt(PrintRenderRequest request) {
+        // Older HOT_KITCHEN events have no receipt context. Honor their original routing.
+        return request != null && request.allo_current && request.receipt_context != null
+            && PrintModuleCode.HOT_KITCHEN.equals(request.module_code);
+    }
+
+    private boolean hasHotKitchenContent(PrintRenderRequest request) {
+        if (usesGrabReceipt(request)) {
+            return request.receipt_context.hasNoteChange() || request.kitchen_tasks.stream()
+                .anyMatch(task -> !"cancelled".equals(task.status) && request.receipt_context.includesKitchenItem(task.order_item_id));
+        }
+        return request != null && hotKitchenPrintEligibilityService.hasHotKitchenContent(request);
+    }
+
+    private ReceiptRenderer orderRenderer(String moduleCode, PrintRenderRequest request) {
+        return renderersByModuleCode.get(usesGrabReceipt(request) ? PrintModuleCode.GRAB : moduleCode);
     }
 
     @Override
@@ -627,7 +645,7 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                     );
                     return;
                 }
-                if (!hotKitchenPrintEligibilityService.hasHotKitchenContent(renderRequest)) {
+                if (!hasHotKitchenContent(renderRequest)) {
                     logger.info(
                         "Skipping HOT_KITCHEN print before job creation because order {} batch {} has no hot kitchen content",
                         orderId,
@@ -636,11 +654,11 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                     return;
                 }
             }
-            if (receiptContexts != null && "ALLO_NOUILLES_TEST".equals(store.code)) {
+            if (renderRequest == null && receiptContexts != null && "ALLO_NOUILLES_TEST".equals(store.code)) {
                 renderRequest = buildRenderRequest(moduleCode, storeId, orderId, orderUpdateBatchId, ruleContext);
             }
             if (orderUpdateBatchId != null || (renderRequest != null && renderRequest.receipt_context != null)) {
-                ReceiptRenderer updateRenderer = renderersByModuleCode.get(moduleCode);
+                ReceiptRenderer updateRenderer = orderRenderer(moduleCode, renderRequest);
                 if (updateRenderer != null) {
                     if (renderRequest == null) {
                         renderRequest = buildRenderRequest(moduleCode, storeId, orderId, orderUpdateBatchId, ruleContext);
@@ -744,14 +762,6 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                 }
             }
 
-            ReceiptRenderer renderer = renderersByModuleCode.get(moduleCode);
-            if (renderer == null) {
-                job = printJobService.attachRenderedContent(job, printer == null ? null : printer.id, null);
-                printJobService.markFailed(job, printer, "RENDERER_MISSING", "No renderer is registered for module " + moduleCode);
-                logger.warn("Print job {} failed because renderer is missing for module {}", job.id, moduleCode);
-                return;
-            }
-
             if (renderRequest == null) {
                 renderRequest = buildRenderRequest(moduleCode, storeId, orderId, orderUpdateBatchId, ruleContext);
             }
@@ -759,6 +769,13 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                 job = printJobService.attachRenderedContent(job, printer == null ? null : printer.id, null);
                 printJobService.markFailed(job, printer, "RENDER_DATA_MISSING", "No render data was available");
                 logger.warn("Print job {} failed because no render data was available", job.id);
+                return;
+            }
+            ReceiptRenderer renderer = orderRenderer(moduleCode, renderRequest);
+            if (renderer == null) {
+                job = printJobService.attachRenderedContent(job, printer == null ? null : printer.id, null);
+                printJobService.markFailed(job, printer, "RENDERER_MISSING", "No renderer is registered for module " + moduleCode);
+                logger.warn("Print job {} failed because renderer is missing for module {}", job.id, moduleCode);
                 return;
             }
             String content = preRenderedContent != null ? preRenderedContent : renderer.render(renderRequest);
@@ -1211,9 +1228,10 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         request.is_update_ticket = updateTicket;
         request.order_update_batch_id = orderUpdateBatchId;
         request.printing_rules = ruleContext;
-        request.receipt_context = receiptContexts == null ? null : receiptContexts.forEvent(store,moduleCode,orderId,orderUpdateBatchId);
-        if (request.allo_current && com.restaurant.system.printing.service.ManualReprintService.currentIntent()!=null) {
-            request.order_items = com.restaurant.system.allo.AlloMoney.effectiveItems(orderItems);
+        boolean currentReprint = request.allo_current && com.restaurant.system.printing.service.ManualReprintService.currentIntent() != null;
+        if (currentReprint) {
+            request.order_items = com.restaurant.system.allo.AlloMoney.effectiveItems(orderItems, orderItemOptions);
+            request.order_item_options = com.restaurant.system.allo.AlloMoney.effectiveOptions(orderItems, orderItemOptions);
             var quantities = request.order_items.stream().collect(java.util.stream.Collectors.toMap(i->i.id,i->i.quantity));
             var originalItems = orderItems;
             request.kitchen_tasks = kitchenTasks.stream().filter(t->quantities.containsKey(t.order_item_id)).map(t->{
@@ -1222,11 +1240,13 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
                 copy.quantity=(t.quantity==null?1:t.quantity)*quantities.get(t.order_item_id)/original.quantity;return copy;
             }).toList();
             request.receipt_context = receiptContexts == null ? null : receiptContexts.freeze(store,moduleCode,orderId,null);
+        } else if (receiptContexts != null) {
+            request.receipt_context = receiptContexts.forEvent(store, moduleCode, orderId, orderUpdateBatchId);
         }
         if (request.receipt_context != null) {
             Set<Long> frozenIds = new java.util.HashSet<>(request.receipt_context.order_item_ids);
             request.order_items = request.order_items.stream().filter(i -> frozenIds.contains(i.id)).toList();
-            request.order_item_options = orderItemOptions.stream().filter(i -> frozenIds.contains(i.order_item_id)).toList();
+            request.order_item_options = request.order_item_options.stream().filter(i -> frozenIds.contains(i.order_item_id)).toList();
             request.kitchen_tasks = request.kitchen_tasks.stream().filter(i -> frozenIds.contains(i.order_item_id)).toList();
         }
         return request;
@@ -1247,13 +1267,13 @@ public class PrintDispatcherServiceImpl implements PrintDispatcherService {
         Long orderUpdateBatchId,
         PrintingDisplayRuleContext ruleContext
     ) {
-        ReceiptRenderer renderer = renderersByModuleCode.get(moduleCode);
-        if (renderer == null) {
-            throw new BusinessException("No renderer is registered for module " + moduleCode);
-        }
         PrintRenderRequest renderRequest = buildRenderRequest(moduleCode, storeId, orderId, orderUpdateBatchId, ruleContext);
         if (renderRequest == null) {
             throw new BusinessException("No render data was available");
+        }
+        ReceiptRenderer renderer = orderRenderer(moduleCode, renderRequest);
+        if (renderer == null) {
+            throw new BusinessException("No renderer is registered for module " + moduleCode);
         }
         String content = renderer.render(renderRequest);
         if (content == null || content.isBlank()) {

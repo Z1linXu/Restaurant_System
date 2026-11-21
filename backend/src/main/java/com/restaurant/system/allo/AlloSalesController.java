@@ -28,6 +28,12 @@ public class AlloSalesController {
     }
     @GetMapping("/orders/{id}")
     public ApiResponse<?> detail(@PathVariable Long storeId,@PathVariable Long id) {scope(storeId,id);return ApiResponse.success(sales.detail(id));}
+    @GetMapping("/orders")
+    public ApiResponse<?> recentOrders(@PathVariable Long storeId, @RequestParam(required = false) LocalDate date,
+                                       @RequestParam(defaultValue = "0") int page) {
+        access(storeId);
+        return ApiResponse.success(sales.recentOrders(storeId, date, page));
+    }
     @PostMapping("/orders/{id}/adjustments")
     public ApiResponse<?> adjust(@PathVariable Long storeId,@PathVariable Long id,@RequestBody AlloSalesService.Adjustment r) {
         scope(storeId,id);var u=auth.requireForStore(storeId,Capability.ORDER_MODIFY_SUBMITTED);
@@ -38,10 +44,20 @@ public class AlloSalesController {
         scope(storeId,id);auth.requireForStore(storeId,Capability.ORDER_MODIFY_SUBMITTED);return ApiResponse.success(sales.preview(id,r));
     }
     @GetMapping("/presets")
-    public ApiResponse<?> presets(@PathVariable Long storeId) {access(storeId);return ApiResponse.success(sales.presets(storeId));}
+    public ApiResponse<?> presets(@PathVariable Long storeId) {access(storeId);return ApiResponse.success(sales.presets(storeId, false));}
     @PostMapping("/presets")
     public ApiResponse<?> savePreset(@PathVariable Long storeId,@RequestBody AlloSalesService.Preset p) {
-        var u=auth.requireForStore(storeId,Capability.ORDER_MODIFY_SUBMITTED);return ApiResponse.success(sales.savePreset(storeId,p,u.userId()));
+        var u=auth.requireForStore(storeId,Capability.ORDER_MODIFY_SUBMITTED);return ApiResponse.success(sales.savePreset(storeId,p,u.userId(), false));
+    }
+    @GetMapping("/coupons")
+    public ApiResponse<?> coupons(@PathVariable Long storeId) {
+        access(storeId);
+        return ApiResponse.success(sales.presets(storeId, true));
+    }
+    @PostMapping("/coupons")
+    public ApiResponse<?> saveCoupon(@PathVariable Long storeId, @RequestBody AlloSalesService.Preset preset) {
+        var user = auth.requireForStore(storeId, Capability.ORDER_MODIFY_SUBMITTED);
+        return ApiResponse.success(sales.savePreset(storeId, preset, user.userId(), true));
     }
     @GetMapping("/overview")
     public ApiResponse<?> overview(@PathVariable Long storeId,@RequestParam(required=false) LocalDate date) {

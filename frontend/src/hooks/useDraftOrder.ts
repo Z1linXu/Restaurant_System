@@ -63,11 +63,12 @@ import { buildOptionSnapshots, calculateDraftLineSubtotal, calculateSnapshotLine
 import { activeTemplateGroups, templateSelectionError } from '../utils/templateCustomization'
 
 function optionTag(option: BackendOrderItemOptionResponse): LocalizedText {
-  if ((option.quantity ?? 1) > 1) {
+  const quantity = option.effective_total_quantity ?? option.quantity ?? 1
+  if (quantity > 1 || option.effective_total_quantity != null) {
     return {
-      en: `${option.option_name_snapshot_en} x${option.quantity}`,
-      zh: `${option.option_name_snapshot_zh} x${option.quantity}`,
-      ...(option.option_name_snapshot_fr ? { fr: `${option.option_name_snapshot_fr} x${option.quantity}` } : {}),
+      en: `${option.option_name_snapshot_en} x${quantity}`,
+      zh: `${option.option_name_snapshot_zh} x${quantity}`,
+      ...(option.option_name_snapshot_fr ? { fr: `${option.option_name_snapshot_fr} x${quantity}` } : {}),
     }
   }
 

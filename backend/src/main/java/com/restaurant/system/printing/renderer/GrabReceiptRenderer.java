@@ -176,8 +176,8 @@ public class GrabReceiptRenderer implements ReceiptRenderer {
         lines.add(presentation.itemName(item) + " x" + quantity);
         for (OrderItemOption option : options) {
             if (option.quantity != null && option.quantity <= 0) continue;
-            int selected = option.quantity == null ? 1 : option.quantity;
-            lines.add(presentation.optionName(option) + " x" + Math.multiplyExact(quantity, selected));
+            lines.add(presentation.optionName(option) + " x"
+                + com.restaurant.system.allo.AlloMoney.printedOptionQuantity(option, quantity));
         }
         if (item.notes != null && !item.notes.isBlank()) lines.add(presentation.label("notes") + ": " + item.notes);
         return lines;
