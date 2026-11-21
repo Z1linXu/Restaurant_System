@@ -20,7 +20,7 @@ import type { ConnectionState } from '../../services/networkStatus'
 import { menuCacheNoticeDismissalKey } from '../../offline/menuCacheNotice'
 import { useAuth } from '../auth/useAuth'
 import { useCurrentStore } from '../store/useStoreContext'
-import { isQuickAddItem } from './orderingCustomizationRules'
+import { requiresCustomization } from './orderingCustomizationRules'
 import { DiningTableOrderGate } from './DiningTableOrderGate'
 
 interface OrderingPageProps {
@@ -128,6 +128,7 @@ function OrderingWorkspace({
   const [customizationState, setCustomizationState] = useState<CustomizationState | null>(null)
   const [takeoutDialogOpen, setTakeoutDialogOpen] = useState(false)
   const [quickAddStates, setQuickAddStates] = useState<Record<string, 'idle' | 'adding' | 'added'>>({})
+  const quickAdds = useRef(new Map<string, { allowAfter: number }>())
   const [menuUpdateNotice, setMenuUpdateNotice] = useState<string | null>(null)
   const [menuNoticeCollapsed, setMenuNoticeCollapsed] = useState(false)
   const connection = useConnectionStatus()
@@ -181,6 +182,7 @@ function OrderingWorkspace({
     contextGenerationRef.current += 1
     contextKeyRef.current = orderingContextKey
     handledSubmittedOrderIdsRef.current.clear()
+    setQuickAddStates({})
   }, [orderingContextKey])
 
   useEffect(() => {
@@ -303,21 +305,18 @@ function OrderingWorkspace({
     [activeCategoryId, items, menuSearch],
   )
 
-  const handleSelectMenuItem = (item: MenuItem) => {
-    if (draftSubmissionLocked) return
-    if (isQuickAddItem(item)) {
-      void addItem(item, buildDefaultDraft(item))
+  const handleSelectMenuItem = async (item: MenuItem) => {
+    if (draftSubmissionLocked || item.isActive === false || item.soldOut) return
+    if (requiresCustomization(item)) {
+      setCustomizationState({ item, mode: 'add', draft: buildDefaultDraft(item) })
       return
     }
-    setCustomizationState({
-      item,
-      mode: 'add',
-      draft: buildDefaultDraft(item),
-    })
-  }
-
-  const handleQuickAddItem = async (item: MenuItem) => {
-    if (draftSubmissionLocked) return
+    const key = `${orderingContextKey}:${item.id}`
+    if ((quickAdds.current.get(key)?.allowAfter ?? 0) > Date.now()) return
+    const tap = { allowAfter: Number.POSITIVE_INFINITY }
+    quickAdds.current.set(key, tap)
+    const context = contextGenerationRef.current
+    const stillHere = () => mountedRef.current && contextGenerationRef.current === context
     setQuickAddStates((current) => ({
       ...current,
       [item.id]: 'adding',
@@ -325,31 +324,20 @@ function OrderingWorkspace({
 
     try {
       await addItem(item, buildDefaultDraft(item))
-      setQuickAddStates((current) => ({
+      tap.allowAfter = Date.now() + 250
+      if (stillHere()) setQuickAddStates((current) => ({
         ...current,
         [item.id]: 'added',
       }))
       window.setTimeout(() => {
-        setQuickAddStates((current) => ({
-          ...current,
-          [item.id]: 'idle',
-        }))
+        if (quickAdds.current.get(key) !== tap) return
+        quickAdds.current.delete(key)
+        if (stillHere()) setQuickAddStates((current) => ({ ...current, [item.id]: 'idle' }))
       }, 900)
     } catch {
-      setQuickAddStates((current) => ({
-        ...current,
-        [item.id]: 'idle',
-      }))
+      quickAdds.current.delete(key)
+      if (stillHere()) setQuickAddStates((current) => ({ ...current, [item.id]: 'idle' }))
     }
-  }
-
-  const handleMenuCardAdd = async (item: MenuItem) => {
-    if (draftSubmissionLocked) return
-    if (isQuickAddItem(item)) {
-      await handleQuickAddItem(item)
-      return
-    }
-    handleSelectMenuItem(item)
   }
 
   const handleDecrementMenuItem = (menuItemId: string) => {
@@ -630,7 +618,7 @@ function OrderingWorkspace({
                     key={item.id}
                     item={item}
                     onSelect={handleSelectMenuItem}
-                    onQuickAdd={handleMenuCardAdd}
+                    onQuickAdd={handleSelectMenuItem}
                     onDecrement={() => handleDecrementMenuItem(item.id)}
                     quickAddState={quickAddStates[item.id] ?? 'idle'}
                     orderedQuantity={orderedQuantityByMenuItemId.get(item.id) ?? 0}

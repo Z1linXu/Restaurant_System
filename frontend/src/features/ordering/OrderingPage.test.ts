@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { MenuItem } from '../../types/ordering'
-import { hasRequiredCustomization, isQuickAddItem } from './orderingCustomizationRules'
+import { requiresCustomization } from './orderingCustomizationRules'
 
 function item(overrides: Partial<MenuItem>): MenuItem {
   return {
@@ -38,8 +38,7 @@ describe('ordering customization requirements', () => {
       },
     })
 
-    expect(hasRequiredCustomization(singleSizeDrink)).toBe(false)
-    expect(isQuickAddItem(singleSizeDrink)).toBe(true)
+    expect(requiresCustomization(singleSizeDrink)).toBe(false)
   })
 
   it('requires the modal when multiple sizes are configured', () => {
@@ -71,7 +70,27 @@ describe('ordering customization requirements', () => {
       },
     })
 
-    expect(hasRequiredCustomization(multiSizeDrink)).toBe(true)
-    expect(isQuickAddItem(multiSizeDrink)).toBe(false)
+    expect(requiresCustomization(multiSizeDrink)).toBe(true)
+  })
+
+  it('quick-adds plain items and treats empty catalog metadata as no choices', () => {
+    expect(requiresCustomization(item({ categoryCode: 'CATEGORY_ADD_ON', sku: 'add_on_zha_jiang' }))).toBe(false)
+    expect(requiresCustomization(item({ categoryCode: 'ARBITRARY', customization: {
+      noodleTypes: [], spicyLevels: [], addOns: [], removeOptions: [],
+    } }))).toBe(false)
+  })
+
+  const choice = { id: 'choice', labelEn: 'Default', labelZh: '默认' }
+
+  it.each([
+    { spicyLevels: [choice] },
+    { noodleTypes: [choice] },
+    { soupBases: { required: true, options: [choice] } },
+    { sizes: { required: true, options: [{ ...choice, portionPrice: 3 }] } },
+    { removeOptions: [choice] },
+    { addOns: [choice] },
+    { combo: { upcharge: 5, groups: [], eggs: [], sides: [], sideRemoveOptions: [] } },
+  ])('shows configured employee choices even with defaults or on former quick-add categories', (customization) => {
+    expect(requiresCustomization(item({ customization }))).toBe(true)
   })
 })

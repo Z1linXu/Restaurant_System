@@ -1,28 +1,18 @@
 import type { MenuItem } from '../../types/ordering'
 
-const QUICK_ADD_DRINK_CATEGORY_CODES = new Set(['DRINK', 'ALCOHOL', 'MILK_TEA'])
-const QUICK_ADD_DRINK_ITEM_TYPES = new Set(['DRINK', 'BEVERAGE'])
-
-function normalizeCode(value: string | null | undefined) {
-  return (value ?? '').trim().toUpperCase()
-}
-
-export function hasRequiredCustomization(item: MenuItem) {
-  const sizeRequiresChoice = Boolean(
-    item.customization?.sizes?.required
-    && (item.customization.sizes.options.length > 1),
+export function requiresCustomization(item: MenuItem) {
+  const config = item.customization
+  if (!config) return false
+  const sizes = config.sizes?.options ?? []
+  return Boolean(
+    // A fixed conventional size is filled in by buildDefaultDraft.
+    sizes.length > 1
+    || sizes.some((size) => size.portionPrice != null)
+    || config.soupBases?.options.length
+    || config.noodleTypes?.length
+    || config.spicyLevels?.length
+    || config.combo
+    || config.addOns?.length
+    || config.removeOptions?.length,
   )
-  return Boolean(sizeRequiresChoice || item.customization?.soupBases?.required)
-}
-
-export function isQuickAddItem(item: MenuItem) {
-  const categoryCode = normalizeCode(item.categoryCode)
-  const itemType = normalizeCode(item.itemType)
-  if (categoryCode === 'FRIED') {
-    return !item.customization
-  }
-  if (QUICK_ADD_DRINK_CATEGORY_CODES.has(categoryCode) || QUICK_ADD_DRINK_ITEM_TYPES.has(itemType)) {
-    return !hasRequiredCustomization(item)
-  }
-  return false
 }

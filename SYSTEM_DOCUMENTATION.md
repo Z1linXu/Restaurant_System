@@ -7991,9 +7991,8 @@ Frontend ordering behavior:
 - The stepper quantity totals all current active order rows with the same menu item id, including rows with different options, notes, or combo selections.
 - Menu card `+` preserves existing behavior: quick-add items add directly, while items requiring customization open the customization modal.
 - Menu card `-` only targets mutable rows. In edit-order mode, previously submitted/locked rows are not modified; if multiple mutable rows share the same menu item id, the latest row is decremented first.
-- Drink-style items with stable metadata such as `categoryCode=DRINK`, `categoryCode=ALCOHOL`, `categoryCode=MILK_TEA`, `itemType=drink`, or `itemType=beverage` quick-add directly when they do not have required customization.
-- Fried items keep the existing no-customization quick-add behavior.
-- Noodles, combo-capable items, and any item with required customization still open the customization modal.
+- The card body and its add button use the same customization metadata. Staff choose from multiple sizes, portion-priced sizes, noodle types, soup bases, spice levels, Combo, Add-ons and Removes in the modal, including preselected choices.
+- Items without those choices use one-tap add with the existing draft defaults. A single conventional size is applied automatically. Each successful quick-add updates the quantity and briefly shows Added.
 - Ordering layout avoids a full-page hard fixed shell. The category list, menu list, and order panel use reasonable max heights so menu items and order rows scroll independently without compressing the order panel to a single row.
 - Ordering layout reserves bottom safe-area padding so Android WebView navigation controls do not cover the order summary footer or submit/update buttons.
 
