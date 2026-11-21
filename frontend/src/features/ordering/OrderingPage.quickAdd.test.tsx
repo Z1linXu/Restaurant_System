@@ -50,13 +50,18 @@ it('uses the same one-tap behavior on the card and + while staging exactly one l
   const choice = { id: '51', labelEn: 'Default', labelZh: '默认' }
   const menu = payload ? mapCatalog(payload) : null
   const categories = menu?.categories ?? [{ id: 'addon', labelEn: 'Add On', labelZh: '加选' }]
+  const addonCategoryId = (menu?.categories.find((category) => category.code === 'CATEGORY_ADD_ON') ?? categories[0]).id
   const items = [...(menu?.items ?? [
     ...skuPrices.map(([sku, price]) => baseItem('add_on_' + sku, price)),
     { ...baseItem('add_on_beef_broth', 3), customization: { sizes: { required: true, options: [
       { ...choice, id: '52', optionCode: 'size_large', portionPrice: 3 }, { ...choice, id: '53', optionCode: 'size_small', portionPrice: 2, priceDelta: -1 },
     ] }, spicyLevels: [choice], removeOptions: [{ ...choice, id: '54', optionCode: 'chili_on_side' }] } },
     { ...baseItem('traditional_beef_noodle', 16), customization: { noodleTypes: [choice] } },
-  ]), { ...baseItem('sold_out_fixture', 3), categoryId: (menu?.categories.find((c) => c.code === 'CATEGORY_ADD_ON') ?? categories[0]).id, soldOut: true }]
+  ]),
+  { ...baseItem('sold_out_fixture', 3), categoryId: addonCategoryId, soldOut: true },
+  { ...baseItem('fixed_size_fixture', 3), categoryId: addonCategoryId, customization: {
+    sizes: { required: true, options: [{ ...choice, optionType: 'size', priceDelta: 2 }] },
+  } }]
   vi.useFakeTimers()
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   vi.stubGlobal('window', { addEventListener: vi.fn(), removeEventListener: vi.fn(), setTimeout })
@@ -118,6 +123,11 @@ it('uses the same one-tap behavior on the card and + while staging exactly one l
       }
       await act(async () => modal.props.onClose())
     }
+    await show('fixed_size_fixture')
+    expect(card('fixed_size_fixture').findAllByType('div').some((node) => node.children.join('') === '$5.00')).toBe(true)
+    await act(async () => button('fixed_size_fixture', 'Add ').props.onClick(tap))
+    expect(root.findAllByType(ItemCustomizationModal)).toHaveLength(0)
+    expect(root.findByType(OrderSummaryPanel).props.subtotal).toBe(20)
   } finally {
     await act(async () => view?.unmount())
     vi.useRealTimers()

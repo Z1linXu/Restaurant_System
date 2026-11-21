@@ -28,6 +28,8 @@ export function MenuItemCard({
 }: MenuItemCardProps) {
   const unavailable = item.isActive === false || !!item.soldOut
   const addDisabled = disabled || unavailable || quickAddState === 'adding'
+  const sizes = item.customization?.sizes?.options ?? []
+  const displayPrice = sizes[0]?.portionPrice ?? (item.price + (sizes.length === 1 ? sizes[0].priceDelta ?? 0 : 0))
   const addLabel = quickAddState === 'adding' ? '...' : quickAddState === 'added' ? 'Added' : '+'
   const stepperAddLabel = quickAddState === 'adding' ? '...' : '+'
 
@@ -63,7 +65,7 @@ export function MenuItemCard({
               <p className={`${compact ? 'text-[1rem]' : 'text-[1.35rem]'} font-semibold text-[rgba(83,58,50,0.86)]`}>{item.nameZh}</p>
             </div>
             <div className={`text-right ${compact ? 'text-[1.55rem]' : 'text-[2rem]'} font-extrabold tracking-[-0.04em] text-[var(--primary)]`}>
-              ${(item.customization?.sizes?.options[0]?.portionPrice ?? item.price).toFixed(2)}
+              ${displayPrice.toFixed(2)}
             </div>
           </div>
 
