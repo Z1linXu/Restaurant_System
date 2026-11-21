@@ -1,5 +1,7 @@
 # Chinatown 菜单与加选 Staging 验收
 
+[2026-11-21 一键点单修复、Staging 验收和发布门禁](CHINATOWN_MENU_ADD_ON_QUICK_ADD_20261121.md)
+
 2026-11-17，America/Toronto
 
 | 项目 | 结果 |
