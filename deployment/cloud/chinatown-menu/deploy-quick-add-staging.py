@@ -2,7 +2,7 @@
 """Replace the reviewed Chinatown Staging frontend. Retain its V41 backend."""
 
 import json
-import subprocess
+import os
 import sys
 import urllib.request
 
@@ -88,5 +88,6 @@ def main(sha):
 
 if __name__ == '__main__':
     assert len(sys.argv) == 2
+    os.environ['COMPOSE_REMOVE_ORPHANS'] = 'false'
     with ops.operation_locks():
         main(sys.argv[1])

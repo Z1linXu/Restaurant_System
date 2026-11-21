@@ -14,7 +14,7 @@ import { OrderSummaryPanel } from './components/OrderSummaryPanel'
 const draftSpy = vi.hoisted(() => ({ add: vi.fn(), delay: Promise.resolve() }))
 vi.mock('../../hooks/useIpadLandscape', () => ({ useIpadLandscape: () => false }))
 vi.mock('../../hooks/useConnectionStatus', () => ({ useConnectionStatus: () => ({ state: 'ONLINE' }) }))
-vi.mock('../auth/useAuth', () => ({ useAuth: () => ({ user: { id: 1 } }) }))
+vi.mock('../auth/useAuth', () => ({ useAuth: () => ({ user: { id: 1 }, permissions: [] }) }))
 vi.mock('../store/useStoreContext', () => ({ useCurrentStore: () => ({ organizationId: 2 }) }))
 vi.mock('../../hooks/useDraftOrder', async (original) => {
   const module = await original<typeof import('../../hooks/useDraftOrder')>()
@@ -77,9 +77,16 @@ it('uses the same one-tap behavior on the card and + while staging exactly one l
     await show('add_on_zha_jiang')
     for (const [sku] of skuPrices) {
       const code = 'add_on_' + sku
-      await act(async () => button(code, 'Add ').props.onClick(tap))
+      await act(async () => {
+        if (sku === 'cilantro') {
+          card(code).findByProps({ role: 'button' }).props.onClick()
+        } else {
+          await button(code, 'Add ').props.onClick(tap)
+        }
+      })
       expect(root.findAllByType(ItemCustomizationModal)).toHaveLength(0)
     }
+    expect(draftSpy.add.mock.calls.every(([, quantity]) => quantity === 1)).toBe(true)
     expect(root.findByType(OrderSummaryPanel).props.subtotal).toBe(15)
     expect(card('add_on_zha_jiang').findByProps({ role: 'status' }).children).toContain('Added')
     await act(async () => { await vi.advanceTimersByTimeAsync(300) })
