@@ -15,4 +15,6 @@ public class OrderItemOptionResponse {
     public String option_name_snapshot_fr;
     public BigDecimal price_delta;
     public Integer quantity;
+    @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    public Integer effective_total_quantity;
 }

@@ -22,8 +22,8 @@ android {
         allo {
             dimension "merchant"
             applicationId "com.allonouilles.pos"
-            versionCode 5
-            versionName "1.1.0"
+            versionCode 6
+            versionName "1.2.0"
             manifestPlaceholders = [padAppLabel: "Allô Nouilles POS"]
             buildConfigField "String", "FIXED_API_BASE_URL", '"https://pos.allonouilles.com"'
             testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"

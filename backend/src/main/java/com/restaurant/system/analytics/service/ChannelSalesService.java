@@ -9,6 +9,9 @@ import com.restaurant.system.order.entity.Order;
 import com.restaurant.system.order.entity.OrderItem;
 import com.restaurant.system.order.repository.OrderItemRepository;
 import com.restaurant.system.order.repository.OrderRepository;
+import com.restaurant.system.order.repository.OrderItemOptionRepository;
+import com.restaurant.system.printing.AlloProductionPrintingPolicy;
+import com.restaurant.system.allo.AlloMoney;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -26,6 +29,10 @@ public class ChannelSalesService {
     private final MenuItemRepository menu;
     private final MenuCategoryRepository categories;
     private final UberSalesSource uber;
+    @org.springframework.beans.factory.annotation.Autowired
+    private OrderItemOptionRepository options;
+    @org.springframework.beans.factory.annotation.Autowired
+    private AlloProductionPrintingPolicy alloPolicy;
 
     public ChannelSalesService(OrderRepository orders, OrderItemRepository items, MenuItemRepository menu,
                                MenuCategoryRepository categories, UberSalesSource uber) {
@@ -39,6 +46,10 @@ public class ChannelSalesService {
             List<Order> pos = orders.findAllByStoreId(storeId).stream().filter(SalesReporting::eligible)
                 .filter(order -> inside(order.submitted_at, startAt, endAt)).toList();
             List<OrderItem> posItems = pos.isEmpty() ? List.of() : items.findAllByOrderIds(pos.stream().map(order -> order.id).toList());
+            if (!posItems.isEmpty() && alloPolicy != null && alloPolicy.allowsPadDirect(storeId)) {
+                var choices = options.findAllByOrderItemIds(posItems.stream().map(i -> i.id).toList());
+                posItems = AlloMoney.effectiveItems(posItems, choices);
+            }
             Map<Long, List<OrderItem>> byOrder = posItems.stream().filter(SalesReporting::eligibleItem).collect(Collectors.groupingBy(item -> item.order_id));
             for (Order order : pos) {
                 List<Line> lines = SalesReporting.allocate(List.of(order), byOrder.getOrDefault(order.id, List.of())).stream().map(allocated -> {

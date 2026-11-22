@@ -2401,6 +2401,28 @@ merchants retain existing behavior. `/api/v1/allo/stores/{storeId}/sales` uses
 existing authenticated Store membership and ORDER_VIEW_DETAIL /
 ORDER_MODIFY_SUBMITTED capabilities, including FRONTDESK. No manager PIN or tender.
 
+V45 extends this contract. `GET /orders?date=YYYY-MM-DD&page=0` lists
+submitted POS orders by their original business date with 50 rows per page.
+The inclusive window is the Store's current day and the preceding 29 days.
+It includes cancelled and partially voided orders. Detail includes every
+original item and option, original and removed quantities, effective line
+amounts, and adjustment history.
+
+`VOID_ITEMS` also accepts `addons: [{option_id, quantity}]`. Each ID is
+the original order option row. Quantity counts individual add-on portions
+across the surviving servings. Main-item voids remove the add-ons attached
+to the removed servings before a standalone add-on quantity is checked.
+The existing lock, request identity, money calculation and audit transaction
+cover both kinds of void.
+
+`GET/POST /coupons` manages the Store's Coupon presets with the same
+revision and `enabled` retirement semantics as discount presets.
+`APPLY_COUPON` accepts `coupon: {id, revision}`. It captures the enabled
+Coupon's saved percentage or fixed amount as the order's single pre-tax
+discount. `REMOVE_COUPON` removes the application. Editing or retiring
+the preset preserves orders and ledger entries that already used it.
+The legacy adjustment hash omits new fields when absent.
+
 - GET `/orders/{id}`: original item snapshots, cumulative void quantities,
   determined gross/discount/net/tax/total/collected, original business date,
   current revision and immutable adjustment ledger.

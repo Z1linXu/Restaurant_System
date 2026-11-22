@@ -117,7 +117,8 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
                     appendSizedLine(builder, (request.allo_current ? displayCount : 1) + " x " + presentation.itemName(item));
                     for (OrderItemOption option : options) {
                         if (option.quantity != null && option.quantity <= 0) continue;
-                        appendSizedLine(builder, presentation.optionName(option) + " x" + Math.multiplyExact(request.allo_current ? displayCount : 1, option.quantity == null ? 1 : option.quantity));
+                        appendSizedLine(builder, presentation.optionName(option) + " x"
+                            + com.restaurant.system.allo.AlloMoney.printedOptionQuantity(option, request.allo_current ? displayCount : 1));
                     }
                     if (item.notes != null && !item.notes.isBlank()) {
                         appendSizedLine(builder, presentation.label("notes") + ": " + item.notes);

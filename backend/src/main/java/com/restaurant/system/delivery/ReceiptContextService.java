@@ -43,6 +43,9 @@ public class ReceiptContextService {
             && presentation.receipts(store).enabled;
     }
     public ReceiptPresentation freeze(Store store,String module,Long orderId,Long batch) {
+        if (mirrorsGrab(store, module)) {
+            return freeze(store, "GRAB", orderId, batch);
+        }
         if(!enabled(store,module))return null;
         requireAllowedMode(store);
         Order order=orders.findById(orderId).orElseThrow(()->fail("ORDER_NOT_FOUND"));
@@ -84,6 +87,17 @@ public class ReceiptContextService {
             freezeUpdateAmounts(context, order, allLines, batch);
         }
         return context;
+    }
+
+    public ReceiptPresentation freezeForDispatch(Store store, String module, Long orderId, Long batch) {
+        // GRAB is enqueued first in the order transaction. Both jobs inherit the same presentation revision.
+        return mirrorsGrab(store, module)
+            ? forEvent(store, "GRAB", orderId, batch)
+            : freeze(store, module, orderId, batch);
+    }
+
+    private boolean mirrorsGrab(Store store, String module) {
+        return "HOT_KITCHEN".equals(module) && printingPolicy.allowsPadDirect(store);
     }
 
     private void freezeUpdateAmounts(ReceiptPresentation context, Order order, List<OrderItem> allLines, Long batch) {

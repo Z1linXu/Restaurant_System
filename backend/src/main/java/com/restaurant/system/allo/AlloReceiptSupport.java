@@ -29,8 +29,10 @@ public final class AlloReceiptSupport {
         var groups=new LinkedHashMap<String,OrderItem>();var representative=new HashMap<Long,Long>();
         for(var i:r.order_items) {
             String key=identity(i,options.getOrDefault(i.id,List.of()));
-            // Unknown identities never merge with another unknown snapshot.
-            if(i.menu_item_id==null)key+="|id="+i.id;
+            // A line with unevenly distributed remaining add-ons has no uniform serving to merge.
+            if (i.menu_item_id == null || options.getOrDefault(i.id, List.of()).stream().anyMatch(o -> o.effective_total_quantity != null)) {
+                key += "|id=" + i.id;
+            }
             var current=groups.get(key);
             if(current==null){var copy=new OrderItem();com.restaurant.system.allo.AlloCopies.copy(i,copy);groups.put(key,copy);representative.put(i.id,i.id);}
             else {current.quantity=Math.addExact(current.quantity,i.quantity);current.line_amount=current.line_amount.add(i.line_amount);representative.put(i.id,current.id);}

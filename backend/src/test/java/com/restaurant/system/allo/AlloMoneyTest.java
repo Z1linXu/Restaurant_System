@@ -6,6 +6,29 @@ import java.math.BigDecimal;
 import com.restaurant.system.order.entity.*;
 import static org.junit.jupiter.api.Assertions.*;
 class AlloMoneyTest {
+ @Test void standaloneAddonVoidRetainsOriginalPricesAndUsesActualRemainingPortions() {
+  var item = new OrderItem();
+  item.id = 1L;
+  item.quantity = 2;
+  item.voided_quantity = 0;
+  item.line_amount = new BigDecimal("51.96");
+  var shrimp = new OrderItemOption();
+  shrimp.order_item_id = item.id;
+  shrimp.option_type_snapshot = "addon";
+  shrimp.quantity = 1;
+  shrimp.price_delta = new BigDecimal("7.99");
+  shrimp.voided_quantity = 1;
+  var options = java.util.List.of(shrimp);
+  assertEquals(new BigDecimal("43.97"), AlloMoney.effectiveLine(item, options));
+  var remainingShrimp = AlloMoney.effectiveOptions(java.util.List.of(item), options).get(0);
+  assertEquals(1, AlloMoney.printedOptionQuantity(remainingShrimp, 2));
+  assertEquals(new BigDecimal("51.96"), item.line_amount);
+  assertEquals(1, shrimp.quantity);
+  assertNull(shrimp.effective_total_quantity);
+  item.voided_quantity = 1;
+  assertEquals(new BigDecimal("17.99"), AlloMoney.effectiveLine(item, options));
+  assertTrue(AlloMoney.effectiveOptions(java.util.List.of(item), options).isEmpty());
+ }
  @ParameterizedTest @CsvSource({"10,PERCENT,50,5.00,5.00,0.75,5.75","10,PERCENT,0,0.00,10.00,1.50,11.50","10,PERCENT,100,10.00,0.00,0.00,0.00","10,AMOUNT,20,10.00,0.00,0.00,0.00","0.03,PERCENT,50,0.02,0.01,0.00,0.01","20,AMOUNT,5,5.00,15.00,2.25,17.25"})
  void exactMoney(String g,String type,String v,String d,String n,String t,String total){
   var m=AlloMoney.calculate(new BigDecimal(g),type,new BigDecimal(v),true);

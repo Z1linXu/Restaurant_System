@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Allô Nouilles POS 下载</title>
+  <style>
+    :root { color-scheme: light; font: 17px/1.55 system-ui, sans-serif; color: #25211e; background: #f7f3ec; }
+    body { margin: 0; padding: clamp(24px, 6vw, 72px) 20px; }
+    main { max-width: 30rem; margin: auto; padding: clamp(24px, 5vw, 44px); background: #fff; border-radius: 24px; box-shadow: 0 12px 36px #35201814; }
+    img { width: 150px; max-width: 100%; height: auto; }
+    h1 { margin: 14px 0 4px; font-size: clamp(1.7rem, 5vw, 2.3rem); line-height: 1.2; }
+    .release { margin: 0 0 24px; color: #625751; }
+    a { display: block; padding: 14px 20px; text-align: center; background: #9c171f; color: #fff; font-weight: 700; text-decoration: none; border-radius: 14px; }
+    a:focus-visible { outline: 3px solid #25211e; outline-offset: 4px; }
+    ol { margin: 24px 0 0; padding-left: 1.4em; }
+    li + li { margin-top: 6px; }
+    small { display: block; color: #625751; margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <main>
+    <img src="/merchant/logo.png" alt="Allô Nouilles">
+    <h1>Allô Nouilles POS</h1>
+    <p class="release">Android @VERSION@ · <time datetime="@DATE@">@DATE@</time> · @SIZE@ MB</p>
+    <a href="@APK@" download>下载最新版 APK</a>
+    <ol>
+      <li>在 Pad 浏览器下载并打开安装包。</li>
+      <li>选择「更新」，完成后重新打开 Allô App。</li>
+    </ol>
+    <small>原有数据随覆盖更新保留。请保留旧版应用，直接安装新版。若系统要求下载来源权限，按 Pad 的安装提示操作。</small>
+  </main>
+</body>
+</html>

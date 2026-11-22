@@ -3,6 +3,8 @@ import { useLocale } from '../../../i18n/useLocale'
 import type { BackendOrderResponse, OrderPrintOption } from '../../../types/ordering'
 import { orderLocationDisplay } from '../../../utils/tableDisplay'
 import type { PrintJobRecord } from '../../../services/printingAdminService'
+import type { FinancialDetail } from '../../allo/alloSalesService'
+import { AdjustmentHistory, AlloOrderItems, OrderAmounts } from '../../allo/AlloOrderDetails'
 import {
   orderStatusDisplayLabel,
   printJobDisplayLabel,
@@ -13,6 +15,7 @@ import {
 
 interface OrderHistoryDetailProps {
   order: BackendOrderResponse | null
+  financialDetail?: FinancialDetail | null
   loading: boolean
   printOptions: OrderPrintOption[]
   printJobs: PrintJobRecord[]
@@ -23,6 +26,7 @@ interface OrderHistoryDetailProps {
 
 export function OrderHistoryDetail({
   order,
+  financialDetail,
   loading,
   printOptions,
   printJobs,
@@ -51,7 +55,7 @@ export function OrderHistoryDetail({
       </div>
 
       <div className="mt-4 space-y-3">
-        {order.items.map((item) => (
+        {financialDetail ? <AlloOrderItems detail={financialDetail} /> : order.items.map((item) => (
           <div key={item.id} className="rounded-[18px] bg-stone-50 px-4 py-3">
             <div className="flex justify-between gap-4">
               <div>
@@ -72,10 +76,17 @@ export function OrderHistoryDetail({
         ))}
       </div>
 
-      <div className="mt-5 flex items-center justify-between border-t border-stone-100 pt-4 text-xl font-extrabold">
+      {financialDetail ? <OrderAmounts amounts={financialDetail.amounts} /> : <div className="mt-5 flex items-center justify-between border-t border-stone-100 pt-4 text-xl font-extrabold">
         <span>{t('order.total')}</span>
         <span>${Number(order.total_amount).toFixed(2)}</span>
-      </div>
+      </div>}
+
+      {!!financialDetail?.adjustments.length && (
+        <details className="my-3">
+          <summary className="min-h-12 cursor-pointer py-3 font-bold">调整记录</summary>
+          <AdjustmentHistory rows={financialDetail.adjustments} />
+        </details>
+      )}
 
       <div className="mt-5">
         <p className="mb-2 text-sm font-bold text-[var(--muted)]">{t('orders.reprintFull')}</p>

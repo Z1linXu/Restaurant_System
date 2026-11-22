@@ -30,6 +30,9 @@ public class Order {
     @Column(name = "discount_name")
     public String discount_name;
 
+    @Column(name = "discount_coupon_id")
+    public Long discount_coupon_id;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")

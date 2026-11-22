@@ -9953,3 +9953,15 @@ historical XS artifacts retain their exact original size, text and bytes. Encodi
 paper width and code-page compatibility checks still apply to both generations.
 See [current API contract](doc/API.md#allô-financial-adjustments-and-sales-overview-v44)
 and [bounded delivery evidence](docs/commercialization/merchants/allo-nouille/SALES_PRINTING_20261115.md).
+
+V45 keeps add-on void counts alongside immutable order-option prices and quantities.
+Current order amounts and current-order reprints use the remaining portions; order
+history retains the original item and option rows with deleted quantities.
+The reporting history lists the last 30 Store-local business dates. Coupons reuse
+the single pre-tax discount rule and retain the applied rule after preset retirement.
+New Allô HOT_KITCHEN order and update intents reuse the frozen GRAB presentation
+and renderer, with separate HOT_KITCHEN assignment, job identity and Pad lease.
+Existing frozen tickets and earlier HOT_KITCHEN dispatch intents retain their
+original interpretation. The report print layout excludes internal identifiers and
+formats adjustment times to seconds. Sales report identities remain in protected
+snapshots for idempotent printing.
