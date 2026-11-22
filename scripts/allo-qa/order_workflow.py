@@ -104,7 +104,7 @@ try:
     assert 'C1 ' in text and 'A3 ' in text and 'SYNTHETIC whole order note' in text
     jobs_hash = runtime.sql(config, f"select md5(string_agg(row_to_json(j)::text,'' order by id)) from print_jobs j where order_id={order_id}")
     outbox_hash = runtime.sql(config, f"select md5(string_agg(row_to_json(o)::text,'' order by id)) from order_dispatch_outbox o where order_id={order_id}")
-    assert runtime.sql(config, f"select count(distinct routing_context) from order_dispatch_outbox where order_id={order_id} and module_code in ('GRAB','HOT_KITCHEN')") == '1'
+    assert runtime.sql(config, f"select count(distinct routing_context::jsonb) from order_dispatch_outbox where order_id={order_id} and module_code in ('GRAB','HOT_KITCHEN')") == '1'
     checks.append('INITIAL_HOT_AND_GRAB_TEXT_AND_CONTEXT_IDENTICAL')
 
     old = detail(order_id)
@@ -146,7 +146,9 @@ try:
     choice = {'id':coupon['id'],'revision':coupon['revision']}
     applied = apply(order_id, adjustment(order_id, 'APPLY_COUPON', coupon=choice))
     assert applied['order']['discount_coupon_id'] == coupon['id'] and applied['amounts']['discount'] == 5
-    retired = staff.call(sales+'/coupons','POST',{**coupon,'enabled':False})
+    retired = staff.call(sales+'/coupons','POST', {
+        'id':coupon['id'], 'name':coupon['name'], 'discount_type':coupon['discount_type'],
+        'value':str(coupon['value']), 'revision':coupon['revision'], 'enabled':False})
     assert not next(row for row in retired if row['id']==coupon['id'])['enabled']
     assert detail(order_id)['amounts'] == applied['amounts']
     stale = adjustment(order_id,'APPLY_COUPON',coupon=choice)
