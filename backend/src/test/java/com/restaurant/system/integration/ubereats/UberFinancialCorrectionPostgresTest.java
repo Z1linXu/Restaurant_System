@@ -144,17 +144,25 @@ class UberFinancialCorrectionPostgresTest {
             db.update("UPDATE uber_eats_orders SET raw_financial_snapshot_json=? WHERE id=?",charges,changed);
             assertThat(businessFingerprint()).isEqualTo(before);
             assertThat(db.queryForObject("SELECT count(*) FROM uber_eats_financial_corrections",Integer.class)).isEqualTo(28);
-            // The original application has no correction migration; Flyway future-migration compatibility is required for rollback.
-            var locations=java.nio.file.Files.createTempDirectory("pending-old-flyway-");
-            try(var resources=java.nio.file.Files.list(java.nio.file.Path.of("src/main/resources/db/migration"))) {
-                for(var path:resources.toList())if(!path.getFileName().toString().startsWith("V39_1__") && !path.getFileName().toString().startsWith("V39_2__"))
-                    java.nio.file.Files.copy(path,locations.resolve(path.getFileName()));
+            // Validate the actual versioned migration sets shipped by the prior applications.
+            // Keeping a later release's migration in the simulated old app turns
+            // the intervening future migrations into missing migrations.
+            var migrationResources = java.nio.file.Path.of("src/main/resources/db/migration");
+            var locations = java.nio.file.Files.createTempDirectory("pending-old-flyway-");
+            try (var resources = java.nio.file.Files.list(migrationResources)) {
+                for (var path : resources.toList()) {
+                    String filename = path.getFileName().toString();
+                    if (filename.matches("V([1-9]|[12][0-9]|3[0-9])__.*\\.sql")) {
+                        java.nio.file.Files.copy(path, locations.resolve(filename));
+                    }
+                }
             }
             Flyway.configure().dataSource(url,user,"").locations("filesystem:"+locations).load().validate();
-            // Current Production v39.1 application also accepts additive v39.2 for app rollback.
-            java.nio.file.Files.copy(java.nio.file.Path.of("src/main/resources/db/migration/V39_1__add_uber_financial_corrections.sql"),
-                    locations.resolve("V39_1__add_uber_financial_corrections.sql"));
-            Flyway.configure().dataSource(url,user,"").locations("filesystem:"+locations).load().validate();
+            for (String migration : List.of("V39_1__add_uber_financial_corrections.sql",
+                    "V39_2__allow_uber_order_total_correction_v3.sql")) {
+                java.nio.file.Files.copy(migrationResources.resolve(migration), locations.resolve(migration));
+                Flyway.configure().dataSource(url,user,"").locations("filesystem:"+locations).load().validate();
+            }
         }
     }
 
