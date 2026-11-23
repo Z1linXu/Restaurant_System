@@ -1,0 +1,69 @@
+name: Chinatown PR 316 one-time merge
+on:
+  push:
+    branches:
+      - codex/release-chinatown-316-20261123
+permissions: {}
+concurrency:
+  group: chinatown-pr316-20261123
+  cancel-in-progress: false
+jobs:
+  merge:
+    if: github.repository == 'Z1linXu/Restaurant_System' && github.run_attempt == 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: chinatown-pr316-20261123
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      MERGE_TOKEN: ${{ github.token }}
+    steps:
+      - name: Verify frozen gate and merge the accepted candidate
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from datetime import datetime, timezone
+          import json
+          import os
+          import urllib.request
+
+          REPO = 'https://api.github.com/repos/Z1linXu/Restaurant_System'
+          SHA = '5e1837594520ef264150cdd21e8cdfaf83fbc8cf'
+          BASE = '80e888fcdad74e98326fcbeaa5df14bc0d9baed6'
+          TREE = '25bf6cfeef2baa2edc807214bbeab106a703cd8e'
+          PROOF = 'd057f2da2f3d'
+          now = datetime.now(timezone.utc)
+          assert datetime.fromisoformat('2026-11-24T03:00:00+00:00') <= now < datetime.fromisoformat('2026-11-24T03:15:00+00:00')
+
+          def get(url):
+              with urllib.request.urlopen(url, timeout=15) as response:
+                  return json.load(response)
+
+          def github(path, body=None):
+              headers = {'Authorization': 'Bearer ' + os.environ['MERGE_TOKEN'],
+                         'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json'}
+              request = urllib.request.Request(REPO + path, headers=headers,
+                  method='GET' if body is None else 'PUT',
+                  data=None if body is None else json.dumps(body).encode())
+              with urllib.request.urlopen(request, timeout=20) as response:
+                  return json.load(response)
+
+          for host in ('staging-pos.lanzhounoodlesmtl.com', 'pos.lanzhounoodlesmtl.com'):
+              assert get('https://' + host + '/api/v1/system/health')['data']['status'] == 'UP'
+          gate = [row for row in github('/commits/' + SHA + '/status')['statuses']
+                  if row['context'] == 'codex/chinatown-pr316-release']
+          assert len(gate) == 1 and gate[0]['state'] == 'success' and gate[0]['description'] == 'Exact Stage and Agent 6 ' + PROOF
+          assert github('/git/ref/heads/main')['object']['sha'] == BASE
+          pr = github('/pulls/316')
+          assert pr['state'] == 'open' and not pr['draft'] and not pr['merged']
+          assert pr['head']['sha'] == SHA and pr['base']['ref'] == 'main' and pr['base']['sha'] == BASE
+          assert github('/git/ref/heads/main')['object']['sha'] == BASE
+          result = github('/pulls/316/merge', {'sha': SHA, 'merge_method': 'merge',
+                          'commit_title': 'Merge Chinatown Add On and live Uber baseline (#316)'})
+          assert result['merged'] is True
+          merged = github('/git/commits/' + result['sha'])
+          assert merged['tree']['sha'] == TREE and [p['sha'] for p in merged['parents']] == [BASE, SHA]
+          assert github('/git/ref/heads/main')['object']['sha'] == result['sha']
+          print('MERGED_SHA=' + result['sha'])
+          PY
