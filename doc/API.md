@@ -1362,6 +1362,14 @@ enabled it is the deterministic default. If only one Size is enabled it is
 auto-selected. If multiple Sizes are enabled and Regular is disabled,
 `default_size_code` must name one enabled Size.
 
+For items with independent portion prices, include `portion_prices`, for
+example `{"size_large":3.00,"size_small":2.00}`. Each enabled size needs an
+absolute price, and the catalog returns it as `portion_price` on the Size
+option. The ordering compatibility delta is the portion price minus the
+item's base price. New or updated order lines require exactly one available
+portion. Store-wide Size pricing skips these overrides. Existing order
+snapshots retain the prices at submission.
+
 #### Update Item Combo Policy
 
 `PUT /api/v1/admin/menu/items/{itemId}/combo-policy`
@@ -1462,7 +1470,7 @@ IDs are revalidated on the backend; frontend Store context is not authorization.
 | PUT | `/api/v1/admin/menu/addons/{addonId}` | `{name_zh, name_en, price, active}`; changed code rejected |
 | GET | `/api/v1/admin/menu/items/{itemId}/addons` | Catalog entries with item `enabled` |
 | PUT | `/api/v1/admin/menu/items/{itemId}/addons/{addonId}` | `{enabled: boolean}` |
-| POST | `/api/v1/admin/menu/addons/reconcile` | `{store_id, dry_run: boolean}`; sanitized linking/conflict report |
+| POST | `/api/v1/admin/menu/addons/reconcile` | `{store_id, dry_run: boolean, option_codes?: string[]}`; sanitized linking/conflict report |
 
 An optional `confirmed_prices: {stable_code: nonnegative_price}` on reconciliation
 is restricted to the verified Staging marker/database and authorized Store.
@@ -1471,6 +1479,13 @@ Apply is atomic across current catalog/options and menu revision. It never picks
 an unresolved name or edits history. Dry-run reports existing conflicts without
 writes. Combo-only `combo_tea_egg`/`combo_fried_egg` cannot be normal catalog
 entries (`ADDON_COMBO_COMPONENT_IDENTITY`) and are omitted from catalog/eligibility.
+
+`option_codes` limits reconciliation to explicit stable codes and uses the
+existing, unambiguous price. The filter cannot be combined with a confirmed
+price override. An unresolved, ordinary legacy Add-on may be disabled with
+`DELETE /api/v1/admin/menu/items/{itemId}/options/{optionId}?legacy_addon=true`.
+The call keeps the row and historical snapshots and rejects linked or Combo
+identities. Linked Add-ons use item eligibility to disable a choice.
 
 Catalog entries expose `id`, `store_id`, immutable `code`, bilingual names,
 `price`, `active` and `printing_configured`. Missing Printing MODIFIER_ADD
@@ -2179,7 +2194,10 @@ Dashboard and analytics summary responses add `channel_sales`, a shared read-onl
 projection with `revenue_basis`, `currency`, `revenue_note`, `totals`, `categories`,
 `noodle_sales`, `items`, `trend`, `daily`, and `stores`. Every row contains `in_store`,
 `uber_eats`, and `total` metrics: `revenue` (nullable), `known_revenue`,
-`unknown_amount_count`, `order_count`, `quantity`, `average_order_value` (nullable),
+`unknown_amount_count` (legacy), `unknown_order_count` (distinct orders),
+`unknown_line_count`, `pending_reasons` (reason -> distinct order count),
+`item_pending_order_count`, `item_pending_reasons` (item-reconciliation reason -> distinct orders),
+`order_count`, `quantity`, `average_order_value` (nullable),
 and category `percentage` (nullable when incomplete). Unknown money must not be
 rendered as zero. Both Dashboard and Reports restrict organization/store parameters to the authenticated
 user's accessible Stores, including comparison rows. Foreign scope returns403;
@@ -2192,9 +2210,9 @@ orders' existing `total_amount` and first `submitted_at`; Uber uses verified acc
 non-cancelled/non-edit-review orders' immutable V35 financial evidence and `placed_at`
 in each Store's local timezone. Mirror local orders are excluded from POS. Uber root
 `total_price` already includes quantity/modifiers; no local menu price enters Uber
-revenue. Supported charges must reconcile root sum=subtotal and subtotal+tax=total
-with no unsupported adjustment/fee. Actual tax is allocated by actual Uber line
-weights. Unsupported/missing financial data keeps quantity but null revenue.
+revenue. Legacy v1/v2 allocations reconcile root sum=subtotal and subtotal+tax=total with no unsupported adjustment/fee. The v3 policy treats valid CAD `total_promo_applied` as the authoritative merchant post-promotion order amount, including applicable tax and excluding non-merchandise fees/tips. It is neither eater payment nor platform payout. Existing actual amounts are never changed to reconcile a cent. +/-1 cent component differences are recorded as rounding review; unknown fees/refunds/mixed currency or material financial conflicts still leave order money unknown.
+
+v3 order-level revenue and item-level completeness are independent. Promotional item net amounts stay null when unverified; no proportional net-revenue guess is made. Totals, daily/trend/Store totals and AOV can be complete while item/category amounts and Revenue Mix percentages remain pending. `unknown_order_count=0` with `item_pending_order_count>0` is valid; unknown line counts are not order counts. Missing item evidence never assigns the whole order amount to OTHER. UI displays confirmed total/AOV alongside separate item-review information, preserving zero vs unknown semantics. V39.1 journal corrections retain original snapshots; V39.2 permits v3 in the same append-only, compensatable journal. No new API mutation endpoint is introduced.
 
 Groups remain SOUP_NOODLE, DRY_NOODLE, FRIED_NOODLE, DRINK, ALCOHOL, SIDE, FRIED, OTHER.
 Unknown historical root identity remains OTHER. Today trend remains10:00–22:00;
@@ -2224,6 +2242,10 @@ create-or-replace/submit reject any non-null value, including an empty string.
 GRAB/HOT reprint retains the original rendered snapshot and does not fetch Uber.
 
 ### Shared Remove printing vocabulary
+
+The stable `egg_on_side`, `meat_on_side`, `tendon_on_side`, `bok_choy_on_side`,
+and `chili_on_side` codes represent zero-price packaging instructions. The
+ticket vocabulary retains the `单放` instruction under the selected item.
 
 `GET /api/v1/admin/printing/display-rules?store_id=...` additionally returns
 `remove_aliases` (`code`, `name_zh`, `default_print_text`, `source`, `alias_codes`),

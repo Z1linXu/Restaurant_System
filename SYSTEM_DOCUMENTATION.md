@@ -7440,6 +7440,13 @@ Generic option create/update/deactivate/reorder endpoints also reject Combo
 upcharge writes; per-item Combo allowed/disabled state must use the dedicated
 Combo Policy endpoint, and Store-level Combo delta must use Pricing Rules.
 
+An item can use absolute portion prices on the same Size options. The menu
+returns the configured portion price and its delta from the base price.
+Store-wide Size pricing leaves these options intact, and new order lines
+validate the selected Size and quote before freezing the price in the order.
+Inactive items can retain an unconfigured price in Menu Management until a
+price is entered. An explicit zero remains a valid selling price.
+
 Phase A5.5 generalizes the A0.2 Store-level Combo content configuration.
 `store_combo_groups` owns Store-scoped group definitions and
 `store_combo_components` owns Store-scoped component definitions. Menu
@@ -7966,9 +7973,8 @@ Frontend ordering behavior:
 - The stepper quantity totals all current active order rows with the same menu item id, including rows with different options, notes, or combo selections.
 - Menu card `+` preserves existing behavior: quick-add items add directly, while items requiring customization open the customization modal.
 - Menu card `-` only targets mutable rows. In edit-order mode, previously submitted/locked rows are not modified; if multiple mutable rows share the same menu item id, the latest row is decremented first.
-- Drink-style items with stable metadata such as `categoryCode=DRINK`, `categoryCode=ALCOHOL`, `categoryCode=MILK_TEA`, `itemType=drink`, or `itemType=beverage` quick-add directly when they do not have required customization.
-- Fried items keep the existing no-customization quick-add behavior.
-- Noodles, combo-capable items, and any item with required customization still open the customization modal.
+- The card body and its add button use the same customization metadata. Staff choose from multiple sizes, portion-priced sizes, noodle types, soup bases, spice levels, Combo, Add-ons and Removes in the modal, including preselected choices.
+- Items without those choices use one-tap add with the existing draft defaults. A single conventional size is applied automatically. Each successful quick-add updates the quantity and briefly shows Added.
 - Ordering layout avoids a full-page hard fixed shell. The category list, menu list, and order panel use reasonable max heights so menu items and order rows scroll independently without compressing the order panel to a single row.
 - Ordering layout reserves bottom safe-area padding so Android WebView navigation controls do not cover the order summary footer or submit/update buttons.
 
@@ -9636,6 +9642,12 @@ Dashboard and Reports share completed/submitted/non-EXTERNAL_PLATFORM sales elig
 `SalesReporting` preserves completed POS sales by first `submitted_at`, excluding cancelled lines and all Uber/EXTERNAL_PLATFORM mirror orders. Existing `order.total_amount` is merchandise including tax (not pre-tax net revenue). `ChannelSalesService` adds a read-only shared Dashboard/Reports `channel_sales` projection: IN_STORE, UBER_EATS and TOTAL. Uber uses verified accepted, non-cancelled/non-edit-review orders by `placed_at`, converted from UTC to each Store's configured timezone (default America/Toronto). One Uber order contributes once; mirror local money never contributes to POS. Historical unclassified/raw roots remain OTHER using frozen identity, regardless of later mapping.
 
 Revenue basis is `MERCHANDISE_INCLUDING_TAX_EXCLUDING_PLATFORM_FEES_TIPS`, not payout or profit. V35 adds `uber_eats_orders.item_financial_snapshot_json`; the normalizer captures allowlisted root/modifier IDs, quantities and actual Uber price money from the same GET response. The snapshot freezes on verified acceptance and is never overwritten by a later refresh/remap, including mapping-held orders. Root `price.total_price` already includes quantity and modifiers. A supported snapshot requires all root amounts to sum exactly to `charges.sub_total`, `sub_total + tax = total`, one currency and no unsupported financial adjustments/nonzero fees. Actual total/tax is allocated across actual Uber root amounts using cumulative minor-unit rounding; this is allocated tax, not a claim of Uber-provided per-item tax. Missing, inconsistent or unsupported evidence yields unknown revenue, never local-price estimates. Historical backfill may only add this new financial column after matching frozen identities and original charges; raw order/financial snapshots, local orders and print history remain intact.
+
+Financial snapshots retain v1/v2 compatibility. The v3 order-total policy uses valid CAD `payment.charges.total_promo_applied` as merchant merchandise including tax after merchant-funded promotions; eater payment and platform payout are distinct. Known/non-merchandise fees, unknown financial adjustments, refunds, mixed currencies or material component conflicts still block. A +/-1 minor-unit component discrepancy is recorded as `ROUNDING_REVIEW`, without changing Uber's total. Trusted order-level revenue is independent from item allocation. v3 promotional item revenues remain null when actual item net amounts cannot be confirmed; they are never fabricated by proportional allocation. Existing v2 derived allocations remain historical evidence.
+
+V39.1 adds `uber_eats_financial_corrections`, an append-only APPLY/REVOKE journal. V39.2 only widens its snapshot-version CHECK from2 to2/3; existing rows and original snapshots are untouched. The read-only sales adapter accepts v1/v2/v3, uses corrections only when original/source SHA256 and Store/environment/order identity match, and validates the v3 total against its authority metadata. Item identity/completeness does not invalidate a trusted v3 order total. The SSH-only correction main starts no Spring workers; the legacy fourteen-order strict-v2 case remains separate from `--case order-total-v3`, which is limited to six exact Production/store1/2026-11-03 IDs. Compensation appends REVOKE independently of later source/business-state changes and preserves all original/APPLY records. It never changes orders, printing, kitchen or Outbox rows.
+
+Channel metrics distinguish unknown order totals from unknown item amounts. `unknown_order_count`/legacy `unknown_amount_count` describe the metric's revenue completeness; `item_pending_order_count`, `item_pending_reasons` and `unknown_line_count` describe item reconciliation separately. Order totals/daily/trend/Store totals and AOV use trusted order revenue even when item/category amounts remain unknown. Category/item amounts show known subtotals and pending review; Revenue Mix percentages stay null when categories are incomplete, while its center can show the confirmed order total. Missing item evidence is not assigned the whole order revenue in OTHER. Confirmed zero remains distinct from unknown.
 
 Dashboard and Reports use the shared authenticated `AnalyticsReadScope`; query parameters can only narrow accessible Store membership, including Store comparison rows. Foreign organization scopes return403. Only global ADMIN can rebuild without an explicit Store ID.
 

@@ -4,6 +4,9 @@ import com.restaurant.system.common.pricing.TaxCalculator;
 import com.restaurant.system.order.entity.Order;
 import com.restaurant.system.order.entity.OrderItem;
 import com.restaurant.system.order.entity.OrderItemOption;
+import com.restaurant.system.menu.pricing.StandardSize;
+import com.restaurant.system.menu.remove.RemoveSemantics;
+import com.restaurant.system.printing.semantic.KitchenModifierTokenResolver;
 import com.restaurant.system.printing.PrintModuleCode;
 import com.restaurant.system.printing.dto.PrintRenderRequest;
 import com.restaurant.system.printing.rules.PrintingDisplayRuleContext;
@@ -100,6 +103,12 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
                 String spicyLevel = resolveSpicyLevelLabel(options, printingRules);
                 if (spicyLevel != null) {
                     appendSizedLine(builder, "辣度: " + spicyLevel);
+                }
+                for (OrderItemOption option : options) {
+                    if (isOptionGroup(option, "REMOVE")
+                        && RemoveSemantics.separatePlatingLabel(option.option_code_snapshot) != null) {
+                        appendSizedLine(builder, KitchenModifierTokenResolver.resolveRemove(option, printingRules));
+                    }
                 }
                 List<String> chargeableLines = resolveChargeableOptionLines(options);
                 for (String chargeableLine : chargeableLines) {
@@ -258,8 +267,9 @@ public class FrontdeskReceiptRenderer implements ReceiptRenderer {
     private String resolveSizeEnLabel(List<OrderItemOption> options, PrintingDisplayRuleContext printingRules) {
         return options.stream()
             .filter(option -> OPTION_TYPE_SIZE.equals(option.option_type_snapshot))
-            .map(option -> printingRules == null
-                ? mapSizeEn(option.option_name_snapshot_zh, option.option_name_snapshot_en)
+            .map(option -> StandardSize.isPortionLabel(option.option_code_snapshot, option.option_name_snapshot_zh)
+                ? option.option_name_snapshot_zh
+                : printingRules == null ? mapSizeEn(option.option_name_snapshot_zh, option.option_name_snapshot_en)
                 : printingRules.resolveDictionaryOutputKey(
                     "SIZE",
                     "FRONTDESK_RECEIPT_EN",

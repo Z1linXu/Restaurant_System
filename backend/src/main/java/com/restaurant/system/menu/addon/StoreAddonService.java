@@ -14,6 +14,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.Objects;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -44,6 +45,7 @@ public class StoreAddonService {
         public Long store_id;
         public Boolean dry_run;
         public Map<String, BigDecimal> confirmed_prices;
+        public Set<String> option_codes;
     }
     public static class EligibilityRequest { public Boolean enabled; }
 
@@ -197,9 +199,19 @@ public class StoreAddonService {
     /** Explicit, bounded reconciliation; GET never materializes or changes eligibility. */
     @Transactional
     public ReconciliationReport reconcile(Long storeId, boolean dryRun) {
+        return reconcile(storeId, dryRun, null);
+    }
+
+    @Transactional
+    public ReconciliationReport reconcile(Long storeId, boolean dryRun, Set<String> optionCodes) {
+        if (optionCodes != null && (optionCodes.isEmpty()
+            || optionCodes.stream().anyMatch(code -> code == null || !code.equals(normalizeCode(code)) || !validCode(code)))) {
+            throw failure("ADDON_CODE_INVALID");
+        }
         entityManager.flush();
         Long organizationId = dryRun ? organizationId(storeId) : lockStore(storeId);
         List<Group> groups = plan(storeId, addons(storeId));
+        if (optionCodes != null) groups = groups.stream().filter(group -> optionCodes.contains(group.code())).toList();
         int groupCount = 0;
         int optionCount = 0;
         for (Group group : groups) {

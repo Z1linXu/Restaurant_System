@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { mapCatalog } from '../hooks/useMenuCatalog'
 import type { BackendMenuCatalog } from '../types/ordering'
 import {
   calculateMenuContentHash,
@@ -199,6 +200,25 @@ describe('versioned menu cache identity and integrity', () => {
 
   it('matches the backend deterministic hash fixture', () => {
     expect(catalog().content_hash).toBe('fnv1a32:07ab0e4f')
+  })
+
+  it('accepts a refreshed Add On catalog with portion prices using the existing Pad cache hash', () => {
+    const next = catalog()
+    next.catalog_version = 'menu-catalog-v4'
+    next.menu_revision += 1
+    const category = next.categories[0]
+    Object.assign(category, { code: 'CATEGORY_ADD_ON', name_en: 'Add On', name_zh: '加选' })
+    const item = category.items[0]
+    Object.assign(item, { sku: 'add_on_beef_broth', base_price: 3 })
+    Object.assign(item.options[0], {
+      option_type: 'size', option_group: 'SIZE', option_code: 'size_small', name_zh: '小份', price_delta: -1,
+    })
+    next.content_hash = calculateMenuContentHash(next)
+    item.options[0].portion_price = 2
+    validateMenuCatalog(next, scope, next.menu_revision)
+    const mapped = mapCatalog(next)
+    expect(mapped.categories[0].labelZh).toBe('加选')
+    expect(mapped.items[0].customization?.sizes?.options[0]).toMatchObject({ priceDelta: -1, portionPrice: 2 })
   })
 
   it('hashes item egg overrides in v4 while preserving v3 cached snapshot validation', () => {

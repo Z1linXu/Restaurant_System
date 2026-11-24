@@ -26,23 +26,27 @@ export function MenuItemCard({
   disabledReason,
   compact = false,
 }: MenuItemCardProps) {
+  const unavailable = item.isActive === false || !!item.soldOut
+  const addDisabled = disabled || unavailable || quickAddState === 'adding'
+  const sizes = item.customization?.sizes?.options ?? []
+  const displayPrice = sizes[0]?.portionPrice ?? (item.price + (sizes.length === 1 ? sizes[0].priceDelta ?? 0 : 0))
   const addLabel = quickAddState === 'adding' ? '...' : quickAddState === 'added' ? 'Added' : '+'
   const stepperAddLabel = quickAddState === 'adding' ? '...' : '+'
 
   return (
     <div
       role="button"
-      aria-disabled={disabled}
-      title={disabled ? disabledReason : undefined}
-      tabIndex={disabled ? -1 : 0}
-      className={`text-left ${disabled ? 'cursor-not-allowed opacity-60' : ''}`}
+      aria-disabled={addDisabled}
+      title={disabled ? disabledReason : unavailable ? 'Unavailable / 暂不可点' : undefined}
+      tabIndex={addDisabled ? -1 : 0}
+      className={`text-left ${disabled || unavailable ? 'cursor-not-allowed opacity-60' : ''}`}
       onClick={() => {
-        if (!disabled) {
+        if (!addDisabled) {
           onSelect(item)
         }
       }}
       onKeyDown={(event) => {
-        if (disabled) {
+        if (addDisabled || event.target !== event.currentTarget || event.repeat) {
           return
         }
         if (event.key === 'Enter' || event.key === ' ') {
@@ -61,7 +65,7 @@ export function MenuItemCard({
               <p className={`${compact ? 'text-[1rem]' : 'text-[1.35rem]'} font-semibold text-[rgba(83,58,50,0.86)]`}>{item.nameZh}</p>
             </div>
             <div className={`text-right ${compact ? 'text-[1.55rem]' : 'text-[2rem]'} font-extrabold tracking-[-0.04em] text-[var(--primary)]`}>
-              ${item.price.toFixed(2)}
+              ${displayPrice.toFixed(2)}
             </div>
           </div>
 
@@ -83,6 +87,9 @@ export function MenuItemCard({
                 <div className={`inline-flex w-fit rounded-full bg-[rgba(144,77,0,0.12)] font-bold uppercase tracking-[0.05em] text-[var(--secondary)] ${compact ? 'px-3 py-1.5 text-[0.72rem]' : 'px-4 py-2 text-sm'}`}>
                   {item.badge.en}
                 </div>
+              ) : null}
+              {quickAddState === 'added' && orderedQuantity > 0 ? (
+                <span role="status" className="text-xs font-semibold text-[var(--secondary)]">Added</span>
               ) : null}
             </div>
 
@@ -114,12 +121,12 @@ export function MenuItemCard({
                   type="button"
                   onClick={async (event) => {
                     event.stopPropagation()
-                    if (disabled) {
+                    if (addDisabled) {
                       return
                     }
                     await onQuickAdd?.(item)
                   }}
-                  disabled={disabled || !onQuickAdd || quickAddState === 'adding'}
+                  disabled={addDisabled || !onQuickAdd}
                   className={`inline-flex items-center justify-center rounded-full font-bold text-[var(--on-primary)] shadow-[0_10px_22px_rgba(97,0,0,0.18)] transition disabled:cursor-not-allowed disabled:opacity-45 ${
                     quickAddState === 'added'
                       ? 'scale-105 bg-[var(--secondary)]'
@@ -135,12 +142,12 @@ export function MenuItemCard({
                 type="button"
                 onClick={async (event) => {
                   event.stopPropagation()
-                  if (disabled) {
+                  if (addDisabled) {
                     return
                   }
                   await onQuickAdd(item)
                 }}
-                disabled={disabled || quickAddState === 'adding'}
+                disabled={addDisabled}
                 className={`inline-flex items-center justify-center rounded-full font-bold text-[var(--on-primary)] shadow-[0_10px_22px_rgba(97,0,0,0.18)] transition ${
                   quickAddState === 'added'
                     ? 'scale-105 bg-[var(--secondary)]'

@@ -179,6 +179,7 @@ export function MenuOptionsPanel({ storeId, itemId, itemName }: MenuOptionsPanel
   const [formOpen, setFormOpen] = useState(false)
   const [enabledSizeCodes, setEnabledSizeCodes] = useState<StandardSizeCode[]>(['size_regular'])
   const [defaultSizeCode, setDefaultSizeCode] = useState<StandardSizeCode>('size_regular')
+  const [portionPrices, setPortionPrices] = useState<Partial<Record<StandardSizeCode, string>>>({})
   const [comboAllowed, setComboAllowed] = useState(false)
 
   const applyLoadedOptions = useCallback((nextOptions: MenuItemOptionAdminRecord[]) => {
@@ -187,6 +188,11 @@ export function MenuOptionsPanel({ storeId, itemId, itemName }: MenuOptionsPanel
     const safeEnabledSizes: StandardSizeCode[] = nextEnabledSizes.length ? nextEnabledSizes : ['size_regular']
     setEnabledSizeCodes(safeEnabledSizes)
     setDefaultSizeCode(extractDefaultSize(nextOptions, safeEnabledSizes))
+    setPortionPrices(Object.fromEntries(nextOptions.flatMap((option) =>
+      option.option_code && option.portion_price != null
+        ? [[option.option_code, Number(option.portion_price).toFixed(2)]]
+        : [],
+    )))
     setComboAllowed(nextOptions.some((option) => isComboUpcharge(option) && option.is_active))
   }, [])
 
@@ -377,6 +383,13 @@ export function MenuOptionsPanel({ storeId, itemId, itemName }: MenuOptionsPanel
       applyLoadedOptions(await updateOwnerMenuItemSizeConfiguration(itemId, {
         enabled_size_codes: enabledSizeCodes,
         default_size_code: safeDefault,
+        portion_prices: Object.keys(portionPrices).length
+          ? Object.fromEntries(enabledSizeCodes.map((code) => {
+              const price = portionPrices[code]?.trim()
+              if (!price) throw new Error('Enter a price for every enabled portion.')
+              return [code, price]
+            }))
+          : undefined,
       }))
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Failed to save Size configuration')
@@ -426,7 +439,9 @@ export function MenuOptionsPanel({ storeId, itemId, itemName }: MenuOptionsPanel
           <div>
             <div className="text-[0.9rem] font-black uppercase tracking-[0.12em] text-[var(--primary)]">Size Configuration / 规格</div>
             <div className="mt-1 text-[0.76rem] text-[var(--muted)]">
-              系统只允许 Small / Regular / Large；价格由 Store Pricing Rules 统一控制。
+              {Object.keys(portionPrices).length
+                ? '规格价格为每份的完整售价。'
+                : '系统只允许 Small / Regular / Large；价格由 Store Pricing Rules 统一控制。'}
             </div>
           </div>
           <button
@@ -451,7 +466,7 @@ export function MenuOptionsPanel({ storeId, itemId, itemName }: MenuOptionsPanel
                     onChange={(event) => toggleSize(size.code, event.target.checked)}
                     className="h-4 w-4 accent-[var(--primary)]"
                   />
-                  {size.zh} / {size.en}
+                  {Object.keys(portionPrices).length ? size.zh.replace('碗', '份') : size.zh} / {size.en}
                 </label>
                 <label className="mt-2 flex min-h-10 items-center gap-2 text-[0.78rem] text-[var(--muted)]">
                   <input
@@ -463,6 +478,20 @@ export function MenuOptionsPanel({ storeId, itemId, itemName }: MenuOptionsPanel
                   />
                   Default
                 </label>
+                {Object.keys(portionPrices).length && enabled ? (
+                  <label className="mt-2 flex items-center gap-2 text-sm">
+                    Price / 售价 $
+                    <input
+                      aria-label={`${size.en} portion price`}
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={portionPrices[size.code] ?? ''}
+                      onChange={(event) => setPortionPrices({ ...portionPrices, [size.code]: event.target.value })}
+                      className="w-24 rounded-lg border px-2 py-1"
+                    />
+                  </label>
+                ) : null}
               </div>
             )
           })}

@@ -18,6 +18,7 @@ public class MenuItemOptionAdminResponse {
     public String name_zh;
     public String name_en;
     public BigDecimal price_delta;
+    public BigDecimal portion_price;
     public Boolean is_active;
     public LocalDateTime created_at;
     public LocalDateTime updated_at;

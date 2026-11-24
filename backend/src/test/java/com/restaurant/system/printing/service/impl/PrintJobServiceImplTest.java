@@ -28,6 +28,7 @@ import com.restaurant.system.printing.transport.EscPosFontSizeMode;
 import com.restaurant.system.printing.semantic.HotKitchenPrintEligibilityService;
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -100,6 +101,32 @@ class PrintJobServiceImplTest {
         assertEquals("PAD_DIRECT", queued.executionMode);
         assertEquals("PENDING", queued.status);
         assertEquals(10L, queued.printer_id);
+    }
+
+    @Test
+    void padDirectEncodesFrozenChinesePortionSpiceAndOnSideText() {
+        PrintJob job = new PrintJob();
+        job.id = 13L;
+        job.status = "PENDING";
+        when(printJobRepository.findById(job.id)).thenReturn(Optional.of(job));
+        when(printJobRepository.save(any(PrintJob.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        String body = "牛肉汤 大份 x1\n正常辣 | 辣单放\n牛筋面 x1\n蛋单放 肉单放 牛筋单放 上海青单放";
+        String preview = PrintMarkup.withTopFeed(PrintMarkup.large("1里") + " (UPDATE)\n" + body);
+        service.attachRenderedContent(job, null, preview);
+        PrinterConfig printer = new PrinterConfig();
+        printer.id = 10L;
+        printer.ip_address = "127.0.0.1";
+        printer.text_encoding = "GBK";
+        var pad = service.markPadDirectQueued(job, printer, "SMALL");
+
+        assertEquals(preview, pad.rendered_text_snapshot);
+        byte[] payload = Base64.getDecoder().decode(pad.escposPayloadBase64);
+        Charset gbk = Charset.forName("GBK");
+        for (String line : body.split("\n")) {
+            assertTrue(containsBytes(payload, line.getBytes(gbk)), line);
+        }
+        assertFalse(new String(payload, gbk).contains("走辣单放"));
     }
 
     @ParameterizedTest(name = "{0} update={1} table={2} preserves the first table line in Pad Direct")

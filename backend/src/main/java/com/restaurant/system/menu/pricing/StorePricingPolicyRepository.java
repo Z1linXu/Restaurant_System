@@ -49,6 +49,7 @@ public interface StorePricingPolicyRepository extends JpaRepository<StorePricing
         where item.id = option_row.menu_item_id
           and item.store_id = :storeId
           and option_row.store_addon_id is null
+          and option_row.portion_price is null
           and (
             lower(trim(coalesce(option_row.option_group, ''))) in ('size', 'combo')
             or (

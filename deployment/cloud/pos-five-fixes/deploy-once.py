@@ -89,7 +89,7 @@ SELECT md5(coalesce(string_agg(to_jsonb(t)::text,'' ORDER BY id),'')) FROM
     return {'cutoffs': cutoffs, 'hashes': hashes}
 
 
-def build_images(release, sha, evidence):
+def build_images(release, sha, evidence, services=(('backend', 'backend'), ('nginx', 'frontend'))):
     # A disposable builder bounds this shared host's build memory and CPU. Removing
     # only this newly created builder does not prune shared images/cache/volumes.
     builder = 'pos-five-' + sha[:12]
@@ -99,7 +99,7 @@ def build_images(release, sha, evidence):
                     '--driver-opt', 'memory=1g,memory-swap=1g,cpu-period=100000,cpu-quota=100000',
                     '--bootstrap'], evidence / 'builder.private.log')
         created = True
-        for service, folder in [('backend', 'backend'), ('nginx', 'frontend')]:
+        for service, folder in services:
             tag = 'restaurant-pos-' + folder + ':staging-' + sha
             args = ['docker', 'buildx', 'build', '--builder', builder, '--load', '--provenance=false',
                     '--label', 'org.opencontainers.image.revision=' + sha, '-t', tag]

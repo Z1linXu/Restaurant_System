@@ -8,6 +8,7 @@ export interface ChoiceOption {
   labelEn: string
   labelZh: string
   priceDelta?: number
+  portionPrice?: number
   optionType?: string
   optionCode?: string | null
   optionGroup?: string | null
@@ -241,6 +242,7 @@ export interface BackendMenuOption {
   name_zh: string
   name_en: string
   price_delta: number
+  portion_price?: number | string | null
   is_active: boolean
   side_item_remove_options?: BackendMenuOption[]
 }

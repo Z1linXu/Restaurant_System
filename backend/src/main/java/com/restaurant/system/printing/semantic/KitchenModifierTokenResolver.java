@@ -83,6 +83,10 @@ public final class KitchenModifierTokenResolver {
         String labelEn,
         PrintingDisplayRuleContext printingRules
     ) {
+        String separate = RemoveSemantics.separatePlatingLabel(semanticCode);
+        if (separate != null) {
+            return labelZh != null && labelZh.trim().endsWith("单放") ? labelZh.trim() : separate;
+        }
         String code = RemoveSemantics.canonicalSemantic(semanticCode);
         String fallback = knownRemoveToken(code);
         if (fallback == null) {
